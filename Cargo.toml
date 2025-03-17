@@ -1,0 +1,22 @@
+[package]
+name = "os"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "firmware"
+path = "src/main.rs"
+
+[profile.dev]
+panic = "abort"
+debug = true
+
+[profile.release]
+panic = "abort"
+debug = true
+
+[dependencies]
+# No dependencies!
+
+[features]
+# No default features

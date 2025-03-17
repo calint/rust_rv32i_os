@@ -118,7 +118,7 @@ impl<'a, T: Copy, const N: usize> Iterator for FixedSizeListIterator<'a, T, N> {
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
-#[no_mangle]
+#[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
     let mut list: FixedSizeList<&[u8], 5> = FixedSizeList::new();
 

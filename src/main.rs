@@ -88,10 +88,6 @@ impl<T: PartialEq + Copy, const N: usize> FixedSizeList<T, N> {
         }
     }
 
-    fn get(&self, index: usize) -> Option<T> {
-        self.data[index]
-    }
-
     fn iter(&self) -> FixedSizeListIterator<'_, T, N> {
         FixedSizeListIterator {
             list: self,

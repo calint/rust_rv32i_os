@@ -8,5 +8,9 @@ SECTIONS
   .text : { *(.text .text.*) } > RAM
   .rodata : { *(.rodata .rodata.*) } > RAM
   .data : { *(.data .data.*) } > RAM
-  .bss : { *(.bss .bss.*) *(COMMON) } > RAM
+  .bss : {
+    __bss_start__ = .;
+    *(.bss .bss.*) *(COMMON)
+    __bss_end__ = .;
+  } > RAM
 }

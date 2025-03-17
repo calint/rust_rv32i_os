@@ -13,8 +13,8 @@ debug = true
 
 [profile.release]
 panic = "abort"
-opt-level = "z"
-debug = true
+opt-level = "z" # optimize for size
+debug = true    # include debugging symbols
 
 [dependencies]
 # No dependencies!

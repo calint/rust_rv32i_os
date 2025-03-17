@@ -63,13 +63,13 @@ impl<T: PartialEq + Copy, const N: usize> FixedSizeList<T, N> {
     }
 
     fn add(&mut self, item: T) -> bool {
-        if self.count < N {
-            self.data[self.count] = Some(item);
-            self.count += 1;
-            true
-        } else {
-            false
-        }
+        // if self.count < N {
+        self.data[self.count] = Some(item);
+        self.count += 1;
+        true
+        // } else {
+        //     false
+        // }
     }
 
     fn remove(&mut self, item: T) -> bool {
@@ -137,5 +137,6 @@ pub extern "C" fn run() -> ! {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
+    uart_send_str(b"PANIC!!!");
     loop {}
 }

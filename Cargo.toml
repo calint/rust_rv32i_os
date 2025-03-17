@@ -13,6 +13,7 @@ debug = true
 
 [profile.release]
 panic = "abort"
+opt-level = "z"
 debug = true
 
 [dependencies]

@@ -392,8 +392,13 @@ public:
 #ifdef RV32I_DEBUG
       printf("jalr x%u, %d(x%u)\n", rd, I_imm12, rs1);
 #endif
-      regs_[rd] = int32_t(pc_ + 4);
       next_pc = uint32_t(regs_[rs1] + I_imm12);
+      regs_[rd] = int32_t(pc_ + 4);
+#ifdef RV32I_DEBUG
+      printf("  x%u=0x%x\n", rs1, regs_[rs1]);
+      printf("  imm=%d\n", I_imm12);
+      printf("  0x%x\n", next_pc);
+#endif
       break;
     }
     //-----------------------------------------------------------------------

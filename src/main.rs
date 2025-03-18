@@ -468,7 +468,7 @@ fn action_go(state: &mut State, entity_id: EntityId, link_id: LinkId) {
     let entity = state.entities.get_mut(entity_id).unwrap();
     let new_loc_id = {
         let loc = state.locations.get(entity.location).unwrap();
-        let mut new_loc_id: LocationId = 0;
+        let mut new_loc_id = 0;
         for ll in loc.links.iter() {
             if ll.link == link_id {
                 new_loc_id = ll.location;

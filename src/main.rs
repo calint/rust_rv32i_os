@@ -433,36 +433,32 @@ fn malloc(size: usize) -> *mut u8 {
 
 fn process_command(state: &mut State, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();
-    if let Some(cmd) = it.next() {
-        match cmd {
-            b"n" => action_go(state, entity_id, 1),
-            b"e" => action_go(state, entity_id, 2),
-            b"s" => action_go(state, entity_id, 3),
-            b"w" => action_go(state, entity_id, 4),
-            b"i" => action_inventory(state, entity_id),
-            b"t" => action_take(state, entity_id, &mut it),
-            b"d" => action_drop(state, entity_id, &mut it),
-            b"g" => action_give(state, entity_id, &mut it),
-            _ => uart_send_str(b"not understood\r\n\r\n"),
-        }
-
-        // let cmd_len = cmd.len();
-        // let name: &[u8];
-        // unsafe {
-        //     let mem = malloc(cmd_len);
-        //     core::ptr::copy_nonoverlapping(cmd.as_ptr(), mem, cmd_len);
-        //     name = core::slice::from_raw_parts(mem, cmd_len);
-        // }
-        // state.objects.add(Object { name: name });
-        // state
-        //     .locations
-        //     .get_mut(1)
-        //     .unwrap()
-        //     .objects
-        //     .add(state.objects.count - 1);
-    } else {
-        uart_send_str(b"not understood\r\n");
+    match it.next() {
+        Some(b"n") => action_go(state, entity_id, 1),
+        Some(b"e") => action_go(state, entity_id, 2),
+        Some(b"s") => action_go(state, entity_id, 3),
+        Some(b"w") => action_go(state, entity_id, 4),
+        Some(b"i") => action_inventory(state, entity_id),
+        Some(b"t") => action_take(state, entity_id, &mut it),
+        Some(b"d") => action_drop(state, entity_id, &mut it),
+        Some(b"g") => action_give(state, entity_id, &mut it),
+        _ => uart_send_str(b"not understood\r\n\r\n"),
     }
+
+    // let cmd_len = cmd.len();
+    // let name: &[u8];
+    // unsafe {
+    //     let mem = malloc(cmd_len);
+    //     core::ptr::copy_nonoverlapping(cmd.as_ptr(), mem, cmd_len);
+    //     name = core::slice::from_raw_parts(mem, cmd_len);
+    // }
+    // state.objects.add(Object { name: name });
+    // state
+    //     .locations
+    //     .get_mut(1)
+    //     .unwrap()
+    //     .objects
+    //     .add(state.objects.count - 1);
 }
 
 fn action_give(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIterator) {

@@ -141,8 +141,7 @@ impl<T: Copy + PartialEq, const N: usize> FixedSizeList<T, N> {
     fn remove(&mut self, item: T) -> bool {
         for i in 0..self.count {
             if self.data[i] == Some(item) {
-                self.remove_at(i);
-                return true;
+                return self.remove_at(i);
             }
         }
         false

@@ -71,7 +71,7 @@ type EntityId = usize;
 type ObjectId = usize;
 
 // Define the object struct
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct Object {
     name: Name,
 }
@@ -85,20 +85,20 @@ struct Entity {
 }
 
 // Define the entity struct
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct Link {
     name: Name,
 }
 
 // Define the location_link struct
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct LocationLink {
     link: LinkId,
     location: LocationId,
 }
 
 // Define the location struct
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 struct Location {
     name: Name,
     links: FixedSizeList<LocationLink, MAX_LINKS_PER_LOCATION>,
@@ -120,7 +120,7 @@ struct FixedSizeList<T, const N: usize> {
     count: usize,
 }
 
-impl<T: Copy, const N: usize> FixedSizeList<T, N> {
+impl<T: Copy + PartialEq, const N: usize> FixedSizeList<T, N> {
     fn new() -> Self {
         FixedSizeList {
             data: [None; N],
@@ -132,6 +132,30 @@ impl<T: Copy, const N: usize> FixedSizeList<T, N> {
         if self.count < N {
             self.data[self.count] = Some(item);
             self.count += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn remove(&mut self, item: T) -> bool {
+        for i in 0..self.count {
+            if self.data[i] == Some(item) {
+                self.remove_at(i);
+                return true;
+            }
+        }
+        false
+    }
+
+    fn remove_at(&mut self, index: usize) -> bool {
+        if index < self.count {
+            self.data[index] = None;
+            for i in index..self.count - 1 {
+                self.data[i] = self.data[i + 1];
+            }
+            self.count -= 1;
+            self.data[self.count] = None;
             true
         } else {
             false
@@ -387,14 +411,15 @@ pub extern "C" fn run() -> ! {
     };
 
     loop {
-        print_location(&state, 1);
+        let mut entity_id = 1;
+        print_location(&state, entity_id);
         uart_send_str(state.entities.get(1).unwrap().name);
         uart_send_str(b" > ");
         let mut cmdbuf = CommandBuffer::new();
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
 
-        process_command(&mut state, &cmdbuf);
+        process_command(&mut state, entity_id, &cmdbuf);
     }
 }
 
@@ -406,26 +431,207 @@ fn malloc(size: usize) -> *mut u8 {
     }
 }
 
-fn process_command(state: &mut State, cmdbuf: &CommandBuffer) {
+fn process_command(state: &mut State, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();
     if let Some(cmd) = it.next() {
-        let cmd_len = cmd.len();
-        let name: &[u8];
-        unsafe {
-            let mem = malloc(cmd_len);
-            core::ptr::copy_nonoverlapping(cmd.as_ptr(), mem, cmd_len);
-            name = core::slice::from_raw_parts(mem, cmd_len);
+        match cmd {
+            b"n" => action_go(state, entity_id, 1),
+            b"e" => action_go(state, entity_id, 2),
+            b"s" => action_go(state, entity_id, 3),
+            b"w" => action_go(state, entity_id, 4),
+            b"i" => action_inventory(state, entity_id),
+            b"t" => action_take(state, entity_id, &mut it),
+            b"d" => action_drop(state, entity_id, &mut it),
+            b"g" => action_give(state, entity_id, &mut it),
+            _ => uart_send_str(b"not understood\r\n\r\n"),
         }
-        state.objects.add(Object { name: name });
-        state
-            .locations
-            .get_mut(1)
-            .unwrap()
-            .objects
-            .add(state.objects.count - 1);
+
+        // let cmd_len = cmd.len();
+        // let name: &[u8];
+        // unsafe {
+        //     let mem = malloc(cmd_len);
+        //     core::ptr::copy_nonoverlapping(cmd.as_ptr(), mem, cmd_len);
+        //     name = core::slice::from_raw_parts(mem, cmd_len);
+        // }
+        // state.objects.add(Object { name: name });
+        // state
+        //     .locations
+        //     .get_mut(1)
+        //     .unwrap()
+        //     .objects
+        //     .add(state.objects.count - 1);
     } else {
         uart_send_str(b"not understood\r\n");
     }
+}
+
+fn action_give(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let object_name = it.next();
+    if object_name.is_none() {
+        uart_send_str(b"give what?\r\n\r\n");
+        return;
+    }
+    let object_name = object_name.unwrap();
+    let to_entity_name = it.next();
+    if to_entity_name.is_none() {
+        uart_send_str(b"give to who?\r\n\r\n");
+        return;
+    }
+    let to_entity_name = to_entity_name.unwrap();
+    let mut to_entity_id = 0;
+    for i in state
+        .locations
+        .get(state.entities.get(entity_id).unwrap().location)
+        .unwrap()
+        .entities
+        .iter()
+    {
+        let e = state.entities.get(i).unwrap();
+        if e.name == to_entity_name {
+            to_entity_id = i;
+            break;
+        }
+    }
+    if to_entity_id == 0 {
+        uart_send_str(to_entity_name);
+        uart_send_str(b" not here\r\n\r\n");
+        return;
+    }
+    let entity = state.entities.get_mut(entity_id).unwrap();
+    for oid in entity.objects.iter() {
+        let obj = state.objects.get(oid).unwrap();
+        if obj.name != object_name {
+            continue;
+        }
+        // remove object from entity
+        if entity.objects.remove(oid) {
+            // add object to location
+            state
+                .entities
+                .get_mut(to_entity_id)
+                .unwrap()
+                .objects
+                .add(oid);
+        }
+        return;
+    }
+    uart_send_str(b"u don't have ");
+    uart_send_str(object_name);
+    uart_send_str(b"\r\n\r\n");
+}
+
+fn action_take(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let entity = state.entities.get_mut(entity_id).unwrap();
+    let loc = state.locations.get(entity.location).unwrap();
+    let object_name = it.next();
+    if object_name.is_none() {
+        uart_send_str(b"take what?\r\n\r\n");
+        return;
+    }
+    let object_name = object_name.unwrap();
+    for oid in loc.objects.iter() {
+        let obj = state.objects.get(oid).unwrap();
+        if obj.name != object_name {
+            continue;
+        }
+        // remove object from location
+        if state
+            .locations
+            .get_mut(entity.location)
+            .unwrap()
+            .objects
+            .remove(oid)
+        {
+            // add object to entity
+            entity.objects.add(oid);
+        }
+        return;
+    }
+    uart_send_str(object_name);
+    uart_send_str(b" is not here\r\n\r\n");
+}
+
+fn action_drop(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let entity = state.entities.get_mut(entity_id).unwrap();
+    let object_name = it.next();
+    if object_name.is_none() {
+        uart_send_str(b"drop what?\r\n\r\n");
+        return;
+    }
+    let object_name = object_name.unwrap();
+    for oid in entity.objects.iter() {
+        let obj = state.objects.get(oid).unwrap();
+        if obj.name != object_name {
+            continue;
+        }
+        // remove object from entity
+        if entity.objects.remove(oid) {
+            // add object to location
+            state
+                .locations
+                .get_mut(entity.location)
+                .unwrap()
+                .objects
+                .add(oid);
+        }
+        return;
+    }
+    uart_send_str(b"u don't have ");
+    uart_send_str(object_name);
+    uart_send_str(b"\r\n\r\n");
+}
+
+fn action_inventory(state: &State, entity_id: EntityId) {
+    let entity = state.entities.get(entity_id).unwrap();
+    uart_send_str(b"u have: ");
+    let mut i = 0;
+    for oid in entity.objects.iter() {
+        if i != 0 {
+            uart_send_str(b", ");
+        }
+        i += 1;
+        uart_send_str(state.objects.get(oid).unwrap().name);
+    }
+    if i == 0 {
+        uart_send_str(b"nothing");
+    }
+    uart_send_str(b"\r\n\r\n");
+}
+
+fn action_go(state: &mut State, entity_id: EntityId, link_id: LinkId) {
+    let entity = state.entities.get_mut(entity_id).unwrap();
+    let new_loc_id = {
+        let loc = state.locations.get(entity.location).unwrap();
+        let mut new_loc_id: LocationId = 0;
+        for ll in loc.links.iter() {
+            if ll.link == link_id {
+                new_loc_id = ll.location;
+                break;
+            }
+        }
+        new_loc_id
+    };
+    if new_loc_id == 0 {
+        uart_send_str(b"can't go there\r\n\r\n");
+        return;
+    }
+
+    // remove entity from old location
+    state
+        .locations
+        .get_mut(entity.location)
+        .unwrap()
+        .entities
+        .remove(entity_id);
+    // add entity to new location
+    state
+        .locations
+        .get_mut(new_loc_id)
+        .unwrap()
+        .entities
+        .add(entity_id);
+    // update entity location
+    entity.location = new_loc_id;
 }
 
 fn input(cmdbuf: &mut CommandBuffer) {
@@ -473,11 +679,11 @@ fn print_location(state: &State, entity_id: EntityId) {
 
     let mut i = 0;
     for eid in loc.entities.iter() {
-        if i != 0 {
-            uart_send_str(b", ");
-        }
         let e = state.entities.get(eid).unwrap();
         if e != entity {
+            if i != 0 {
+                uart_send_str(b", ");
+            }
             uart_send_str(e.name);
             i += 1;
         }

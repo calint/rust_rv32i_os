@@ -176,6 +176,77 @@ impl<'a, T: Copy, const N: usize> Iterator for FixedSizeListIterator<'a, T, N> {
     }
 }
 
+struct CommandBuffer {
+    buffer: [u8; 80],
+    count: usize,
+}
+
+impl CommandBuffer {
+    fn new() -> Self {
+        CommandBuffer {
+            buffer: [0; 80],
+            count: 0,
+        }
+    }
+
+    fn insert(&mut self, ch: u8) -> bool {
+        if self.count < 80 {
+            self.buffer[self.count] = ch;
+            self.count += 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    fn backspace(&mut self) -> bool {
+        if self.count > 0 {
+            self.count -= 1;
+            true
+        } else {
+            false
+        }
+    }
+
+    // iterate over the buffer returning a slice for each word
+    fn iter_words(&self) -> CommandBufferIterator {
+        CommandBufferIterator {
+            cmdbuf: self,
+            index: 0,
+        }
+    }
+}
+
+// iterator over the command buffer returning a slice for each word
+struct CommandBufferIterator<'a> {
+    cmdbuf: &'a CommandBuffer,
+    index: usize,
+}
+
+impl<'a> Iterator for CommandBufferIterator<'a> {
+    type Item = &'a [u8];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.index < self.cmdbuf.count {
+            let start = self.index;
+            while self.index < self.cmdbuf.count
+                && !self.cmdbuf.buffer[self.index].is_ascii_whitespace()
+            {
+                self.index += 1;
+            }
+            let end = self.index;
+            while self.index < self.cmdbuf.count
+                && self.cmdbuf.buffer[self.index].is_ascii_whitespace()
+            {
+                self.index += 1;
+            }
+            Some(&self.cmdbuf.buffer[start..end])
+        } else {
+            None
+        }
+    }
+}
+
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
@@ -309,35 +380,9 @@ pub extern "C" fn run() -> ! {
         let mut cmdbuf = CommandBuffer::new();
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
-    }
-}
 
-struct CommandBuffer {
-    buffer: FixedSizeList<u8, 80>,
-}
-
-impl CommandBuffer {
-    fn new() -> Self {
-        CommandBuffer {
-            buffer: FixedSizeList::new(),
-        }
-    }
-
-    fn insert(&mut self, ch: u8) -> bool {
-        if self.buffer.count < 80 {
-            self.buffer.add(ch);
-            true
-        } else {
-            false
-        }
-    }
-
-    fn backspace(&mut self) -> bool {
-        if self.buffer.count > 0 {
-            self.buffer.count -= 1;
-            true
-        } else {
-            false
+        for word in cmdbuf.iter_words() {
+            uart_send_str(word);
         }
     }
 }

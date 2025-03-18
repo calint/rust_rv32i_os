@@ -181,16 +181,6 @@ global_asm!(include_str!("startup.s"));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
-    let mut list: FixedSizeList<&[u8], 5> = FixedSizeList::new();
-
-    list.add(b"hello world");
-    list.add(b"echo below:");
-
-    for item in list.iter() {
-        uart_send_str(item);
-        uart_send_str(b"\r\n");
-    }
-
     let mut state = State {
         objects: {
             let mut objects = FixedSizeList::new();
@@ -312,12 +302,37 @@ pub extern "C" fn run() -> ! {
         },
     };
 
-    print_location(&state, 1);
-
-    print_location(&state, 2);
-
     loop {
-        uart_send_char(uart_read_char());
+        print_location(&state, 1);
+        uart_send_str(state.entities.get(1).unwrap().name);
+        uart_send_str(b" > ");
+        let mut command: FixedSizeList<u8, 80> = FixedSizeList::new();
+        input(&mut command);
+        uart_send_str(b"\r\n");
+    }
+}
+
+fn input(command: &mut FixedSizeList<u8, 80>) {
+    loop {
+        let ch = uart_read_char();
+        if ch == b'\r' {
+            break;
+        }
+        if ch == b'\n' {
+            continue;
+        }
+        if ch == 0x7f {
+            if command.count > 0 {
+                command.count -= 1;
+                uart_send_char(0x7f);
+                uart_send_char(b' ');
+                uart_send_char(0x7f);
+            }
+            continue;
+        }
+        if command.add(ch) {
+            uart_send_char(ch);
+        }
     }
 }
 

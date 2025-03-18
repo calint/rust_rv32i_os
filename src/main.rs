@@ -306,13 +306,43 @@ pub extern "C" fn run() -> ! {
         print_location(&state, 1);
         uart_send_str(state.entities.get(1).unwrap().name);
         uart_send_str(b" > ");
-        let mut command: FixedSizeList<u8, 80> = FixedSizeList::new();
-        input(&mut command);
+        let mut cmdbuf = CommandBuffer::new();
+        input(&mut cmdbuf);
         uart_send_str(b"\r\n");
     }
 }
 
-fn input(command: &mut FixedSizeList<u8, 80>) {
+struct CommandBuffer {
+    buffer: FixedSizeList<u8, 80>,
+}
+
+impl CommandBuffer {
+    fn new() -> Self {
+        CommandBuffer {
+            buffer: FixedSizeList::new(),
+        }
+    }
+
+    fn insert(&mut self, ch: u8) -> bool {
+        if self.buffer.count < 80 {
+            self.buffer.add(ch);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn backspace(&mut self) -> bool {
+        if self.buffer.count > 0 {
+            self.buffer.count -= 1;
+            true
+        } else {
+            false
+        }
+    }
+}
+
+fn input(cmdbuf: &mut CommandBuffer) {
     loop {
         let ch = uart_read_char();
         if ch == b'\r' {
@@ -322,15 +352,14 @@ fn input(command: &mut FixedSizeList<u8, 80>) {
             continue;
         }
         if ch == 0x7f {
-            if command.count > 0 {
-                command.count -= 1;
+            if cmdbuf.backspace() {
                 uart_send_char(0x7f);
                 uart_send_char(b' ');
                 uart_send_char(0x7f);
             }
             continue;
         }
-        if command.add(ch) {
+        if cmdbuf.insert(ch) {
             uart_send_char(ch);
         }
     }

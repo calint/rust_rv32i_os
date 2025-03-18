@@ -276,13 +276,13 @@ impl<'a> Iterator for CommandBufferIterator<'a> {
     }
 }
 
-struct Heap {
-    free: *mut u8,
-}
+// struct Heap {
+//     free: *mut u8,
+// }
 
-static mut HEAP: Heap = Heap {
-    free: unsafe { &__heap_start__ as *const u8 as *mut u8 },
-};
+// static mut HEAP: Heap = Heap {
+//     free: unsafe { &__heap_start__ as *const u8 as *mut u8 },
+// };
 
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
@@ -410,26 +410,30 @@ pub extern "C" fn run() -> ! {
         },
     };
 
+    let mut entity_id = 1;
     loop {
-        let mut entity_id = 1;
         print_location(&state, entity_id);
-        uart_send_str(state.entities.get(1).unwrap().name);
+        uart_send_str(state.entities.get(entity_id).unwrap().name);
         uart_send_str(b" > ");
         let mut cmdbuf = CommandBuffer::new();
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
-
         process_command(&mut state, entity_id, &cmdbuf);
+        if entity_id == 1 {
+            entity_id = 2;
+        } else {
+            entity_id = 1;
+        }
     }
 }
 
-fn malloc(size: usize) -> *mut u8 {
-    unsafe {
-        let ret = HEAP.free;
-        HEAP.free = ret.add(size);
-        ret
-    }
-}
+// fn malloc(size: usize) -> *mut u8 {
+//     unsafe {
+//         let ret = HEAP.free;
+//         HEAP.free = ret.add(size);
+//         ret
+//     }
+// }
 
 fn process_command(state: &mut State, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();

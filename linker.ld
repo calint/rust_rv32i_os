@@ -8,4 +8,5 @@ SECTIONS
     *(.bss .bss.*) *(COMMON)
     __bss_end__ = .;
   }
+  __heap_start__ = .;
 }

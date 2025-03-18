@@ -8,6 +8,11 @@ use core::ptr::{read_volatile, write_volatile};
 mod constants; // FPGA addresses
 use constants::*;
 
+unsafe extern "C" {
+    // declared in 'linker.ld'
+    static __heap_start__: u8;
+}
+
 // API
 #[inline(always)]
 fn uart_read_char() -> u8 {
@@ -247,6 +252,14 @@ impl<'a> Iterator for CommandBufferIterator<'a> {
     }
 }
 
+struct Heap {
+    free: *mut u8,
+}
+
+static mut HEAP: Heap = Heap {
+    free: unsafe { &__heap_start__ as *const u8 as *mut u8 },
+};
+
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
@@ -381,18 +394,38 @@ pub extern "C" fn run() -> ! {
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
 
-        let mut it = cmdbuf.iter_words();
-        if let Some(cmd) = it.next() {
-            if cmd == b"bye" {
-                uart_send_str(b"program terminated\r\n");
-                break;
-            }
-        } else {
-            uart_send_str(b"not understood\r\n");
-        }
+        process_command(&mut state, &cmdbuf);
     }
+}
 
-    loop {}
+fn malloc(size: usize) -> *mut u8 {
+    unsafe {
+        let ret = HEAP.free;
+        HEAP.free = ret.add(size);
+        ret
+    }
+}
+
+fn process_command(state: &mut State, cmdbuf: &CommandBuffer) {
+    let mut it = cmdbuf.iter_words();
+    if let Some(cmd) = it.next() {
+        let cmd_len = cmd.len();
+        let name: &[u8];
+        unsafe {
+            let mem = malloc(cmd_len);
+            core::ptr::copy_nonoverlapping(cmd.as_ptr(), mem, cmd_len);
+            name = core::slice::from_raw_parts(mem, cmd_len);
+        }
+        state.objects.add(Object { name: name });
+        state
+            .locations
+            .get_mut(1)
+            .unwrap()
+            .objects
+            .add(state.objects.count - 1);
+    } else {
+        uart_send_str(b"not understood\r\n");
+    }
 }
 
 fn input(cmdbuf: &mut CommandBuffer) {

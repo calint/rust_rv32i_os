@@ -583,7 +583,7 @@ fn action_drop(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIte
         uart_send_str(b"ok\r\n\r\n");
         return;
     }
-    uart_send_str(b"u don't have ");
+    uart_send_str(b"don't have ");
     uart_send_str(object_name);
     uart_send_str(b"\r\n\r\n");
 }
@@ -645,7 +645,7 @@ fn action_give(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIte
         uart_send_str(b"ok\r\n\r\n");
         return;
     }
-    uart_send_str(b"u don't have ");
+    uart_send_str(b"don't have ");
     uart_send_str(object_name);
     uart_send_str(b"\r\n\r\n");
 }

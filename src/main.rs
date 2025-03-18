@@ -346,9 +346,9 @@ fn print_location(state: &State, entity_id: EntityId) {
         if i != 0 {
             uart_send_str(b", ");
         }
-        let ent = state.entities.get(eid).unwrap();
-        if ent != entity {
-            uart_send_str(ent.name);
+        let e = state.entities.get(eid).unwrap();
+        if e != entity {
+            uart_send_str(e.name);
             i += 1;
         }
     }

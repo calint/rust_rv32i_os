@@ -381,10 +381,18 @@ pub extern "C" fn run() -> ! {
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
 
-        for word in cmdbuf.iter_words() {
-            uart_send_str(word);
+        let mut it = cmdbuf.iter_words();
+        if let Some(cmd) = it.next() {
+            if cmd == b"bye" {
+                uart_send_str(b"program terminated\r\n");
+                break;
+            }
+        } else {
+            uart_send_str(b"not understood\r\n");
         }
     }
+
+    loop {}
 }
 
 fn input(cmdbuf: &mut CommandBuffer) {

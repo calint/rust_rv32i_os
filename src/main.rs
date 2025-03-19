@@ -71,13 +71,13 @@ type EntityId = usize;
 type ObjectId = usize;
 
 // Define the object struct
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 struct Object {
     name: Name,
 }
 
 // Define the entity struct
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 struct Entity {
     name: Name,
     location: LocationId,
@@ -85,20 +85,20 @@ struct Entity {
 }
 
 // Define the entity struct
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 struct Link {
     name: Name,
 }
 
 // Define the location_link struct
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 struct LocationLink {
     link: LinkId,
     location: LocationId,
 }
 
 // Define the location struct
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 struct Location {
     name: Name,
     links: FixedSizeList<LocationLink, MAX_LINKS_PER_LOCATION>,
@@ -106,7 +106,7 @@ struct Location {
     entities: FixedSizeList<EntityId, MAX_ENTITIES_PER_LOCATION>,
 }
 
-struct State {
+struct World {
     objects: FixedSizeList<Object, MAX_OBJECTS>,
     entities: FixedSizeList<Entity, MAX_ENTITIES>,
     locations: FixedSizeList<Location, MAX_LOCATIONS>,
@@ -114,7 +114,7 @@ struct State {
 }
 
 // Define the FixedSizeList struct
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 struct FixedSizeList<T, const N: usize> {
     data: [Option<T>; N],
     count: usize,
@@ -288,7 +288,7 @@ global_asm!(include_str!("startup.s"));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
-    let mut state = State {
+    let mut world = World {
         objects: {
             let mut objects = FixedSizeList::new();
             objects.add(Object { name: b"" });
@@ -411,13 +411,13 @@ pub extern "C" fn run() -> ! {
 
     let mut entity_id = 1;
     loop {
-        print_location(&state, entity_id);
-        uart_send_str(state.entities.get(entity_id).unwrap().name);
+        print_location(&world, entity_id);
+        uart_send_str(world.entities.get(entity_id).unwrap().name);
         uart_send_str(b" > ");
         let mut cmdbuf = CommandBuffer::new();
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
-        process_command(&mut state, entity_id, &cmdbuf);
+        process_command(&mut world, entity_id, &cmdbuf);
         if entity_id == 1 {
             entity_id = 2;
         } else {
@@ -434,7 +434,7 @@ pub extern "C" fn run() -> ! {
 //     }
 // }
 
-fn process_command(state: &mut State, entity_id: EntityId, cmdbuf: &CommandBuffer) {
+fn process_command(state: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();
     match it.next() {
         Some(b"n") => action_go(state, entity_id, 1),
@@ -464,7 +464,7 @@ fn process_command(state: &mut State, entity_id: EntityId, cmdbuf: &CommandBuffe
     //     .add(state.objects.count - 1);
 }
 
-fn action_go(state: &mut State, entity_id: EntityId, link_id: LinkId) {
+fn action_go(state: &mut World, entity_id: EntityId, link_id: LinkId) {
     let entity = state.entities.get_mut(entity_id).unwrap();
     let new_loc_id = {
         let loc = state.locations.get(entity.location).unwrap();
@@ -506,7 +506,7 @@ fn action_go(state: &mut State, entity_id: EntityId, link_id: LinkId) {
     entity.location = new_loc_id;
 }
 
-fn action_inventory(state: &State, entity_id: EntityId) {
+fn action_inventory(state: &World, entity_id: EntityId) {
     let entity = state.entities.get(entity_id).unwrap();
     uart_send_str(b"u have: ");
     let mut i = 0;
@@ -523,7 +523,7 @@ fn action_inventory(state: &State, entity_id: EntityId) {
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_take(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_take(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let entity = state.entities.get_mut(entity_id).unwrap();
     let loc = state.locations.get_mut(entity.location).unwrap();
     let object_name = it.next();
@@ -554,7 +554,7 @@ fn action_take(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIte
     uart_send_str(b" is not here\r\n\r\n");
 }
 
-fn action_drop(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_drop(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let entity = state.entities.get_mut(entity_id).unwrap();
     let object_name = it.next();
     if object_name.is_none() {
@@ -591,7 +591,7 @@ fn action_drop(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIte
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_give(state: &mut State, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_give(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let object_name = it.next();
     if object_name.is_none() {
         uart_send_str(b"give what?\r\n\r\n");
@@ -676,7 +676,7 @@ fn input(cmdbuf: &mut CommandBuffer) {
     }
 }
 
-fn print_location(state: &State, entity_id: EntityId) {
+fn print_location(state: &World, entity_id: EntityId) {
     let entity = state.entities.get(entity_id).unwrap();
     let loc = state.locations.get(entity.location).unwrap();
     uart_send_str(b"u r in ");

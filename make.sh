@@ -13,6 +13,9 @@ $OBJDUMP --source-comment -Mnumeric,no-aliases -Sr $BIN > firmware.lst
 #$OBJDUMP --source-comment -Sr $BIN > firmware.lst
 $OBJDUMP -s --section=.rodata --section=.srodata --section=.data --section=.sdata --section=.bss --section=.sbss $BIN > firmware.dat || true
 
+echo " * firmware built"
+ls -l --color firmware.bin
+
 # run
 echo " * build emulator"
 emulator/make.sh

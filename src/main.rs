@@ -87,10 +87,12 @@ fn memory_heap_start() -> u32 {
     unsafe { &__heap_start__ as *const u8 as u32 }
 }
 
-fn sdcard_read_blocking(sector: usize, buffer_512_bytes: &mut [u8; 512]) {
+fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8; 512]) {
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
-        write_volatile(SDCARD_READ_SECTOR as *mut i32, sector as i32);
+        write_volatile(SDCARD_READ_SECTOR as *mut u32, sector * 512);
+        // note: hardware expects multiple of 512 for sector
+        //       sector 0: 0, 1: 512, 2: 1024 etc
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
         for i in 0..512 {
             buffer_512_bytes[i] = read_volatile(SDCARD_NEXT_BYTE as *const u8);
@@ -98,13 +100,15 @@ fn sdcard_read_blocking(sector: usize, buffer_512_bytes: &mut [u8; 512]) {
     }
 }
 
-fn sdcard_write_blocking(sector: usize, buffer_512_bytes: &[u8; 512]) {
+fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8; 512]) {
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
         for i in 0..512 {
             write_volatile(SDCARD_NEXT_BYTE as *mut u8, buffer_512_bytes[i]);
         }
-        write_volatile(SDCARD_WRITE_SECTOR as *mut i32, sector as i32);
+        write_volatile(SDCARD_WRITE_SECTOR as *mut u32, sector * 512);
+        // note: hardware expects multiple of 512 for sector
+        //       sector 0: 0, 1: 512, 2: 1024 etc
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
     }
 }
@@ -844,13 +848,13 @@ fn action_help() {
     uart_send_str(HELP);
 }
 
-fn string_to_u32(number_as_str: &[u8]) -> usize {
+fn string_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;
     for &ch in number_as_str {
         if ch < '0' as u8 || ch > '9' as u8 {
             return num;
         }
-        num = num * 10 + (ch - '0' as u8) as usize;
+        num = num * 10 + (ch - '0' as u8) as u32;
     }
     num
 }

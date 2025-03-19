@@ -6,18 +6,9 @@ edition = "2024"
 [[bin]]
 name = "firmware"
 path = "src/main.rs"
-
-[profile.dev]
-panic = "abort"
-debug = true
+test = false
+bench = false
 
 [profile.release]
-panic = "abort"
 opt-level = "z" # optimize for size
-debug = true    # include debugging symbols
-
-[dependencies]
-# No dependencies!
-
-[features]
-# No default features
+debug = true    # include debugging symbols to generate better firmware.lst

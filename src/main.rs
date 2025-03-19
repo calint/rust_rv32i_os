@@ -1,6 +1,7 @@
 #![no_std]
 #![no_main]
 
+use core::arch::asm;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use core::ptr::{read_volatile, write_volatile};
@@ -32,6 +33,29 @@ fn uart_send_char(ch: u8) {
     unsafe {
         while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
         write_volatile(UART_OUT_ADDR as *mut i32, ch as i32);
+    }
+}
+
+fn uart_send_hex_u32(i: u32, separate_half_words: bool) {
+    uart_send_hex_byte((i >> 24) as u8);
+    uart_send_hex_byte((i >> 16) as u8);
+    if separate_half_words {
+        uart_send_char(b':');
+    }
+    uart_send_hex_byte((i >> 8) as u8);
+    uart_send_hex_byte(i as u8);
+}
+
+fn uart_send_hex_byte(ch: u8) {
+    uart_send_hex_nibble(ch >> 4);
+    uart_send_hex_nibble(ch & 0x0f);
+}
+
+fn uart_send_hex_nibble(nibble: u8) {
+    if nibble < 10 {
+        uart_send_char(b'0' + nibble);
+    } else {
+        uart_send_char(b'A' + (nibble - 10));
     }
 }
 
@@ -434,17 +458,18 @@ pub extern "C" fn run() -> ! {
 //     }
 // }
 
-fn process_command(state: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
+fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();
     match it.next() {
-        Some(b"n") => action_go(state, entity_id, 1),
-        Some(b"e") => action_go(state, entity_id, 2),
-        Some(b"s") => action_go(state, entity_id, 3),
-        Some(b"w") => action_go(state, entity_id, 4),
-        Some(b"i") => action_inventory(state, entity_id),
-        Some(b"t") => action_take(state, entity_id, &mut it),
-        Some(b"d") => action_drop(state, entity_id, &mut it),
-        Some(b"g") => action_give(state, entity_id, &mut it),
+        Some(b"n") => action_go(world, entity_id, 1),
+        Some(b"e") => action_go(world, entity_id, 2),
+        Some(b"s") => action_go(world, entity_id, 3),
+        Some(b"w") => action_go(world, entity_id, 4),
+        Some(b"i") => action_inventory(world, entity_id),
+        Some(b"t") => action_take(world, entity_id, &mut it),
+        Some(b"d") => action_drop(world, entity_id, &mut it),
+        Some(b"g") => action_give(world, entity_id, &mut it),
+        Some(b"sp") => action_stack_pointer(),
         _ => uart_send_str(b"not understood\r\n\r\n"),
     }
 
@@ -464,10 +489,10 @@ fn process_command(state: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffe
     //     .add(state.objects.count - 1);
 }
 
-fn action_go(state: &mut World, entity_id: EntityId, link_id: LinkId) {
-    let entity = state.entities.get_mut(entity_id).unwrap();
+fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
+    let entity = world.entities.get_mut(entity_id).unwrap();
     let new_loc_id = {
-        let loc = state.locations.get(entity.location).unwrap();
+        let loc = world.locations.get(entity.location).unwrap();
         let mut new_loc_id = 0;
         for ll in loc.links.iter() {
             if ll.link == link_id {
@@ -483,7 +508,7 @@ fn action_go(state: &mut World, entity_id: EntityId, link_id: LinkId) {
     }
 
     // add entity to new location
-    if !state
+    if !world
         .locations
         .get_mut(new_loc_id)
         .unwrap()
@@ -493,7 +518,7 @@ fn action_go(state: &mut World, entity_id: EntityId, link_id: LinkId) {
         return;
     }
     // remove entity from old location
-    if !state
+    if !world
         .locations
         .get_mut(entity.location)
         .unwrap()
@@ -506,8 +531,8 @@ fn action_go(state: &mut World, entity_id: EntityId, link_id: LinkId) {
     entity.location = new_loc_id;
 }
 
-fn action_inventory(state: &World, entity_id: EntityId) {
-    let entity = state.entities.get(entity_id).unwrap();
+fn action_inventory(world: &World, entity_id: EntityId) {
+    let entity = world.entities.get(entity_id).unwrap();
     uart_send_str(b"u have: ");
     let mut i = 0;
     for oid in entity.objects.iter() {
@@ -515,7 +540,7 @@ fn action_inventory(state: &World, entity_id: EntityId) {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_str(state.objects.get(oid).unwrap().name);
+        uart_send_str(world.objects.get(oid).unwrap().name);
     }
     if i == 0 {
         uart_send_str(b"nothing");
@@ -523,9 +548,9 @@ fn action_inventory(state: &World, entity_id: EntityId) {
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_take(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let entity = state.entities.get_mut(entity_id).unwrap();
-    let loc = state.locations.get_mut(entity.location).unwrap();
+fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let entity = world.entities.get_mut(entity_id).unwrap();
+    let loc = world.locations.get_mut(entity.location).unwrap();
     let object_name = it.next();
     if object_name.is_none() {
         uart_send_str(b"take what?\r\n\r\n");
@@ -533,7 +558,7 @@ fn action_take(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     }
     let object_name = object_name.unwrap();
     for oid in loc.objects.iter() {
-        let obj = state.objects.get(oid).unwrap();
+        let obj = world.objects.get(oid).unwrap();
         if obj.name != object_name {
             continue;
         }
@@ -554,8 +579,8 @@ fn action_take(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     uart_send_str(b" is not here\r\n\r\n");
 }
 
-fn action_drop(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let entity = state.entities.get_mut(entity_id).unwrap();
+fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let entity = world.entities.get_mut(entity_id).unwrap();
     let object_name = it.next();
     if object_name.is_none() {
         uart_send_str(b"drop what?\r\n\r\n");
@@ -563,7 +588,7 @@ fn action_drop(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     }
     let object_name = object_name.unwrap();
     for oid in entity.objects.iter() {
-        let obj = state.objects.get(oid).unwrap();
+        let obj = world.objects.get(oid).unwrap();
         if obj.name != object_name {
             continue;
         }
@@ -573,7 +598,7 @@ fn action_drop(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             return;
         }
         // add object to location
-        if !state
+        if !world
             .locations
             .get_mut(entity.location)
             .unwrap()
@@ -591,7 +616,7 @@ fn action_drop(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_give(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let object_name = it.next();
     if object_name.is_none() {
         uart_send_str(b"give what?\r\n\r\n");
@@ -605,14 +630,14 @@ fn action_give(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     }
     let to_entity_name = to_entity_name.unwrap();
     let mut to_entity_id = 0;
-    for i in state
+    for i in world
         .locations
-        .get(state.entities.get(entity_id).unwrap().location)
+        .get(world.entities.get(entity_id).unwrap().location)
         .unwrap()
         .entities
         .iter()
     {
-        let e = state.entities.get(i).unwrap();
+        let e = world.entities.get(i).unwrap();
         if e.name == to_entity_name {
             to_entity_id = i;
             break;
@@ -623,9 +648,9 @@ fn action_give(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         uart_send_str(b" not here\r\n\r\n");
         return;
     }
-    let entity = state.entities.get_mut(entity_id).unwrap();
+    let entity = world.entities.get_mut(entity_id).unwrap();
     for oid in entity.objects.iter() {
-        let obj = state.objects.get(oid).unwrap();
+        let obj = world.objects.get(oid).unwrap();
         if obj.name != object_name {
             continue;
         }
@@ -635,7 +660,7 @@ fn action_give(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             return;
         }
         // add object to location
-        if !state
+        if !world
             .entities
             .get_mut(to_entity_id)
             .unwrap()
@@ -650,6 +675,19 @@ fn action_give(state: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     }
     uart_send_str(b"don't have ");
     uart_send_str(object_name);
+    uart_send_str(b"\r\n\r\n");
+}
+
+fn action_stack_pointer() {
+    uart_send_str(b"stack pointer: ");
+    let sp: u32;
+    unsafe {
+        asm!(
+            "mv {0}, sp", // Move the stack pointer to the output variable
+            out(reg) sp,
+        );
+    }
+    uart_send_hex_u32(sp, true);
     uart_send_str(b"\r\n\r\n");
 }
 
@@ -676,9 +714,9 @@ fn input(cmdbuf: &mut CommandBuffer) {
     }
 }
 
-fn print_location(state: &World, entity_id: EntityId) {
-    let entity = state.entities.get(entity_id).unwrap();
-    let loc = state.locations.get(entity.location).unwrap();
+fn print_location(world: &World, entity_id: EntityId) {
+    let entity = world.entities.get(entity_id).unwrap();
+    let loc = world.locations.get(entity.location).unwrap();
     uart_send_str(b"u r in ");
     uart_send_str(loc.name);
 
@@ -689,7 +727,7 @@ fn print_location(state: &World, entity_id: EntityId) {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_str(state.objects.get(oid).unwrap().name);
+        uart_send_str(world.objects.get(oid).unwrap().name);
     }
     if i == 0 {
         uart_send_str(b"nothing");
@@ -698,7 +736,7 @@ fn print_location(state: &World, entity_id: EntityId) {
 
     let mut i = 0;
     for eid in loc.entities.iter() {
-        let e = state.entities.get(eid).unwrap();
+        let e = world.entities.get(eid).unwrap();
         if e != entity {
             if i != 0 {
                 uart_send_str(b", ");
@@ -718,7 +756,7 @@ fn print_location(state: &World, entity_id: EntityId) {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_str(state.links.get(lid.link).unwrap().name);
+        uart_send_str(world.links.get(lid.link).unwrap().name);
     }
     if i == 0 {
         uart_send_str(b"none");

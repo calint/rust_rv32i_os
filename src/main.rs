@@ -683,7 +683,7 @@ fn action_stack_pointer() {
     let sp: u32;
     unsafe {
         asm!(
-            "mv {0}, sp", // Move the stack pointer to the output variable
+            "mv {0}, sp",
             out(reg) sp,
         );
     }

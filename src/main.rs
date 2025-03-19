@@ -6,15 +6,18 @@ use core::arch::global_asm;
 use core::panic::PanicInfo;
 use core::ptr::{read_volatile, write_volatile};
 
+//
+// unsafe rust hardware interface
+//
+
 mod constants; // FPGA addresses
 use constants::*;
 
 unsafe extern "C" {
-    // declared in 'linker.ld'
-    static __heap_start__: u8;
+    // declared in 'linker.ld
+    unsafe static __heap_start__: u8;
 }
 
-// API
 #[inline(always)]
 fn uart_read_char() -> u8 {
     loop {
@@ -35,6 +38,47 @@ fn uart_send_char(ch: u8) {
         write_volatile(UART_OUT_ADDR as *mut i32, ch as i32);
     }
 }
+
+#[inline(always)]
+fn sdcard_status() -> i32 {
+    unsafe { read_volatile(SDCARD_STATUS as *const i32) }
+}
+
+#[inline(always)]
+fn led_set(low_being_on_bits: u8) {
+    unsafe { write_volatile(LED as *mut i32, low_being_on_bits as i32) }
+}
+
+#[inline(always)]
+fn memory_heap_start() -> u32 {
+    unsafe { &__heap_start__ as *const u8 as u32 }
+}
+
+fn sdcard_read_blocking(sector: usize, buffer_512_bytes: &mut [u8; 512]) {
+    unsafe {
+        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
+        write_volatile(SDCARD_READ_SECTOR as *mut i32, sector as i32);
+        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
+        for i in 0..512 {
+            buffer_512_bytes[i] = read_volatile(SDCARD_NEXT_BYTE as *const u8);
+        }
+    }
+}
+
+fn sdcard_write_blocking(sector: usize, buffer_512_bytes: &[u8; 512]) {
+    unsafe {
+        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
+        for i in 0..512 {
+            write_volatile(SDCARD_NEXT_BYTE as *mut u8, buffer_512_bytes[i]);
+        }
+        write_volatile(SDCARD_WRITE_SECTOR as *mut i32, sector as i32);
+        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
+    }
+}
+
+//
+// safe rust below
+//
 
 fn uart_send_hex_u32(i: u32, separate_half_words: bool) {
     uart_send_hex_byte((i >> 24) as u8);
@@ -78,14 +122,14 @@ fn uart_send_str(str: &[u8]) {
     }
 }
 
-const MAX_OBJECTS: usize = 128;
-const MAX_ENTITIES: usize = 128;
-const MAX_LOCATIONS: usize = 128;
-const MAX_LINKS: usize = 128;
-const MAX_LINKS_PER_LOCATION: usize = 128;
-const MAX_OBJECTS_PER_LOCATION: usize = 128;
-const MAX_ENTITIES_PER_LOCATION: usize = 128;
-const MAX_OBJECTS_PER_ENTITY: usize = 128;
+const MAX_OBJECTS: usize = 32;
+const MAX_ENTITIES: usize = 32;
+const MAX_LOCATIONS: usize = 32;
+const MAX_LINKS: usize = 32;
+const MAX_LINKS_PER_LOCATION: usize = 32;
+const MAX_OBJECTS_PER_LOCATION: usize = 32;
+const MAX_ENTITIES_PER_LOCATION: usize = 32;
+const MAX_OBJECTS_PER_ENTITY: usize = 32;
 
 // Define type aliases
 type Name = &'static [u8];
@@ -273,6 +317,12 @@ impl CommandBuffer {
 struct CommandBufferIterator<'a> {
     cmdbuf: &'a CommandBuffer,
     index: usize,
+}
+
+impl<'a> CommandBufferIterator<'a> {
+    fn rest(&self) -> &'a [u8] {
+        &self.cmdbuf.buffer[self.index..self.cmdbuf.count]
+    }
 }
 
 impl<'a> Iterator for CommandBufferIterator<'a> {
@@ -469,7 +519,11 @@ fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffe
         Some(b"t") => action_take(world, entity_id, &mut it),
         Some(b"d") => action_drop(world, entity_id, &mut it),
         Some(b"g") => action_give(world, entity_id, &mut it),
-        Some(b"sp") => action_stack_pointer(),
+        Some(b"mi") => action_memory_info(),
+        Some(b"sds") => action_sdcard_status(),
+        Some(b"sdr") => action_sdcard_read(&mut it),
+        Some(b"sdw") => action_sdcard_write(&mut it),
+        Some(b"led") => action_led_set(&mut it),
         _ => uart_send_str(b"not understood\r\n\r\n"),
     }
 
@@ -678,7 +732,13 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_stack_pointer() {
+fn action_memory_info() {
+    uart_send_str(b"heap start: ");
+    uart_send_hex_u32(memory_heap_start(), true);
+    uart_send_str(b"\r\n");
+    uart_send_str(b"memory end: ");
+    uart_send_hex_u32(MEMORY_END, true);
+    uart_send_str(b"\r\n");
     uart_send_str(b"stack pointer: ");
     let sp: u32;
     unsafe {
@@ -689,6 +749,69 @@ fn action_stack_pointer() {
     }
     uart_send_hex_u32(sp, true);
     uart_send_str(b"\r\n\r\n");
+}
+
+fn action_sdcard_status() {
+    uart_send_str(b"SDCARD_STATUS: 0x");
+    uart_send_hex_u32(sdcard_status() as u32, true);
+    uart_send_str(b"\r\n\r\n");
+}
+
+fn action_sdcard_read(it: &mut CommandBufferIterator) {
+    let sector = match it.next() {
+        Some(sector) => string_to_u32(sector),
+        None => {
+            uart_send_str(b"what sector\r\n\r\n");
+            return;
+        }
+    };
+
+    let mut buf = [0; 512];
+    sdcard_read_blocking(sector, &mut buf);
+    for i in 0..512 {
+        uart_send_char(buf[i]);
+    }
+    uart_send_str(b"\r\n\r\n");
+}
+
+fn action_sdcard_write(it: &mut CommandBufferIterator) {
+    let sector = match it.next() {
+        Some(sector) => string_to_u32(sector),
+        None => {
+            uart_send_str(b"what sector\r\n\r\n");
+            return;
+        }
+    };
+
+    let rest = it.rest();
+    let len = rest.len().min(512);
+    let mut buf = [0u8; 512];
+    buf[..len].copy_from_slice(&rest[..len]);
+    sdcard_write_blocking(sector, &buf);
+    uart_send_str(b"ok\r\n\r\n");
+}
+
+fn action_led_set(it: &mut CommandBufferIterator) {
+    let bits = match it.next() {
+        Some(bits) => string_to_u32(bits),
+        None => {
+            uart_send_str(b"which leds in bits 0 being on\r\n\r\n");
+            return;
+        }
+    };
+
+    led_set(bits as u8);
+}
+
+fn string_to_u32(number_as_str: &[u8]) -> usize {
+    let mut num = 0;
+    for &ch in number_as_str {
+        if ch < '0' as u8 || ch > '9' as u8 {
+            return num;
+        }
+        num = num * 10 + (ch - '0' as u8) as usize;
+    }
+    num
 }
 
 fn input(cmdbuf: &mut CommandBuffer) {

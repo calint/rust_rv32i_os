@@ -1,6 +1,39 @@
 #![no_std]
 #![no_main]
 
+static HELLO: &[u8] = b"welcome to adventure #5\r\n    type 'help'\r\n\r\n";
+
+static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
+:         frameless osca          oOo.oOo\r\n\
+:      __________________________  .oOo.\r\n\
+:     O\\        -_   .. \\    ___ \\   ||\r\n\
+:    O  \\                \\   \\ \\\\ \\ //\\\\\r\n\
+:   o   /\\    risc-v      \\   \\|\\\\ \\\r\n\
+:  .   //\\\\    fpga        \\   ||   \\\r\n\
+:   .  \\\\/\\\\    rust        \\  \\_\\   \\\r\n\
+:    .  \\\\//\\________________\\________\\\r\n\
+:     .  \\/_/, \\\\\\--\\\\..\\\\ - /\\_____  /\r\n\
+:      .  \\ \\ . \\\\\\__\\\\__\\\\./ / \\__/ /\r\n\
+:       .  \\ \\ , \\    \\\\ ///./ ,/./ /\r\n\
+:        .  \\ \\___\\ sticky notes / /\r\n\
+:         .  \\/\\________________/ /\r\n\
+:    ./\\.  . / /                 /\r\n\
+:    /--\\   .\\/_________________/\r\n\
+:         ___.                 .\r\n\
+:        |o o|. . . . . . . . .\r\n\
+:        /| |\\ . .\r\n\
+:    ____       . .\r\n\
+:   |O  O|       . .\r\n\
+:   |_ -_|        . .\r\n\
+:    /||\\\r\n\
+:      ___\r\n\
+:     /- -\\\r\n\
+:    /\\_-_/\\\r\n\
+:      | |\r\n\
+\r\n";
+
+static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  help: this message\r\n\r\n";
+
 use core::arch::asm;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
@@ -483,6 +516,9 @@ pub extern "C" fn run() -> ! {
         },
     };
 
+    uart_send_str(ASCII_ART);
+    uart_send_str(HELLO);
+
     let mut entity_id = 1;
     loop {
         print_location(&world, entity_id);
@@ -519,11 +555,12 @@ fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffe
         Some(b"t") => action_take(world, entity_id, &mut it),
         Some(b"d") => action_drop(world, entity_id, &mut it),
         Some(b"g") => action_give(world, entity_id, &mut it),
-        Some(b"mi") => action_memory_info(),
         Some(b"sds") => action_sdcard_status(),
         Some(b"sdr") => action_sdcard_read(&mut it),
         Some(b"sdw") => action_sdcard_write(&mut it),
+        Some(b"mi") => action_memory_info(),
         Some(b"led") => action_led_set(&mut it),
+        Some(b"help") => action_help(),
         _ => uart_send_str(b"not understood\r\n\r\n"),
     }
 
@@ -801,6 +838,10 @@ fn action_led_set(it: &mut CommandBufferIterator) {
     };
 
     led_set(bits as u8);
+}
+
+fn action_help() {
+    uart_send_str(HELP);
 }
 
 fn string_to_u32(number_as_str: &[u8]) -> usize {

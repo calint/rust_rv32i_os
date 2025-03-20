@@ -58,13 +58,11 @@ type LinkId = usize;
 type EntityId = usize;
 type ObjectId = usize;
 
-// Define the object struct
 #[derive(Copy, Clone, PartialEq)]
 struct Object {
     name: Name,
 }
 
-// Define the entity struct
 #[derive(Copy, Clone, PartialEq)]
 struct Entity {
     name: Name,
@@ -72,20 +70,17 @@ struct Entity {
     objects: FixedSizeList<ObjectId, MAX_OBJECTS_PER_ENTITY>,
 }
 
-// Define the entity struct
 #[derive(Copy, Clone, PartialEq)]
 struct Link {
     name: Name,
 }
 
-// Define the location_link struct
 #[derive(Copy, Clone, PartialEq)]
 struct LocationLink {
     link: LinkId,
     location: LocationId,
 }
 
-// Define the location struct
 #[derive(Copy, Clone, PartialEq)]
 struct Location {
     name: Name,

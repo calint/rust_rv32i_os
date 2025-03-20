@@ -2,6 +2,7 @@
 
 mod constants;
 pub mod fixed_size_list;
+pub mod gen_list;
 pub mod lib_unsafe;
 
 use lib_unsafe::uart_send_char;

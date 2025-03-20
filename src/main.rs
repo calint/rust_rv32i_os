@@ -34,126 +34,13 @@ static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
 
 static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  help: this message\r\n\r\n";
 
-use core::arch::asm;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use core::ptr::{read_volatile, write_volatile};
 
-//
-// unsafe rust hardware interface
-//
-
-mod constants; // FPGA addresses
-use constants::*;
-
-unsafe extern "C" {
-    // declared in 'linker.ld
-    unsafe static __heap_start__: u8;
-}
-
-#[inline(always)]
-fn uart_read_char() -> u8 {
-    loop {
-        unsafe {
-            let input = read_volatile(UART_IN_ADDR as *const i32);
-            if input == -1 {
-                continue;
-            }
-            return input as u8;
-        }
-    }
-}
-
-#[inline(always)]
-fn uart_send_char(ch: u8) {
-    unsafe {
-        while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
-        write_volatile(UART_OUT_ADDR as *mut i32, ch as i32);
-    }
-}
-
-#[inline(always)]
-fn sdcard_status() -> i32 {
-    unsafe { read_volatile(SDCARD_STATUS as *const i32) }
-}
-
-#[inline(always)]
-fn led_set(low_being_on_bits: u8) {
-    unsafe { write_volatile(LED as *mut i32, low_being_on_bits as i32) }
-}
-
-#[inline(always)]
-fn memory_heap_start() -> u32 {
-    unsafe { &__heap_start__ as *const u8 as u32 }
-}
-
-fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8; 512]) {
-    unsafe {
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
-        write_volatile(SDCARD_READ_SECTOR as *mut u32, sector);
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
-        for i in 0..512 {
-            buffer_512_bytes[i] = read_volatile(SDCARD_NEXT_BYTE as *const u8);
-        }
-    }
-}
-
-fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8; 512]) {
-    unsafe {
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
-        for i in 0..512 {
-            write_volatile(SDCARD_NEXT_BYTE as *mut u8, buffer_512_bytes[i]);
-        }
-        write_volatile(SDCARD_WRITE_SECTOR as *mut u32, sector);
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
-    }
-}
-
-//
-// safe rust below
-//
-
-fn uart_send_hex_u32(i: u32, separate_half_words: bool) {
-    uart_send_hex_byte((i >> 24) as u8);
-    uart_send_hex_byte((i >> 16) as u8);
-    if separate_half_words {
-        uart_send_char(b':');
-    }
-    uart_send_hex_byte((i >> 8) as u8);
-    uart_send_hex_byte(i as u8);
-}
-
-fn uart_send_hex_byte(ch: u8) {
-    uart_send_hex_nibble(ch >> 4);
-    uart_send_hex_nibble(ch & 0x0f);
-}
-
-fn uart_send_hex_nibble(nibble: u8) {
-    if nibble < 10 {
-        uart_send_char(b'0' + nibble);
-    } else {
-        uart_send_char(b'A' + (nibble - 10));
-    }
-}
-
-// #[inline(always)]
-// fn uart_send_cstr(cstr: *const u8) {
-//     unsafe {
-//         let mut ptr = cstr;
-//         while *ptr != 0 {
-//             while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
-//             write_volatile(UART_OUT_ADDR as *mut i32, *ptr as i32);
-//             ptr = ptr.offset(1);
-//         }
-//     }
-// }
-
-#[inline(always)]
-fn uart_send_str(str: &[u8]) {
-    for &byte in str {
-        uart_send_char(byte);
-    }
-}
+extern crate lib;
+use lib::fixed_size_list::FixedSizeList;
+use lib::lib_unsafe::*;
+use lib::*;
 
 const MAX_OBJECTS: usize = 32;
 const MAX_ENTITIES: usize = 32;
@@ -212,97 +99,6 @@ struct World {
     entities: FixedSizeList<Entity, MAX_ENTITIES>,
     locations: FixedSizeList<Location, MAX_LOCATIONS>,
     links: FixedSizeList<Link, MAX_LINKS>,
-}
-
-// Define the FixedSizeList struct
-#[derive(Copy, Clone, PartialEq)]
-struct FixedSizeList<T, const N: usize> {
-    data: [Option<T>; N],
-    count: usize,
-}
-
-impl<T: Copy + PartialEq, const N: usize> FixedSizeList<T, N> {
-    fn new() -> Self {
-        FixedSizeList {
-            data: [None; N],
-            count: 0,
-        }
-    }
-
-    fn add(&mut self, item: T) -> bool {
-        if self.count < N {
-            self.data[self.count] = Some(item);
-            self.count += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn remove(&mut self, item: T) -> bool {
-        for i in 0..self.count {
-            if self.data[i] == Some(item) {
-                return self.remove_at(i);
-            }
-        }
-        false
-    }
-
-    fn remove_at(&mut self, index: usize) -> bool {
-        if index < self.count {
-            self.data[index] = None;
-            for i in index..self.count - 1 {
-                self.data[i] = self.data[i + 1];
-            }
-            self.count -= 1;
-            self.data[self.count] = None;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn get(&self, index: usize) -> Option<&T> {
-        if index < self.count {
-            self.data[index].as_ref()
-        } else {
-            None
-        }
-    }
-
-    fn get_mut(&mut self, index: usize) -> Option<&mut T> {
-        if index < self.count {
-            self.data[index].as_mut()
-        } else {
-            None
-        }
-    }
-
-    fn iter(&self) -> FixedSizeListIterator<T, N> {
-        FixedSizeListIterator {
-            list: self,
-            index: 0,
-        }
-    }
-}
-
-struct FixedSizeListIterator<'a, T, const N: usize> {
-    list: &'a FixedSizeList<T, N>,
-    index: usize,
-}
-
-impl<'a, T: Copy, const N: usize> Iterator for FixedSizeListIterator<'a, T, N> {
-    type Item = T;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.list.count {
-            let item = self.list.data[self.index];
-            self.index += 1;
-            item
-        } else {
-            None
-        }
-    }
 }
 
 struct CommandBuffer {
@@ -381,14 +177,6 @@ impl<'a> Iterator for CommandBufferIterator<'a> {
         }
     }
 }
-
-// struct Heap {
-//     free: *mut u8,
-// }
-
-// static mut HEAP: Heap = Heap {
-//     free: unsafe { &__heap_start__ as *const u8 as *mut u8 },
-// };
 
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
@@ -774,17 +562,10 @@ fn action_memory_info() {
     uart_send_hex_u32(memory_heap_start(), true);
     uart_send_str(b"\r\n");
     uart_send_str(b"memory end: ");
-    uart_send_hex_u32(MEMORY_END, true);
+    uart_send_hex_u32(memory_end(), true);
     uart_send_str(b"\r\n");
     uart_send_str(b"stack pointer: ");
-    let sp: u32;
-    unsafe {
-        asm!(
-            "mv {0}, sp",
-            out(reg) sp,
-        );
-    }
-    uart_send_hex_u32(sp, true);
+    uart_send_hex_u32(memory_stack_pointer(), true);
     uart_send_str(b"\r\n\r\n");
 }
 

@@ -90,9 +90,7 @@ fn memory_heap_start() -> u32 {
 fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8; 512]) {
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
-        write_volatile(SDCARD_READ_SECTOR as *mut u32, sector * 512);
-        // note: hardware expects multiple of 512 for sector
-        //       sector 0: 0, 1: 512, 2: 1024 etc
+        write_volatile(SDCARD_READ_SECTOR as *mut u32, sector);
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
         for i in 0..512 {
             buffer_512_bytes[i] = read_volatile(SDCARD_NEXT_BYTE as *const u8);
@@ -106,9 +104,7 @@ fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8; 512]) {
         for i in 0..512 {
             write_volatile(SDCARD_NEXT_BYTE as *mut u8, buffer_512_bytes[i]);
         }
-        write_volatile(SDCARD_WRITE_SECTOR as *mut u32, sector * 512);
-        // note: hardware expects multiple of 512 for sector
-        //       sector 0: 0, 1: 512, 2: 1024 etc
+        write_volatile(SDCARD_WRITE_SECTOR as *mut u32, sector);
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
     }
 }

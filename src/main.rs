@@ -39,6 +39,7 @@ mod lib {
     pub mod api_unsafe;
     pub mod constants;
     pub mod fixed_size_list;
+    // pub mod gen_list;
 }
 
 use core::arch::global_asm;
@@ -56,7 +57,6 @@ const MAX_OBJECTS_PER_LOCATION: usize = 32;
 const MAX_ENTITIES_PER_LOCATION: usize = 32;
 const MAX_OBJECTS_PER_ENTITY: usize = 32;
 
-// Define type aliases
 type Name = &'static [u8];
 type LocationId = usize;
 type LinkId = usize;
@@ -247,14 +247,6 @@ pub extern "C" fn run() -> ! {
     }
 }
 
-// fn malloc(size: usize) -> *mut u8 {
-//     unsafe {
-//         let ret = HEAP.free;
-//         HEAP.free = ret.add(size);
-//         ret
-//     }
-// }
-
 fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();
     match it.next() {
@@ -274,21 +266,6 @@ fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffe
         Some(b"help") => action_help(),
         _ => uart_send_str(b"not understood\r\n\r\n"),
     }
-
-    // let cmd_len = cmd.len();
-    // let name: &[u8];
-    // unsafe {
-    //     let mem = malloc(cmd_len);
-    //     core::ptr::copy_nonoverlapping(cmd.as_ptr(), mem, cmd_len);
-    //     name = core::slice::from_raw_parts(mem, cmd_len);
-    // }
-    // state.objects.add(Object { name: name });
-    // state
-    //     .locations
-    //     .get_mut(1)
-    //     .unwrap()
-    //     .objects
-    //     .add(state.objects.count - 1);
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {

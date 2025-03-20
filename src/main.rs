@@ -34,13 +34,18 @@ static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
 
 static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  help: this message\r\n\r\n";
 
+mod lib {
+    pub mod api;
+    pub mod api_unsafe;
+    pub mod constants;
+    pub mod fixed_size_list;
+}
+
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-
-extern crate lib;
+use lib::api::*;
+use lib::api_unsafe::*;
 use lib::fixed_size_list::FixedSizeList;
-use lib::lib_unsafe::*;
-use lib::*;
 
 const MAX_OBJECTS: usize = 32;
 const MAX_ENTITIES: usize = 32;

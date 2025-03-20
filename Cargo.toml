@@ -12,6 +12,3 @@ bench = false
 [profile.release]
 opt-level = "z" # optimize for size
 debug = true    # include debugging symbols to generate better firmware.lst
-
-[dependencies]
-lib = { path = "lib" }

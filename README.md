@@ -8,5 +8,5 @@ rustup target add riscv32i-unknown-none-elf
 
 ## build and emulate
 ```
-./make.sh
+./run.sh
 ```

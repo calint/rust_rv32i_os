@@ -2,6 +2,8 @@
 set -e
 cd $(dirname "$0")
 
+cd ..
+
 BIN=target/riscv32i-unknown-none-elf/release/firmware
 OBJCOPY=riscv64-elf-objcopy
 OBJDUMP=riscv64-elf-objdump
@@ -15,13 +17,3 @@ $OBJDUMP -s --section=.rodata --section=.srodata --section=.data --section=.sdat
 
 echo " * firmware built"
 ls -l --color firmware.bin
-
-# run
-echo " * build emulator"
-emulator/make.sh
-
-# run tests
-qa/emulate/test.sh
-
-echo " * run emulator"
-emulator/osqa firmware.bin sdcard.bin

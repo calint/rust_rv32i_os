@@ -295,6 +295,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     }
     // update entity location
     entity.location = new_loc_id;
+    uart_send_str(b"ok\r\n\r\n");
 }
 
 fn action_inventory(world: &World, entity_id: EntityId) {

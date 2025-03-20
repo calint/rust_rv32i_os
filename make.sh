@@ -20,5 +20,8 @@ ls -l --color firmware.bin
 echo " * build emulator"
 emulator/make.sh
 
+# run tests
+qa/emulate/test.sh
+
 echo " * run emulator"
 emulator/osqa firmware.bin sdcard.bin

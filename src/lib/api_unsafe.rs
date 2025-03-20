@@ -24,7 +24,7 @@ pub fn uart_read_char() -> u8 {
 pub fn uart_send_char(ch: u8) {
     unsafe {
         while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
-        write_volatile(UART_OUT_ADDR as *mut i32, ch as i32);
+        write_volatile(UART_OUT_ADDR as *mut u8, ch);
     }
 }
 

@@ -1,9 +1,9 @@
 use super::api_unsafe::*;
-use super::constants;
+use super::constants::*;
 
 #[inline(always)]
 pub fn memory_end() -> u32 {
-    constants::MEMORY_END
+    MEMORY_END
 }
 
 #[inline(always)]

@@ -96,4 +96,34 @@ impl<T, const N: usize> GenList<T, N> {
             None => false,
         }
     }
+    pub fn iter(&self) -> GenListIterator<T, N> {
+        GenListIterator {
+            list: self,
+            index: 0,
+        }
+    }
+}
+
+pub struct GenListIterator<'a, T, const N: usize> {
+    list: &'a GenList<T, N>,
+    index: usize,
+}
+
+impl<'a, T, const N: usize> Iterator for GenListIterator<'a, T, N> {
+    type Item = (Key, &'a T);
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.index < self.list.items_end {
+            if let Some(entry) = &self.list.items[self.index] {
+                let key = Key {
+                    index: self.index,
+                    generation: entry.generation,
+                };
+                self.index += 1;
+                return Some((key, &entry.item));
+            }
+            self.index += 1;
+        }
+        None
+    }
 }

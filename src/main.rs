@@ -109,7 +109,6 @@ pub extern "C" fn run() -> ! {
     let mut world = World {
         objects: {
             let mut objects = FixedSizeList::new();
-            objects.add(Object { name: b"" });
             objects.add(Object { name: b"notebook" });
             objects.add(Object { name: b"mirror" });
             objects.add(Object { name: b"lighter" });
@@ -118,22 +117,17 @@ pub extern "C" fn run() -> ! {
         entities: {
             let mut entities = FixedSizeList::new();
             entities.add(Entity {
-                name: b"",
-                location: 0,
-                objects: FixedSizeList::new(),
-            });
-            entities.add(Entity {
                 name: b"me",
-                location: 1,
+                location: 0,
                 objects: {
                     let mut list = FixedSizeList::new();
-                    list.add(2);
+                    list.add(1);
                     list
                 },
             });
             entities.add(Entity {
                 name: b"u",
-                location: 2,
+                location: 1,
                 objects: FixedSizeList::new(),
             });
             entities
@@ -141,33 +135,27 @@ pub extern "C" fn run() -> ! {
         locations: {
             let mut locations = FixedSizeList::new();
             locations.add(Location {
-                name: b"",
-                links: FixedSizeList::new(),
-                objects: FixedSizeList::new(),
-                entities: FixedSizeList::new(),
-            });
-            locations.add(Location {
                 name: b"roome",
                 links: {
                     let mut list = FixedSizeList::new();
+                    list.add(LocationLink {
+                        link: 0,
+                        location: 1,
+                    });
                     list.add(LocationLink {
                         link: 1,
                         location: 2,
                     });
                     list.add(LocationLink {
-                        link: 2,
+                        link: 3,
                         location: 3,
-                    });
-                    list.add(LocationLink {
-                        link: 4,
-                        location: 4,
                     });
                     list
                 },
                 objects: FixedSizeList::new(),
                 entities: {
                     let mut list = FixedSizeList::new();
-                    list.add(1);
+                    list.add(0);
                     list
                 },
             });
@@ -176,20 +164,20 @@ pub extern "C" fn run() -> ! {
                 links: {
                     let mut list = FixedSizeList::new();
                     list.add(LocationLink {
-                        link: 3,
-                        location: 1,
+                        link: 2,
+                        location: 0,
                     });
                     list
                 },
                 objects: {
                     let mut list = FixedSizeList::new();
-                    list.add(1);
-                    list.add(3);
+                    list.add(0);
+                    list.add(2);
                     list
                 },
                 entities: {
                     let mut list = FixedSizeList::new();
-                    list.add(2);
+                    list.add(1);
                     list
                 },
             });
@@ -204,8 +192,8 @@ pub extern "C" fn run() -> ! {
                 links: {
                     let mut list = FixedSizeList::new();
                     list.add(LocationLink {
-                        link: 2,
-                        location: 1,
+                        link: 1,
+                        location: 0,
                     });
                     list
                 },
@@ -216,7 +204,6 @@ pub extern "C" fn run() -> ! {
         },
         links: {
             let mut links = FixedSizeList::new();
-            links.add(Link { name: b"" });
             links.add(Link { name: b"north" });
             links.add(Link { name: b"east" });
             links.add(Link { name: b"south" });
@@ -230,7 +217,7 @@ pub extern "C" fn run() -> ! {
     uart_send_str(ASCII_ART);
     uart_send_str(HELLO);
 
-    let mut entity_id = 1;
+    let mut entity_id = 0;
     loop {
         print_location(&world, entity_id);
         uart_send_str(world.entities.get(entity_id).unwrap().name);
@@ -239,10 +226,10 @@ pub extern "C" fn run() -> ! {
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
         process_command(&mut world, entity_id, &cmdbuf);
-        if entity_id == 1 {
-            entity_id = 2;
-        } else {
+        if entity_id == 0 {
             entity_id = 1;
+        } else {
+            entity_id = 0;
         }
     }
 }
@@ -250,10 +237,10 @@ pub extern "C" fn run() -> ! {
 fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();
     match it.next() {
-        Some(b"n") => action_go(world, entity_id, 1),
-        Some(b"e") => action_go(world, entity_id, 2),
-        Some(b"s") => action_go(world, entity_id, 3),
-        Some(b"w") => action_go(world, entity_id, 4),
+        Some(b"n") => action_go(world, entity_id, 0),
+        Some(b"e") => action_go(world, entity_id, 1),
+        Some(b"s") => action_go(world, entity_id, 2),
+        Some(b"w") => action_go(world, entity_id, 3),
         Some(b"i") => action_inventory(world, entity_id),
         Some(b"t") => action_take(world, entity_id, &mut it),
         Some(b"d") => action_drop(world, entity_id, &mut it),
@@ -270,21 +257,21 @@ fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffe
 
 fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     let entity = world.entities.get_mut(entity_id).unwrap();
-    let new_loc_id = {
-        let loc = world.locations.get(entity.location).unwrap();
-        let mut new_loc_id = 0;
-        for ll in loc.links.iter() {
-            if ll.link == link_id {
-                new_loc_id = ll.location;
-                break;
-            }
+    let loc = world.locations.get(entity.location).unwrap();
+    let mut new_loc_id = None;
+    for ll in loc.links.iter() {
+        if ll.link == link_id {
+            new_loc_id = Some(ll.location);
+            break;
         }
-        new_loc_id
-    };
-    if new_loc_id == 0 {
-        uart_send_str(b"can't go there\r\n\r\n");
-        return;
     }
+    let new_loc_id = match new_loc_id {
+        Some(id) => id,
+        None => {
+            uart_send_str(b"can't go there\r\n\r\n");
+            return;
+        }
+    };
 
     // add entity to new location
     if !world

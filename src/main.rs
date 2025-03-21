@@ -214,6 +214,8 @@ pub extern "C" fn run() -> ! {
         },
     };
 
+    led_set(0b0000); // turn all leds on
+
     uart_send_str(ASCII_ART);
     uart_send_str(HELLO);
 

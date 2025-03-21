@@ -9,13 +9,12 @@ unsafe extern "C" {
 
 #[inline(always)]
 pub fn uart_read_char() -> u8 {
-    loop {
-        unsafe {
+    unsafe {
+        loop {
             let input = read_volatile(UART_IN_ADDR as *const i32);
-            if input == -1 {
-                continue;
+            if input != -1 {
+                return input as u8;
             }
-            return input as u8;
         }
     }
 }
@@ -35,7 +34,7 @@ pub fn sdcard_status() -> i32 {
 
 #[inline(always)]
 pub fn led_set(low_being_on_bits: u8) {
-    unsafe { write_volatile(LED as *mut i32, low_being_on_bits as i32) }
+    unsafe { write_volatile(LED as *mut u8, low_being_on_bits as u8) }
 }
 
 #[inline(always)]

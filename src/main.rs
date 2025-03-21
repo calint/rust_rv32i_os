@@ -219,13 +219,13 @@ pub extern "C" fn run() -> ! {
 
     let mut entity_id = 0;
     loop {
-        print_location(&world, entity_id);
+        action_look(&world, entity_id);
         uart_send_str(world.entities.get(entity_id).unwrap().name);
         uart_send_str(b" > ");
         let mut cmdbuf = CommandBuffer::new();
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
-        process_command(&mut world, entity_id, &cmdbuf);
+        handle_input(&mut world, entity_id, &cmdbuf);
         if entity_id == 0 {
             entity_id = 1;
         } else {
@@ -234,7 +234,7 @@ pub extern "C" fn run() -> ! {
     }
 }
 
-fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
+fn handle_input(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
     let mut it = cmdbuf.iter_words();
     match it.next() {
         Some(b"n") => action_go(world, entity_id, 0),
@@ -253,6 +253,56 @@ fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffe
         Some(b"help") => action_help(),
         _ => uart_send_str(b"not understood\r\n\r\n"),
     }
+}
+
+fn action_look(world: &World, entity_id: EntityId) {
+    let entity = world.entities.get(entity_id).unwrap();
+    let loc = world.locations.get(entity.location).unwrap();
+    uart_send_str(b"u r in ");
+    uart_send_str(loc.name);
+
+    uart_send_str(b"\r\nu c: ");
+    let mut i = 0;
+    for oid in loc.objects.iter() {
+        if i != 0 {
+            uart_send_str(b", ");
+        }
+        i += 1;
+        uart_send_str(world.objects.get(oid).unwrap().name);
+    }
+    if i == 0 {
+        uart_send_str(b"nothing");
+    }
+    uart_send_str(b"\r\n");
+
+    let mut i = 0;
+    for eid in loc.entities.iter() {
+        let e = world.entities.get(eid).unwrap();
+        if e != entity {
+            if i != 0 {
+                uart_send_str(b", ");
+            }
+            uart_send_str(e.name);
+            i += 1;
+        }
+    }
+    if i > 0 {
+        uart_send_str(b" is here\r\n");
+    }
+
+    uart_send_str(b"exits: ");
+    let mut i = 0;
+    for lid in loc.links.iter() {
+        if i != 0 {
+            uart_send_str(b", ");
+        }
+        i += 1;
+        uart_send_str(world.links.get(lid.link).unwrap().name);
+    }
+    if i == 0 {
+        uart_send_str(b"none");
+    }
+    uart_send_str(b"\r\n");
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
@@ -572,56 +622,6 @@ fn input(cmdbuf: &mut CommandBuffer) {
             uart_send_char(ch);
         }
     }
-}
-
-fn print_location(world: &World, entity_id: EntityId) {
-    let entity = world.entities.get(entity_id).unwrap();
-    let loc = world.locations.get(entity.location).unwrap();
-    uart_send_str(b"u r in ");
-    uart_send_str(loc.name);
-
-    uart_send_str(b"\r\nu c: ");
-    let mut i = 0;
-    for oid in loc.objects.iter() {
-        if i != 0 {
-            uart_send_str(b", ");
-        }
-        i += 1;
-        uart_send_str(world.objects.get(oid).unwrap().name);
-    }
-    if i == 0 {
-        uart_send_str(b"nothing");
-    }
-    uart_send_str(b"\r\n");
-
-    let mut i = 0;
-    for eid in loc.entities.iter() {
-        let e = world.entities.get(eid).unwrap();
-        if e != entity {
-            if i != 0 {
-                uart_send_str(b", ");
-            }
-            uart_send_str(e.name);
-            i += 1;
-        }
-    }
-    if i > 0 {
-        uart_send_str(b" is here\r\n");
-    }
-
-    uart_send_str(b"exits: ");
-    let mut i = 0;
-    for lid in loc.links.iter() {
-        if i != 0 {
-            uart_send_str(b", ");
-        }
-        i += 1;
-        uart_send_str(world.links.get(lid.link).unwrap().name);
-    }
-    if i == 0 {
-        uart_send_str(b"none");
-    }
-    uart_send_str(b"\r\n");
 }
 
 struct CommandBuffer {

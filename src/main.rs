@@ -526,7 +526,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     // remove object from entity
     if !from_entity.objects.remove_at(object_index) {
-        uart_send_str(b"error 1\r\n\r\n");
+        uart_send_str(b"error\r\n\r\n");
         return;
     }
 
@@ -538,7 +538,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         .objects
         .add(object_id)
     {
-        uart_send_str(b"error 2\r\n\r\n");
+        uart_send_str(b"error\r\n\r\n");
         return;
     }
 

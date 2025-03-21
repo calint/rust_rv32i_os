@@ -319,26 +319,24 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     };
 
     // add entity to new location
-    if !world
-        .locations
-        .get_mut(to_loc_id)
-        .unwrap()
-        .entities
-        .add(entity_id)
-    {
-        return;
-    }
+    assert!(
+        world
+            .locations
+            .get_mut(to_loc_id)
+            .unwrap()
+            .entities
+            .add(entity_id)
+    );
 
     // remove entity from old location
-    if !world
-        .locations
-        .get_mut(entity.location)
-        .unwrap()
-        .entities
-        .remove(entity_id)
-    {
-        return;
-    }
+    assert!(
+        world
+            .locations
+            .get_mut(entity.location)
+            .unwrap()
+            .entities
+            .remove(entity_id)
+    );
 
     // update entity location
     entity.location = to_loc_id;
@@ -397,16 +395,10 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // remove object from location
-    if !loc.objects.remove_at(object_index) {
-        uart_send_str(b"error\r\n\r\n");
-        return;
-    }
+    assert!(loc.objects.remove_at(object_index));
 
     // add object to entity
-    if !entity.objects.add(object_id) {
-        uart_send_str(b"error\r\n\r\n");
-        return;
-    }
+    assert!(entity.objects.add(object_id));
 
     uart_send_str(b"ok\r\n\r\n");
 }
@@ -444,22 +436,17 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // remove object from entity
-    if !entity.objects.remove_at(object_index) {
-        uart_send_str(b"error\r\n\r\n");
-        return;
-    }
+    assert!(entity.objects.remove_at(object_index));
 
     // add object to location
-    if !world
-        .locations
-        .get_mut(entity.location)
-        .unwrap()
-        .objects
-        .add(object_id)
-    {
-        uart_send_str(b"error\r\n\r\n");
-        return;
-    }
+    assert!(
+        world
+            .locations
+            .get_mut(entity.location)
+            .unwrap()
+            .objects
+            .add(object_id)
+    );
 
     uart_send_str(b"ok\r\n\r\n");
 }
@@ -525,22 +512,17 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // remove object from entity
-    if !from_entity.objects.remove_at(object_index) {
-        uart_send_str(b"error\r\n\r\n");
-        return;
-    }
+    assert!(from_entity.objects.remove_at(object_index));
 
     // add object to "to" entity
-    if !world
-        .entities
-        .get_mut(to_entity_id)
-        .unwrap()
-        .objects
-        .add(object_id)
-    {
-        uart_send_str(b"error\r\n\r\n");
-        return;
-    }
+    assert!(
+        world
+            .entities
+            .get_mut(to_entity_id)
+            .unwrap()
+            .objects
+            .add(object_id)
+    );
 
     uart_send_str(b"ok\r\n\r\n");
 }

@@ -258,15 +258,8 @@ fn process_command(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffe
 fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     let entity = world.entities.get_mut(entity_id).unwrap();
     let loc = world.locations.get(entity.location).unwrap();
-    let mut new_loc_id = None;
-    for ll in loc.links.iter() {
-        if ll.link == link_id {
-            new_loc_id = Some(ll.location);
-            break;
-        }
-    }
-    let new_loc_id = match new_loc_id {
-        Some(id) => id,
+    let new_loc_id = match loc.links.iter().find(|x| x.link == link_id) {
+        Some(lnk) => lnk.location,
         None => {
             uart_send_str(b"can't go there\r\n\r\n");
             return;
@@ -283,6 +276,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     {
         return;
     }
+
     // remove entity from old location
     if !world
         .locations
@@ -293,6 +287,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     {
         return;
     }
+
     // update entity location
     entity.location = new_loc_id;
     uart_send_str(b"ok\r\n\r\n");
@@ -318,131 +313,163 @@ fn action_inventory(world: &World, entity_id: EntityId) {
 fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let entity = world.entities.get_mut(entity_id).unwrap();
     let loc = world.locations.get_mut(entity.location).unwrap();
-    let object_name = it.next();
-    if object_name.is_none() {
-        uart_send_str(b"take what?\r\n\r\n");
-        return;
-    }
-    let object_name = object_name.unwrap();
-    for oid in loc.objects.iter() {
-        let obj = world.objects.get(oid).unwrap();
-        if obj.name != object_name {
-            continue;
-        }
-        // remove object from location
-        if !loc.objects.remove(oid) {
-            uart_send_str(b"error\r\n\r\n");
+
+    // get object name
+    let object_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_str(b"take what?\r\n\r\n");
             return;
         }
-        // add object to entity
-        if !entity.objects.add(oid) {
-            uart_send_str(b"error\r\n\r\n");
+    };
+
+    // find object id
+    let object_id = match loc
+        .objects
+        .iter()
+        .find(|&x| world.objects.get(x).unwrap().name == object_name)
+    {
+        Some(id) => id,
+        None => {
+            uart_send_str(object_name);
+            uart_send_str(b" is not here\r\n\r\n");
             return;
         }
-        uart_send_str(b"ok\r\n\r\n");
+    };
+
+    // remove object from location
+    if !loc.objects.remove(object_id) {
+        uart_send_str(b"error\r\n\r\n");
         return;
     }
-    uart_send_str(object_name);
-    uart_send_str(b" is not here\r\n\r\n");
+
+    // add object to entity
+    if !entity.objects.add(object_id) {
+        uart_send_str(b"error\r\n\r\n");
+        return;
+    }
+
+    uart_send_str(b"ok\r\n\r\n");
 }
 
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let entity = world.entities.get_mut(entity_id).unwrap();
-    let object_name = it.next();
-    if object_name.is_none() {
-        uart_send_str(b"drop what?\r\n\r\n");
-        return;
-    }
-    let object_name = object_name.unwrap();
-    for oid in entity.objects.iter() {
-        let obj = world.objects.get(oid).unwrap();
-        if obj.name != object_name {
-            continue;
-        }
-        // remove object from entity
-        if !entity.objects.remove(oid) {
-            uart_send_str(b"error\r\n\r\n");
+    let object_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_str(b"drop what?\r\n\r\n");
             return;
         }
-        // add object to location
-        if !world
-            .locations
-            .get_mut(entity.location)
-            .unwrap()
-            .objects
-            .add(oid)
-        {
-            uart_send_str(b"error\r\n\r\n");
+    };
+
+    // find object id in entity inventory
+    let object_id = match entity
+        .objects
+        .iter()
+        .find(|&x| world.objects.get(x).unwrap().name == object_name)
+    {
+        Some(id) => id,
+        None => {
+            uart_send_str(b"don't have ");
+            uart_send_str(object_name);
+            uart_send_str(b"\r\n\r\n");
             return;
         }
-        uart_send_str(b"ok\r\n\r\n");
+    };
+
+    // remove object from entity
+    if !entity.objects.remove(object_id) {
+        uart_send_str(b"error\r\n\r\n");
         return;
     }
-    uart_send_str(b"don't have ");
-    uart_send_str(object_name);
-    uart_send_str(b"\r\n\r\n");
+
+    // add object to location
+    if !world
+        .locations
+        .get_mut(entity.location)
+        .unwrap()
+        .objects
+        .add(object_id)
+    {
+        uart_send_str(b"error\r\n\r\n");
+        return;
+    }
+
+    uart_send_str(b"ok\r\n\r\n");
 }
 
 fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let object_name = it.next();
-    if object_name.is_none() {
-        uart_send_str(b"give what?\r\n\r\n");
-        return;
-    }
-    let object_name = object_name.unwrap();
-    let to_entity_name = it.next();
-    if to_entity_name.is_none() {
-        uart_send_str(b"give to who?\r\n\r\n");
-        return;
-    }
-    let to_entity_name = to_entity_name.unwrap();
-    let mut to_entity_id = 0;
-    for i in world
+    // get object name
+    let object_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_str(b"give what?\r\n\r\n");
+            return;
+        }
+    };
+
+    // get entity name
+    let to_entity_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_str(b"give to whom?\r\n\r\n");
+            return;
+        }
+    };
+
+    // find "to" entity
+    let to_entity_id = match world
         .locations
         .get(world.entities.get(entity_id).unwrap().location)
         .unwrap()
         .entities
         .iter()
+        .find(|&x| world.entities.get(x).unwrap().name == to_entity_name)
     {
-        let e = world.entities.get(i).unwrap();
-        if e.name == to_entity_name {
-            to_entity_id = i;
-            break;
-        }
-    }
-    if to_entity_id == 0 {
-        uart_send_str(to_entity_name);
-        uart_send_str(b" not here\r\n\r\n");
-        return;
-    }
-    let entity = world.entities.get_mut(entity_id).unwrap();
-    for oid in entity.objects.iter() {
-        let obj = world.objects.get(oid).unwrap();
-        if obj.name != object_name {
-            continue;
-        }
-        // remove object from entity
-        if !entity.objects.remove(oid) {
-            uart_send_str(b"error\r\n\r\n");
+        Some(id) => id,
+        None => {
+            uart_send_str(to_entity_name);
+            uart_send_str(b" not here\r\n\r\n");
             return;
         }
-        // add object to location
-        if !world
-            .entities
-            .get_mut(to_entity_id)
-            .unwrap()
-            .objects
-            .add(oid)
-        {
-            uart_send_str(b"error\r\n\r\n");
+    };
+
+    let from_entity = world.entities.get_mut(entity_id).unwrap();
+
+    // find object in "from" entity
+    let object_id = match from_entity
+        .objects
+        .iter()
+        .find(|&x| world.objects.get(x).unwrap().name == object_name)
+    {
+        Some(id) => id,
+        None => {
+            uart_send_str(b"don't have ");
+            uart_send_str(object_name);
+            uart_send_str(b"\r\n\r\n");
             return;
         }
-        uart_send_str(b"ok\r\n\r\n");
+    };
+
+    // remove object from entity
+    if !from_entity.objects.remove(object_id) {
+        uart_send_str(b"error 1\r\n\r\n");
         return;
     }
-    uart_send_str(b"don't have ");
-    uart_send_str(object_name);
-    uart_send_str(b"\r\n\r\n");
+
+    // add object to "to" entity
+    if !world
+        .entities
+        .get_mut(to_entity_id)
+        .unwrap()
+        .objects
+        .add(object_id)
+    {
+        uart_send_str(b"error 2\r\n\r\n");
+        return;
+    }
+
+    uart_send_str(b"ok\r\n\r\n");
 }
 
 fn action_memory_info() {

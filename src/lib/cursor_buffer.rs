@@ -107,40 +107,52 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
     }
 
     // iterate over the buffer returning a slice for each word
-    pub fn iter_words(&self) -> CursorBufferIterator<SIZE, T> {
+    pub fn iter_words<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
+    where
+        F: Fn(&T) -> bool,
+    {
         CursorBufferIterator {
             cmd_buf: self,
             index: 0,
+            delimiter,
         }
     }
 }
 
 // iterator over the command buffer returning a slice for each word
-pub struct CursorBufferIterator<'a, const SIZE: usize, T> {
+pub struct CursorBufferIterator<'a, const SIZE: usize, T, F>
+where
+    F: Fn(&T) -> bool,
+{
     cmd_buf: &'a CursorBuffer<SIZE, T>,
     index: usize,
+    delimiter: F,
 }
 
-impl<'a, const SIZE: usize, T> CursorBufferIterator<'a, SIZE, T> {
+impl<'a, const SIZE: usize, T, F> CursorBufferIterator<'a, SIZE, T, F>
+where
+    F: Fn(&T) -> bool,
+{
     pub fn rest(&self) -> &'a [T] {
         &self.cmd_buf.line[self.index..self.cmd_buf.end]
     }
 }
 
-impl<'a, const SIZE: usize> Iterator for CursorBufferIterator<'a, SIZE, u8> {
-    type Item = &'a [u8];
+impl<'a, const SIZE: usize, T, F> Iterator for CursorBufferIterator<'a, SIZE, T, F>
+where
+    F: Fn(&T) -> bool,
+{
+    type Item = &'a [T];
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.cmd_buf.end {
             let start = self.index;
-            while self.index < self.cmd_buf.end
-                && !self.cmd_buf.line[self.index].is_ascii_whitespace()
+            while self.index < self.cmd_buf.end && !(self.delimiter)(&self.cmd_buf.line[self.index])
             {
                 self.index += 1;
             }
             let end = self.index;
-            while self.index < self.cmd_buf.end
-                && self.cmd_buf.line[self.index].is_ascii_whitespace()
+            while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index])
             {
                 self.index += 1;
             }

@@ -37,6 +37,7 @@ static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go sou
 mod lib {
     pub mod api;
     pub mod api_unsafe;
+    pub mod command_buffer;
     pub mod constants;
     pub mod fixed_size_list;
     // pub mod gen_list;
@@ -46,7 +47,8 @@ use core::arch::global_asm;
 use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
-use lib::fixed_size_list::FixedSizeList;
+use lib::command_buffer::*;
+use lib::fixed_size_list::*;
 
 const MAX_OBJECTS: usize = 32;
 const MAX_ENTITIES: usize = 32;
@@ -56,6 +58,10 @@ const MAX_LINKS_PER_LOCATION: usize = 32;
 const MAX_OBJECTS_PER_LOCATION: usize = 32;
 const MAX_ENTITIES_PER_LOCATION: usize = 32;
 const MAX_OBJECTS_PER_ENTITY: usize = 32;
+const COMMAND_BUFFER_SIZE: usize = 80;
+const CHAR_BACKSPACE: u8 = 0x7f;
+const CHAR_CARRIAGE_RETURN: u8 = 0xd;
+const CHAR_ESCAPE: u8 = 0x1b;
 
 type Name = &'static [u8];
 type LocationId = usize;
@@ -236,8 +242,12 @@ pub extern "C" fn run() -> ! {
     }
 }
 
-fn handle_input(world: &mut World, entity_id: EntityId, cmdbuf: &CommandBuffer) {
-    let mut it = cmdbuf.iter_words();
+fn handle_input(
+    world: &mut World,
+    entity_id: EntityId,
+    cmd_buf: &CommandBuffer<COMMAND_BUFFER_SIZE>,
+) {
+    let mut it = cmd_buf.iter_words();
     match it.next() {
         Some(b"n") => action_go(world, entity_id, 0),
         Some(b"e") => action_go(world, entity_id, 1),
@@ -362,7 +372,11 @@ fn action_inventory(world: &World, entity_id: EntityId) {
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_take(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE>,
+) {
     let entity = world.entities.get_mut(entity_id).unwrap();
     let loc = world.locations.get_mut(entity.location).unwrap();
 
@@ -405,7 +419,11 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     uart_send_str(b"ok\r\n\r\n");
 }
 
-fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_drop(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE>,
+) {
     let entity = world.entities.get_mut(entity_id).unwrap();
     let object_name = match it.next() {
         Some(name) => name,
@@ -453,7 +471,11 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     uart_send_str(b"ok\r\n\r\n");
 }
 
-fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_give(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE>,
+) {
     // get object name
     let object_name = match it.next() {
         Some(name) => name,
@@ -547,7 +569,7 @@ fn action_sdcard_status() {
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_sdcard_read(it: &mut CommandBufferIterator) {
+fn action_sdcard_read(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE>) {
     let sector = match it.next() {
         Some(sector) => string_to_u32(sector),
         None => {
@@ -564,7 +586,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_sdcard_write(it: &mut CommandBufferIterator) {
+fn action_sdcard_write(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE>) {
     let sector = match it.next() {
         Some(sector) => string_to_u32(sector),
         None => {
@@ -581,7 +603,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     uart_send_str(b"ok\r\n\r\n");
 }
 
-fn action_led_set(it: &mut CommandBufferIterator) {
+fn action_led_set(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE>) {
     let bits = match it.next() {
         Some(bits) => string_to_u32(bits),
         None => {
@@ -600,110 +622,90 @@ fn action_help() {
 fn string_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;
     for &ch in number_as_str {
-        if ch < '0' as u8 || ch > '9' as u8 {
+        if ch < b'0' || ch > b'9' {
             return num;
         }
-        num = num * 10 + (ch - '0' as u8) as u32;
+        num = num * 10 + (ch - b'0') as u32;
     }
     num
 }
 
-fn input(cmdbuf: &mut CommandBuffer) {
+fn input(cmd_buf: &mut CommandBuffer<COMMAND_BUFFER_SIZE>) {
+    enum InputState {
+        Normal,
+        Escape,
+        EscapeBracket,
+    }
+
+    let mut state = InputState::Normal;
+    let mut escape_sequence_parameter = 0;
+
+    cmd_buf.reset();
+
     loop {
         let ch = uart_read_char();
-        if ch == b'\r' {
-            break;
-        }
-        if ch == b'\n' {
-            continue;
-        }
-        if ch == 0x7f {
-            if cmdbuf.backspace() {
-                uart_send_char(0x7f);
-                uart_send_char(b' ');
-                uart_send_char(0x7f);
+        led_set(!ch);
+
+        match state {
+            InputState::Normal => {
+                if ch == CHAR_ESCAPE {
+                    state = InputState::Escape;
+                } else if ch == CHAR_BACKSPACE {
+                    if cmd_buf.backspace() {
+                        uart_send_char(ch);
+                        cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                        uart_send_char(b' ');
+                        uart_send_move_back(cmd_buf.elements_after_cursor_count() + 1);
+                    }
+                } else if ch == CHAR_CARRIAGE_RETURN || cmd_buf.is_full() {
+                    return;
+                } else {
+                    uart_send_char(ch);
+                    cmd_buf.insert(ch);
+                    cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                    uart_send_move_back(cmd_buf.elements_after_cursor_count());
+                }
             }
-            continue;
-        }
-        if cmdbuf.insert(ch) {
-            uart_send_char(ch);
-        }
-    }
-}
-
-struct CommandBuffer {
-    buffer: [u8; 80],
-    count: usize,
-}
-
-impl CommandBuffer {
-    fn new() -> Self {
-        CommandBuffer {
-            buffer: [0; 80],
-            count: 0,
-        }
-    }
-
-    fn insert(&mut self, ch: u8) -> bool {
-        if self.count < 80 {
-            self.buffer[self.count] = ch;
-            self.count += 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    fn backspace(&mut self) -> bool {
-        if self.count > 0 {
-            self.count -= 1;
-            true
-        } else {
-            false
-        }
-    }
-
-    // iterate over the buffer returning a slice for each word
-    fn iter_words(&self) -> CommandBufferIterator {
-        CommandBufferIterator {
-            cmdbuf: self,
-            index: 0,
-        }
-    }
-}
-
-// iterator over the command buffer returning a slice for each word
-struct CommandBufferIterator<'a> {
-    cmdbuf: &'a CommandBuffer,
-    index: usize,
-}
-
-impl<'a> CommandBufferIterator<'a> {
-    fn rest(&self) -> &'a [u8] {
-        &self.cmdbuf.buffer[self.index..self.cmdbuf.count]
-    }
-}
-
-impl<'a> Iterator for CommandBufferIterator<'a> {
-    type Item = &'a [u8];
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.cmdbuf.count {
-            let start = self.index;
-            while self.index < self.cmdbuf.count
-                && !self.cmdbuf.buffer[self.index].is_ascii_whitespace()
-            {
-                self.index += 1;
+            InputState::Escape => {
+                if ch == b'[' {
+                    state = InputState::EscapeBracket;
+                } else {
+                    state = InputState::Normal;
+                }
             }
-            let end = self.index;
-            while self.index < self.cmdbuf.count
-                && self.cmdbuf.buffer[self.index].is_ascii_whitespace()
-            {
-                self.index += 1;
+            InputState::EscapeBracket => {
+                if ch >= b'0' && ch <= b'9' {
+                    escape_sequence_parameter = escape_sequence_parameter * 10 + (ch - b'0');
+                } else {
+                    match ch {
+                        b'D' => {
+                            // arrow left
+                            if cmd_buf.move_cursor_left() {
+                                uart_send_str(b"\x1B[D");
+                            }
+                        }
+                        b'C' => {
+                            // arrow right
+                            if cmd_buf.move_cursor_right() {
+                                uart_send_str(b"\x1B[C");
+                            }
+                        }
+                        b'~' => {
+                            // delete
+                            if escape_sequence_parameter == 3 {
+                                // delete key
+                                cmd_buf.del();
+                                cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                                uart_send_char(b' ');
+                                uart_send_move_back(cmd_buf.elements_after_cursor_count() + 1);
+                            }
+                        }
+                        _ => {}
+                    }
+                    state = InputState::Normal;
+                    escape_sequence_parameter = 0;
+                }
             }
-            Some(&self.cmdbuf.buffer[start..end])
-        } else {
-            None
         }
     }
 }

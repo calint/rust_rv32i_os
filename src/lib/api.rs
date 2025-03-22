@@ -35,3 +35,9 @@ pub fn uart_send_hex_nibble(nibble: u8) {
         uart_send_char(b'A' + (nibble - 10));
     }
 }
+
+pub fn uart_send_move_back(count: usize) {
+    for _ in 0..count {
+        uart_send_char(8);
+    }
+}

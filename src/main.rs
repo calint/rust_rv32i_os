@@ -640,7 +640,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                 } else if ch == CHAR_BACKSPACE {
                     if command_buffer.backspace() {
                         uart_send_char(ch);
-                        command_buffer.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                        command_buffer.for_each_from_cursor(|c| uart_send_char(c));
                         uart_send_char(b' ');
                         uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
                     }
@@ -649,7 +649,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                 } else {
                     if command_buffer.insert(ch) {
                         uart_send_char(ch);
-                        command_buffer.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                        command_buffer.for_each_from_cursor(|c| uart_send_char(c));
                         uart_send_move_back(command_buffer.elements_after_cursor_count());
                     }
                 }
@@ -683,8 +683,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                             if escape_sequence_parameter == 3 {
                                 // delete key
                                 command_buffer.del();
-                                command_buffer
-                                    .apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                                command_buffer.for_each_from_cursor(|c| uart_send_char(c));
                                 uart_send_char(b' ');
                                 uart_send_move_back(
                                     command_buffer.elements_after_cursor_count() + 1,

@@ -26,10 +26,8 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         }
 
         self.end += 1;
-        for i in (self.cursor + 1..=self.end).rev() {
-            self.line[i] = self.line[i - 1];
-        }
-
+        self.line
+            .copy_within(self.cursor..self.end - 1, self.cursor + 1);
         self.line[self.cursor] = ch;
         self.cursor += 1;
         true
@@ -40,10 +38,8 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
             return;
         }
 
-        for i in self.cursor + 1..self.end {
-            self.line[i - 1] = self.line[i];
-        }
-
+        self.line
+            .copy_within(self.cursor + 1..self.end, self.cursor);
         self.end -= 1;
     }
 
@@ -58,10 +54,8 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
             return true;
         }
 
-        for i in self.cursor - 1..self.end - 1 {
-            self.line[i] = self.line[i + 1];
-        }
-
+        self.line
+            .copy_within(self.cursor..self.end, self.cursor - 1);
         self.cursor -= 1;
         self.end -= 1;
         true
@@ -93,7 +87,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         self.end == SIZE - 1
     }
 
-    pub fn apply_on_elements_from_cursor_to_end<F>(&self, f: F)
+    pub fn for_each_from_cursor<F>(&self, f: F)
     where
         F: Fn(T),
     {
@@ -145,22 +139,24 @@ where
     type Item = &'a [T];
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.index < self.cmd_buf.end {
-            // find a delimiter
-            let start = self.index;
-            while self.index < self.cmd_buf.end && !(self.delimiter)(&self.cmd_buf.line[self.index])
-            {
-                self.index += 1;
-            }
-            // move forward over the rest of delimiters
-            let end = self.index;
-            while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index])
-            {
-                self.index += 1;
-            }
-            Some(&self.cmd_buf.line[start..end])
-        } else {
-            None
+        if self.index >= self.cmd_buf.end {
+            return None;
         }
+
+        // find a delimiter
+        let start = self.index;
+        self.index += self.cmd_buf.line[self.index..self.cmd_buf.end]
+            .iter()
+            .position(|c| (self.delimiter)(c))
+            .unwrap_or(self.cmd_buf.end - self.index);
+
+        // move forward over the rest of delimiters
+        let end = self.index;
+        self.index += self.cmd_buf.line[self.index..self.cmd_buf.end]
+            .iter()
+            .position(|c| !(self.delimiter)(c))
+            .unwrap_or(self.cmd_buf.end - self.index);
+
+        Some(&self.cmd_buf.line[start..end])
     }
 }

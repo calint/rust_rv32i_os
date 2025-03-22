@@ -7,8 +7,8 @@ pub fn memory_end() -> u32 {
 }
 
 #[inline(always)]
-pub fn uart_send_str(str: &[u8]) {
-    for &byte in str {
+pub fn uart_send_str(s: &[u8]) {
+    for &byte in s {
         uart_send_char(byte);
     }
 }

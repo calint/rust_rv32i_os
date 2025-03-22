@@ -35,9 +35,7 @@ impl<T: Copy + PartialEq, const N: usize> FixedSizeList<T, N> {
     pub fn remove_at(&mut self, index: usize) -> bool {
         if index < self.count {
             self.data[index] = None;
-            for i in index..self.count - 1 {
-                self.data[i] = self.data[i + 1];
-            }
+            self.data.copy_within(index + 1..self.count, index);
             self.count -= 1;
             self.data[self.count] = None;
             true

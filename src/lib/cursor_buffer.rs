@@ -139,23 +139,33 @@ where
     type Item = &'a [T];
 
     fn next(&mut self) -> Option<Self::Item> {
+        //! this can be done with only 2 loops by skipping the leading delimeters before creation of iterator
+        // skip leading delimiters and find the start of the next chunk
+        while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index]) {
+            self.index += 1;
+        }
+
         if self.index >= self.cmd_buf.end {
             return None;
         }
 
-        // find a delimiter
+        // find the end of the chunk
         let start = self.index;
-        self.index += self.cmd_buf.line[self.index..self.cmd_buf.end]
-            .iter()
-            .position(|c| (self.delimiter)(c))
-            .unwrap_or(self.cmd_buf.end - self.index);
+        while self.index < self.cmd_buf.end && !(self.delimiter)(&self.cmd_buf.line[self.index]) {
+            self.index += 1;
+        }
 
-        // move forward over the rest of delimiters
+        // if the chunk is delimiters only, return None
+        if start == self.index {
+            return None;
+        }
+
         let end = self.index;
-        self.index += self.cmd_buf.line[self.index..self.cmd_buf.end]
-            .iter()
-            .position(|c| !(self.delimiter)(c))
-            .unwrap_or(self.cmd_buf.end - self.index);
+
+        // skip trailing delimiters
+        while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index]) {
+            self.index += 1;
+        }
 
         Some(&self.cmd_buf.line[start..end])
     }

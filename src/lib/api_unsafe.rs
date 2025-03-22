@@ -8,6 +8,14 @@ unsafe extern "C" {
 }
 
 #[inline(always)]
+pub fn uart_send_char(ch: u8) {
+    unsafe {
+        while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
+        write_volatile(UART_OUT_ADDR as *mut u8, ch);
+    }
+}
+
+#[inline(always)]
 pub fn uart_read_char() -> u8 {
     unsafe {
         loop {
@@ -17,19 +25,6 @@ pub fn uart_read_char() -> u8 {
             }
         }
     }
-}
-
-#[inline(always)]
-pub fn uart_send_char(ch: u8) {
-    unsafe {
-        while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
-        write_volatile(UART_OUT_ADDR as *mut u8, ch);
-    }
-}
-
-#[inline(always)]
-pub fn sdcard_status() -> i32 {
-    unsafe { read_volatile(SDCARD_STATUS as *const i32) }
 }
 
 #[inline(always)]
@@ -47,6 +42,11 @@ pub fn memory_stack_pointer() -> u32 {
         );
     }
     sp
+}
+
+#[inline(always)]
+pub fn sdcard_status() -> i32 {
+    unsafe { read_volatile(SDCARD_STATUS as *const i32) }
 }
 
 pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8; 512]) {

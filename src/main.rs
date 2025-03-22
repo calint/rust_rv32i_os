@@ -567,9 +567,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
 
     let mut buf = [0; 512];
     sdcard_read_blocking(sector, &mut buf);
-    for i in 0..512 {
-        uart_send_char(buf[i]);
-    }
+    buf.iter().for_each(|&x| uart_send_char(x));
     uart_send_str(b"\r\n\r\n");
 }
 
@@ -649,7 +647,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                 } else {
                     if command_buffer.insert(ch) {
                         uart_send_char(ch);
-                        command_buffer.for_each_from_cursor(|c| uart_send_char(c));
+                        command_buffer.for_each_from_cursor(|x| uart_send_char(x));
                         uart_send_move_back(command_buffer.elements_after_cursor_count());
                     }
                 }
@@ -683,7 +681,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                             if escape_sequence_parameter == 3 {
                                 // delete key
                                 command_buffer.del();
-                                command_buffer.for_each_from_cursor(|c| uart_send_char(c));
+                                command_buffer.for_each_from_cursor(|x| uart_send_char(x));
                                 uart_send_char(b' ');
                                 uart_send_move_back(
                                     command_buffer.elements_after_cursor_count() + 1,

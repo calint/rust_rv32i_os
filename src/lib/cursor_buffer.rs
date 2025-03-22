@@ -93,9 +93,9 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         self.end == SIZE - 1
     }
 
-    pub fn apply_on_elements_from_cursor_to_end<F>(&self, mut f: F)
+    pub fn apply_on_elements_from_cursor_to_end<F>(&self, f: F)
     where
-        F: FnMut(T),
+        F: Fn(T),
     {
         for i in self.cursor..self.end {
             f(self.line[i]);
@@ -106,7 +106,8 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         self.end - self.cursor
     }
 
-    // iterate over the buffer returning a slice for each word
+    // iterate over the buffer returning a slice for each chunk delimited by lambda result
+    // note: adjacent delimiters are consumed
     pub fn iter_words<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
     where
         F: Fn(&T) -> bool,

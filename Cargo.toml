@@ -10,5 +10,8 @@ test = false
 bench = false
 
 [profile.release]
-opt-level = "z" # optimize for size
-debug = true    # include debugging symbols to generate better firmware.lst
+opt-level = "z"   # optimize for size
+debug = true      # include debugging symbols to generate better firmware.lst
+lto = true        # enable link time optimization
+codegen-units = 1 # parallel code generation units
+panic = "abort"   # abort immediately rather than unwind

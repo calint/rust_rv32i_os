@@ -647,10 +647,11 @@ fn input(cmd_buf: &mut CommandBuffer) {
                 } else if ch == CHAR_CARRIAGE_RETURN || cmd_buf.is_full() {
                     return;
                 } else {
-                    uart_send_char(ch);
-                    cmd_buf.insert(ch);
-                    cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
-                    uart_send_move_back(cmd_buf.elements_after_cursor_count());
+                    if cmd_buf.insert(ch) {
+                        uart_send_char(ch);
+                        cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                        uart_send_move_back(cmd_buf.elements_after_cursor_count());
+                    }
                 }
             }
             InputState::Escape => {

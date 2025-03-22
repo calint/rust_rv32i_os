@@ -106,8 +106,8 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         self.end - self.cursor
     }
 
-    // iterate over the buffer returning a slice for each chunk delimited by lambda result
-    // note: adjacent delimiters are consumed
+    /// Iterate over the buffer returning a slice for each chunk delimited by returning true from delimiter lambda.
+    /// Note: Adjacent delimiters are consumed.
     pub fn iter_words<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
     where
         F: Fn(&T) -> bool,
@@ -120,7 +120,6 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
     }
 }
 
-// iterator over the command buffer returning a slice for each word
 pub struct CursorBufferIterator<'a, const SIZE: usize, T, F>
 where
     F: Fn(&T) -> bool,

@@ -233,10 +233,10 @@ pub extern "C" fn run() -> ! {
         action_look(&world, entity_id);
         uart_send_str(world.entities.get(entity_id).unwrap().name);
         uart_send_str(b" > ");
-        let mut cmdbuf = CursorBuffer::new();
-        input(&mut cmdbuf);
+        let mut command_buffer = CursorBuffer::new();
+        input(&mut command_buffer);
         uart_send_str(b"\r\n");
-        handle_input(&mut world, entity_id, &cmdbuf);
+        handle_input(&mut world, entity_id, &command_buffer);
         if entity_id == 0 {
             entity_id = 1;
         } else {
@@ -245,8 +245,8 @@ pub extern "C" fn run() -> ! {
     }
 }
 
-fn handle_input(world: &mut World, entity_id: EntityId, cmd_buf: &CommandBuffer) {
-    let mut it: CommandBufferIterator = cmd_buf.iter_words(|x| x.is_ascii_whitespace());
+fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &CommandBuffer) {
+    let mut it: CommandBufferIterator = command_buffer.iter_words(|x| x.is_ascii_whitespace());
     match it.next() {
         Some(b"n") => action_go(world, entity_id, 0),
         Some(b"e") => action_go(world, entity_id, 1),

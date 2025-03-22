@@ -4,7 +4,7 @@ use core::ptr::{read_volatile, write_volatile};
 
 unsafe extern "C" {
     // declared in 'linker.ld
-    unsafe static __heap_start__: u8;
+    pub unsafe static __heap_start__: u8;
 }
 
 #[inline(always)]
@@ -35,11 +35,6 @@ pub fn sdcard_status() -> i32 {
 #[inline(always)]
 pub fn led_set(low_being_on_bits: u8) {
     unsafe { write_volatile(LED as *mut u8, low_being_on_bits) }
-}
-
-#[inline(always)]
-pub fn memory_heap_start() -> u32 {
-    unsafe { &__heap_start__ as *const u8 as u32 }
 }
 
 #[inline(always)]

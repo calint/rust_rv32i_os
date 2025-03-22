@@ -1,19 +1,19 @@
-pub struct CommandBuffer<const SIZE: usize> {
-    line: [u8; SIZE],
+pub struct CommandBuffer<const SIZE: usize, T> {
+    line: [T; SIZE],
     end: usize,
     cursor: usize,
 }
 
-impl<const SIZE: usize> CommandBuffer<SIZE> {
+impl<const SIZE: usize, T: Default + Copy> CommandBuffer<SIZE, T> {
     pub fn new() -> Self {
         CommandBuffer {
-            line: [0; SIZE],
+            line: [T::default(); SIZE],
             end: 0,
             cursor: 0,
         }
     }
 
-    pub fn insert(&mut self, ch: u8) -> bool {
+    pub fn insert(&mut self, ch: T) -> bool {
         if self.end == SIZE {
             return false;
         }
@@ -95,7 +95,7 @@ impl<const SIZE: usize> CommandBuffer<SIZE> {
 
     pub fn apply_on_elements_from_cursor_to_end<F>(&self, mut f: F)
     where
-        F: FnMut(u8),
+        F: FnMut(T),
     {
         for i in self.cursor..self.end {
             f(self.line[i]);
@@ -107,7 +107,7 @@ impl<const SIZE: usize> CommandBuffer<SIZE> {
     }
 
     // iterate over the buffer returning a slice for each word
-    pub fn iter_words(&self) -> CommandBufferIterator<SIZE> {
+    pub fn iter_words(&self) -> CommandBufferIterator<SIZE, T> {
         CommandBufferIterator {
             cmd_buf: self,
             index: 0,
@@ -116,18 +116,18 @@ impl<const SIZE: usize> CommandBuffer<SIZE> {
 }
 
 // iterator over the command buffer returning a slice for each word
-pub struct CommandBufferIterator<'a, const SIZE: usize> {
-    cmd_buf: &'a CommandBuffer<SIZE>,
+pub struct CommandBufferIterator<'a, const SIZE: usize, T> {
+    cmd_buf: &'a CommandBuffer<SIZE, T>,
     index: usize,
 }
 
-impl<'a, const SIZE: usize> CommandBufferIterator<'a, SIZE> {
-    pub fn rest(&self) -> &'a [u8] {
+impl<'a, const SIZE: usize, T> CommandBufferIterator<'a, SIZE, T> {
+    pub fn rest(&self) -> &'a [T] {
         &self.cmd_buf.line[self.index..self.cmd_buf.end]
     }
 }
 
-impl<'a, const SIZE: usize> Iterator for CommandBufferIterator<'a, SIZE> {
+impl<'a, const SIZE: usize> Iterator for CommandBufferIterator<'a, SIZE, u8> {
     type Item = &'a [u8];
 
     fn next(&mut self) -> Option<Self::Item> {

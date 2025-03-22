@@ -268,13 +268,13 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
 
 fn action_look(world: &World, entity_id: EntityId) {
     let entity = world.entities.get(entity_id).unwrap();
-    let loc = world.locations.get(entity.location).unwrap();
+    let location = world.locations.get(entity.location).unwrap();
     uart_send_str(b"u r in ");
-    uart_send_str(loc.name);
+    uart_send_str(location.name);
 
     uart_send_str(b"\r\nu c: ");
     let mut i = 0;
-    for oid in loc.objects.iter() {
+    for oid in location.objects.iter() {
         if i != 0 {
             uart_send_str(b", ");
         }
@@ -287,7 +287,7 @@ fn action_look(world: &World, entity_id: EntityId) {
     uart_send_str(b"\r\n");
 
     let mut i = 0;
-    for eid in loc.entities.iter() {
+    for eid in location.entities.iter() {
         let e = world.entities.get(eid).unwrap();
         if e != entity {
             if i != 0 {
@@ -303,7 +303,7 @@ fn action_look(world: &World, entity_id: EntityId) {
 
     uart_send_str(b"exits: ");
     let mut i = 0;
-    for lid in loc.links.iter() {
+    for lid in location.links.iter() {
         if i != 0 {
             uart_send_str(b", ");
         }
@@ -318,10 +318,10 @@ fn action_look(world: &World, entity_id: EntityId) {
 
 fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     let entity = world.entities.get_mut(entity_id).unwrap();
-    let loc = world.locations.get(entity.location).unwrap();
+    let location = world.locations.get(entity.location).unwrap();
 
     // find "to" location id
-    let to_loc_id = match loc.links.iter().find(|x| x.link == link_id) {
+    let to_location_id = match location.links.iter().find(|x| x.link == link_id) {
         Some(lnk) => lnk.location,
         None => {
             uart_send_str(b"can't go there\r\n\r\n");
@@ -333,7 +333,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     assert!(
         world
             .locations
-            .get_mut(to_loc_id)
+            .get_mut(to_location_id)
             .unwrap()
             .entities
             .add(entity_id)
@@ -350,7 +350,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     );
 
     // update entity location
-    entity.location = to_loc_id;
+    entity.location = to_location_id;
     uart_send_str(b"ok\r\n\r\n");
 }
 
@@ -373,7 +373,7 @@ fn action_inventory(world: &World, entity_id: EntityId) {
 
 fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let entity = world.entities.get_mut(entity_id).unwrap();
-    let loc = world.locations.get_mut(entity.location).unwrap();
+    let location = world.locations.get_mut(entity.location).unwrap();
 
     // get object name
     let object_name = match it.next() {
@@ -388,7 +388,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_index = None;
     let mut object_id = None;
 
-    for (index, oid) in loc.objects.iter().enumerate() {
+    for (index, oid) in location.objects.iter().enumerate() {
         if world.objects.get(oid).unwrap().name == object_name {
             object_index = Some(index);
             object_id = Some(oid);
@@ -406,7 +406,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // remove object from location
-    assert!(loc.objects.remove_at(object_index));
+    assert!(location.objects.remove_at(object_index));
 
     // add object to entity
     assert!(entity.objects.add(object_id));
@@ -617,7 +617,7 @@ fn string_to_u32(number_as_str: &[u8]) -> u32 {
     num
 }
 
-fn input(cmd_buf: &mut CommandBuffer) {
+fn input(command_buffer: &mut CommandBuffer) {
     enum InputState {
         Normal,
         Escape,
@@ -627,7 +627,7 @@ fn input(cmd_buf: &mut CommandBuffer) {
     let mut state = InputState::Normal;
     let mut escape_sequence_parameter = 0;
 
-    cmd_buf.reset();
+    command_buffer.reset();
 
     loop {
         let ch = uart_read_char();
@@ -638,19 +638,19 @@ fn input(cmd_buf: &mut CommandBuffer) {
                 if ch == CHAR_ESCAPE {
                     state = InputState::Escape;
                 } else if ch == CHAR_BACKSPACE {
-                    if cmd_buf.backspace() {
+                    if command_buffer.backspace() {
                         uart_send_char(ch);
-                        cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                        command_buffer.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
                         uart_send_char(b' ');
-                        uart_send_move_back(cmd_buf.elements_after_cursor_count() + 1);
+                        uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
                     }
-                } else if ch == CHAR_CARRIAGE_RETURN || cmd_buf.is_full() {
+                } else if ch == CHAR_CARRIAGE_RETURN || command_buffer.is_full() {
                     return;
                 } else {
-                    if cmd_buf.insert(ch) {
+                    if command_buffer.insert(ch) {
                         uart_send_char(ch);
-                        cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
-                        uart_send_move_back(cmd_buf.elements_after_cursor_count());
+                        command_buffer.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                        uart_send_move_back(command_buffer.elements_after_cursor_count());
                     }
                 }
             }
@@ -668,13 +668,13 @@ fn input(cmd_buf: &mut CommandBuffer) {
                     match ch {
                         b'D' => {
                             // arrow left
-                            if cmd_buf.move_cursor_left() {
+                            if command_buffer.move_cursor_left() {
                                 uart_send_str(b"\x1B[D");
                             }
                         }
                         b'C' => {
                             // arrow right
-                            if cmd_buf.move_cursor_right() {
+                            if command_buffer.move_cursor_right() {
                                 uart_send_str(b"\x1B[C");
                             }
                         }
@@ -682,10 +682,13 @@ fn input(cmd_buf: &mut CommandBuffer) {
                             // delete
                             if escape_sequence_parameter == 3 {
                                 // delete key
-                                cmd_buf.del();
-                                cmd_buf.apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
+                                command_buffer.del();
+                                command_buffer
+                                    .apply_on_elements_from_cursor_to_end(|c| uart_send_char(c));
                                 uart_send_char(b' ');
-                                uart_send_move_back(cmd_buf.elements_after_cursor_count() + 1);
+                                uart_send_move_back(
+                                    command_buffer.elements_after_cursor_count() + 1,
+                                );
                             }
                         }
                         _ => {}

@@ -146,11 +146,13 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.index < self.cmd_buf.end {
+            // find a delimiter
             let start = self.index;
             while self.index < self.cmd_buf.end && !(self.delimiter)(&self.cmd_buf.line[self.index])
             {
                 self.index += 1;
             }
+            // move forward over the rest of delimiters
             let end = self.index;
             while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index])
             {

@@ -37,8 +37,8 @@ static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go sou
 mod lib {
     pub mod api;
     pub mod api_unsafe;
-    pub mod command_buffer;
     pub mod constants;
+    pub mod cursor_buffer;
     pub mod fixed_size_list;
     // pub mod gen_list;
 }
@@ -47,7 +47,7 @@ use core::arch::global_asm;
 use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
-use lib::command_buffer::*;
+use lib::cursor_buffer::*;
 use lib::fixed_size_list::*;
 
 const MAX_OBJECTS: usize = 32;
@@ -230,7 +230,7 @@ pub extern "C" fn run() -> ! {
         action_look(&world, entity_id);
         uart_send_str(world.entities.get(entity_id).unwrap().name);
         uart_send_str(b" > ");
-        let mut cmdbuf = CommandBuffer::new();
+        let mut cmdbuf = CursorBuffer::new();
         input(&mut cmdbuf);
         uart_send_str(b"\r\n");
         handle_input(&mut world, entity_id, &cmdbuf);
@@ -245,7 +245,7 @@ pub extern "C" fn run() -> ! {
 fn handle_input(
     world: &mut World,
     entity_id: EntityId,
-    cmd_buf: &CommandBuffer<COMMAND_BUFFER_SIZE, u8>,
+    cmd_buf: &CursorBuffer<COMMAND_BUFFER_SIZE, u8>,
 ) {
     let mut it = cmd_buf.iter_words();
     match it.next() {
@@ -375,7 +375,7 @@ fn action_inventory(world: &World, entity_id: EntityId) {
 fn action_take(
     world: &mut World,
     entity_id: EntityId,
-    it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>,
+    it: &mut CursorBufferIterator<COMMAND_BUFFER_SIZE, u8>,
 ) {
     let entity = world.entities.get_mut(entity_id).unwrap();
     let loc = world.locations.get_mut(entity.location).unwrap();
@@ -422,7 +422,7 @@ fn action_take(
 fn action_drop(
     world: &mut World,
     entity_id: EntityId,
-    it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>,
+    it: &mut CursorBufferIterator<COMMAND_BUFFER_SIZE, u8>,
 ) {
     let entity = world.entities.get_mut(entity_id).unwrap();
     let object_name = match it.next() {
@@ -474,7 +474,7 @@ fn action_drop(
 fn action_give(
     world: &mut World,
     entity_id: EntityId,
-    it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>,
+    it: &mut CursorBufferIterator<COMMAND_BUFFER_SIZE, u8>,
 ) {
     // get object name
     let object_name = match it.next() {
@@ -569,7 +569,7 @@ fn action_sdcard_status() {
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_sdcard_read(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>) {
+fn action_sdcard_read(it: &mut CursorBufferIterator<COMMAND_BUFFER_SIZE, u8>) {
     let sector = match it.next() {
         Some(sector) => string_to_u32(sector),
         None => {
@@ -586,7 +586,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>) {
     uart_send_str(b"\r\n\r\n");
 }
 
-fn action_sdcard_write(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>) {
+fn action_sdcard_write(it: &mut CursorBufferIterator<COMMAND_BUFFER_SIZE, u8>) {
     let sector = match it.next() {
         Some(sector) => string_to_u32(sector),
         None => {
@@ -603,7 +603,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>) 
     uart_send_str(b"ok\r\n\r\n");
 }
 
-fn action_led_set(it: &mut CommandBufferIterator<COMMAND_BUFFER_SIZE, u8>) {
+fn action_led_set(it: &mut CursorBufferIterator<COMMAND_BUFFER_SIZE, u8>) {
     let bits = match it.next() {
         Some(bits) => string_to_u32(bits),
         None => {
@@ -630,7 +630,7 @@ fn string_to_u32(number_as_str: &[u8]) -> u32 {
     num
 }
 
-fn input(cmd_buf: &mut CommandBuffer<COMMAND_BUFFER_SIZE, u8>) {
+fn input(cmd_buf: &mut CursorBuffer<COMMAND_BUFFER_SIZE, u8>) {
     enum InputState {
         Normal,
         Escape,

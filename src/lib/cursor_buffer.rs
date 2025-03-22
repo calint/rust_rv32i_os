@@ -1,12 +1,12 @@
-pub struct CommandBuffer<const SIZE: usize, T> {
+pub struct CursorBuffer<const SIZE: usize, T> {
     line: [T; SIZE],
     end: usize,
     cursor: usize,
 }
 
-impl<const SIZE: usize, T: Default + Copy> CommandBuffer<SIZE, T> {
+impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
     pub fn new() -> Self {
-        CommandBuffer {
+        CursorBuffer {
             line: [T::default(); SIZE],
             end: 0,
             cursor: 0,
@@ -107,8 +107,8 @@ impl<const SIZE: usize, T: Default + Copy> CommandBuffer<SIZE, T> {
     }
 
     // iterate over the buffer returning a slice for each word
-    pub fn iter_words(&self) -> CommandBufferIterator<SIZE, T> {
-        CommandBufferIterator {
+    pub fn iter_words(&self) -> CursorBufferIterator<SIZE, T> {
+        CursorBufferIterator {
             cmd_buf: self,
             index: 0,
         }
@@ -116,18 +116,18 @@ impl<const SIZE: usize, T: Default + Copy> CommandBuffer<SIZE, T> {
 }
 
 // iterator over the command buffer returning a slice for each word
-pub struct CommandBufferIterator<'a, const SIZE: usize, T> {
-    cmd_buf: &'a CommandBuffer<SIZE, T>,
+pub struct CursorBufferIterator<'a, const SIZE: usize, T> {
+    cmd_buf: &'a CursorBuffer<SIZE, T>,
     index: usize,
 }
 
-impl<'a, const SIZE: usize, T> CommandBufferIterator<'a, SIZE, T> {
+impl<'a, const SIZE: usize, T> CursorBufferIterator<'a, SIZE, T> {
     pub fn rest(&self) -> &'a [T] {
         &self.cmd_buf.line[self.index..self.cmd_buf.end]
     }
 }
 
-impl<'a, const SIZE: usize> Iterator for CommandBufferIterator<'a, SIZE, u8> {
+impl<'a, const SIZE: usize> Iterator for CursorBufferIterator<'a, SIZE, u8> {
     type Item = &'a [u8];
 
     fn next(&mut self) -> Option<Self::Item> {

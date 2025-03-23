@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![feature(allocator_api)]
 
 static HELLO: &[u8] = b"welcome to adventure #5\r\n    type 'help'\r\n\r\n";
 
@@ -41,6 +42,7 @@ mod lib {
     pub mod cursor_buffer;
     pub mod fixed_size_list;
     // pub mod gen_list;
+    pub mod bump_allocator;
 }
 
 use core::arch::global_asm;

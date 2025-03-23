@@ -75,25 +75,21 @@ struct Object {
     name: Name,
 }
 
-#[derive(Clone, PartialEq)]
 struct Entity {
     name: Name,
     location: LocationId,
     objects: Vec<ObjectId>,
 }
 
-#[derive(Clone, PartialEq)]
 struct Link {
     name: Name,
 }
 
-#[derive(Copy, Clone, PartialEq)]
 struct LocationLink {
     link: LinkId,
     location: LocationId,
 }
 
-#[derive(Clone, PartialEq)]
 struct Location {
     name: Name,
     links: Vec<LocationLink>,
@@ -313,7 +309,7 @@ fn action_look(world: &World, entity_id: EntityId) {
     let mut i = 0;
     for &eid in location.entities.iter() {
         let e = world.entities.get(eid).unwrap();
-        if e != entity {
+        if eid != entity_id {
             if i != 0 {
                 uart_send_str(b", ");
             }

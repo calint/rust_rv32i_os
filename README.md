@@ -10,3 +10,6 @@ rustup target add riscv32i-unknown-none-elf
 ```
 ./run.sh
 ```
+
+## note
+see https://github.com/calint/tang-nano-9k--riscv--cache-psram for FPGA implementation

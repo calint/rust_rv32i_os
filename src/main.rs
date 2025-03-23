@@ -89,7 +89,7 @@ impl Name {
     }
 
     fn equals(&self, compare_with: &[u8]) -> bool {
-        if compare_with.len() > NAME_SIZE {
+        if compare_with.len() >= NAME_SIZE {
             return false;
         }
         self.data.starts_with(compare_with) && self.data[compare_with.len()] == 0

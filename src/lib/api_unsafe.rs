@@ -7,7 +7,6 @@ unsafe extern "C" {
     pub unsafe static __heap_start__: u8;
 }
 
-#[inline(always)]
 pub fn uart_send_char(ch: u8) {
     unsafe {
         while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
@@ -15,7 +14,6 @@ pub fn uart_send_char(ch: u8) {
     }
 }
 
-#[inline(always)]
 pub fn uart_read_char() -> u8 {
     unsafe {
         loop {
@@ -27,12 +25,10 @@ pub fn uart_read_char() -> u8 {
     }
 }
 
-#[inline(always)]
 pub fn led_set(low_being_on_bits: u8) {
     unsafe { write_volatile(LED as *mut u8, low_being_on_bits) }
 }
 
-#[inline(always)]
 pub fn memory_stack_pointer() -> u32 {
     let sp: u32;
     unsafe {
@@ -44,7 +40,6 @@ pub fn memory_stack_pointer() -> u32 {
     sp
 }
 
-#[inline(always)]
 pub fn sdcard_status() -> i32 {
     unsafe { read_volatile(SDCARD_STATUS as *const i32) }
 }

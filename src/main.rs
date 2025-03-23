@@ -308,6 +308,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"mi") => action_memory_info(),
         Some(b"led") => action_led_set(&mut it),
         Some(b"help") => action_help(),
+        Some(b"no") => action_new_object(world, entity_id, &mut it),
         _ => uart_send_str(b"not understood\r\n\r\n"),
     }
 }
@@ -599,7 +600,7 @@ fn action_sdcard_status() {
 
 fn action_sdcard_read(it: &mut CommandBufferIterator) {
     let sector = match it.next() {
-        Some(sector) => string_to_u32(sector),
+        Some(sector) => u8_slice_to_u32(sector),
         None => {
             uart_send_str(b"what sector\r\n\r\n");
             return;
@@ -614,7 +615,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
 
 fn action_sdcard_write(it: &mut CommandBufferIterator) {
     let sector = match it.next() {
-        Some(sector) => string_to_u32(sector),
+        Some(sector) => u8_slice_to_u32(sector),
         None => {
             uart_send_str(b"what sector\r\n\r\n");
             return;
@@ -631,7 +632,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
 
 fn action_led_set(it: &mut CommandBufferIterator) {
     let bits = match it.next() {
-        Some(bits) => string_to_u32(bits),
+        Some(bits) => u8_slice_to_u32(bits),
         None => {
             uart_send_str(b"which leds in bits 0 being on\r\n\r\n");
             return;
@@ -645,15 +646,27 @@ fn action_help() {
     uart_send_str(HELP);
 }
 
-fn string_to_u32(number_as_str: &[u8]) -> u32 {
-    let mut num = 0;
-    for &ch in number_as_str {
-        if ch < b'0' || ch > b'9' {
-            return num;
+fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    // get object name
+    let object_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_str(b"what object name\r\n\r\n");
+            return;
         }
-        num = num * 10 + (ch - b'0') as u32;
-    }
-    num
+    };
+
+    let object = Object {
+        name: Name::from(object_name),
+    };
+
+    let object_id = world.objects.len();
+    world.objects.push(object);
+
+    let entity = world.entities.get_mut(entity_id).unwrap();
+    entity.objects.push(object_id);
+
+    uart_send_str(b"ok\r\n\r\n");
 }
 
 fn input(command_buffer: &mut CommandBuffer) {

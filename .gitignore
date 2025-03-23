@@ -1,5 +1,5 @@
 /target
-/firmware.bin
+/firmware.img
 /firmware.lst
 /firmware.dat
 /Cargo.lock

@@ -40,33 +40,29 @@ mod lib {
     pub mod api_unsafe;
     pub mod constants;
     pub mod cursor_buffer;
-    pub mod fixed_size_list;
+    // pub mod fixed_size_list;
     // pub mod gen_list;
     pub mod bump_allocator;
 }
 
+extern crate alloc;
+
+use alloc::boxed::Box;
+use alloc::vec::Vec;
 use core::arch::global_asm;
+use core::ops::Deref;
 use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
 use lib::bump_allocator::init_bump_allocator;
 use lib::cursor_buffer::*;
-use lib::fixed_size_list::*;
 
-const MAX_OBJECTS: usize = 32;
-const MAX_ENTITIES: usize = 32;
-const MAX_LOCATIONS: usize = 32;
-const MAX_LINKS: usize = 32;
-const MAX_LINKS_PER_LOCATION: usize = 32;
-const MAX_OBJECTS_PER_LOCATION: usize = 32;
-const MAX_ENTITIES_PER_LOCATION: usize = 32;
-const MAX_OBJECTS_PER_ENTITY: usize = 32;
 const COMMAND_BUFFER_SIZE: usize = 80;
 const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
 const CHAR_ESCAPE: u8 = 0x1b;
 
-type Name = &'static [u8];
+type Name = Box<[u8]>;
 type LocationId = usize;
 type LinkId = usize;
 type EntityId = usize;
@@ -75,19 +71,18 @@ type ObjectId = usize;
 type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 type CommandBufferIterator<'a> = CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
 
-#[derive(Copy, Clone, PartialEq)]
 struct Object {
     name: Name,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct Entity {
     name: Name,
     location: LocationId,
-    objects: FixedSizeList<ObjectId, MAX_OBJECTS_PER_ENTITY>,
+    objects: Vec<ObjectId>,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct Link {
     name: Name,
 }
@@ -98,23 +93,20 @@ struct LocationLink {
     location: LocationId,
 }
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct Location {
     name: Name,
-    links: FixedSizeList<LocationLink, MAX_LINKS_PER_LOCATION>,
-    objects: FixedSizeList<ObjectId, MAX_OBJECTS_PER_LOCATION>,
-    entities: FixedSizeList<EntityId, MAX_ENTITIES_PER_LOCATION>,
+    links: Vec<LocationLink>,
+    objects: Vec<ObjectId>,
+    entities: Vec<EntityId>,
 }
 
 struct World {
-    objects: FixedSizeList<Object, MAX_OBJECTS>,
-    entities: FixedSizeList<Entity, MAX_ENTITIES>,
-    locations: FixedSizeList<Location, MAX_LOCATIONS>,
-    links: FixedSizeList<Link, MAX_LINKS>,
+    objects: Vec<Object>,
+    entities: Vec<Entity>,
+    locations: Vec<Location>,
+    links: Vec<Link>,
 }
-
-// extern crate alloc;
-// use alloc::boxed::Box;
 
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
@@ -125,108 +117,126 @@ pub extern "C" fn run() -> ! {
 
     let mut world = World {
         objects: {
-            let mut objects = FixedSizeList::new();
-            objects.add(Object { name: b"notebook" });
-            objects.add(Object { name: b"mirror" });
-            objects.add(Object { name: b"lighter" });
+            let mut objects = Vec::new();
+            objects.push(Object {
+                name: Box::from(b"notebook" as &[u8]),
+            });
+            objects.push(Object {
+                name: Box::from(b"mirror" as &[u8]),
+            });
+            objects.push(Object {
+                name: Box::from(b"lighter" as &[u8]),
+            });
             objects
         },
         entities: {
-            let mut entities = FixedSizeList::new();
-            entities.add(Entity {
-                name: b"me",
+            let mut entities = Vec::new();
+            entities.push(Entity {
+                name: Box::from(b"me" as &[u8]),
                 location: 0,
                 objects: {
-                    let mut list = FixedSizeList::new();
-                    list.add(1);
+                    let mut list = Vec::new();
+                    list.push(1);
                     list
                 },
             });
-            entities.add(Entity {
-                name: b"u",
+            entities.push(Entity {
+                name: Box::from(b"u" as &[u8]),
                 location: 1,
-                objects: FixedSizeList::new(),
+                objects: Vec::new(),
             });
             entities
         },
         locations: {
-            let mut locations = FixedSizeList::new();
-            locations.add(Location {
-                name: b"roome",
+            let mut locations = Vec::new();
+            locations.push(Location {
+                name: Box::from(b"roome" as &[u8]),
                 links: {
-                    let mut list = FixedSizeList::new();
-                    list.add(LocationLink {
+                    let mut list = Vec::new();
+                    list.push(LocationLink {
                         link: 0,
                         location: 1,
                     });
-                    list.add(LocationLink {
+                    list.push(LocationLink {
                         link: 1,
                         location: 2,
                     });
-                    list.add(LocationLink {
+                    list.push(LocationLink {
                         link: 3,
                         location: 3,
                     });
                     list
                 },
-                objects: FixedSizeList::new(),
+                objects: Vec::new(),
                 entities: {
-                    let mut list = FixedSizeList::new();
-                    list.add(0);
+                    let mut list = Vec::new();
+                    list.push(0);
                     list
                 },
             });
-            locations.add(Location {
-                name: b"office",
+            locations.push(Location {
+                name: Box::from(b"office" as &[u8]),
                 links: {
-                    let mut list = FixedSizeList::new();
-                    list.add(LocationLink {
+                    let mut list = Vec::new();
+                    list.push(LocationLink {
                         link: 2,
                         location: 0,
                     });
                     list
                 },
                 objects: {
-                    let mut list = FixedSizeList::new();
-                    list.add(0);
-                    list.add(2);
+                    let mut list = Vec::new();
+                    list.push(0);
+                    list.push(2);
                     list
                 },
                 entities: {
-                    let mut list = FixedSizeList::new();
-                    list.add(1);
+                    let mut list = Vec::new();
+                    list.push(1);
                     list
                 },
             });
-            locations.add(Location {
-                name: b"bathroom",
-                links: FixedSizeList::new(),
-                objects: FixedSizeList::new(),
-                entities: FixedSizeList::new(),
+            locations.push(Location {
+                name: Box::from(b"bathroom" as &[u8]),
+                links: Vec::new(),
+                objects: Vec::new(),
+                entities: Vec::new(),
             });
-            locations.add(Location {
-                name: b"kitchen",
+            locations.push(Location {
+                name: Box::from(b"kitchen" as &[u8]),
                 links: {
-                    let mut list = FixedSizeList::new();
-                    list.add(LocationLink {
+                    let mut list = Vec::new();
+                    list.push(LocationLink {
                         link: 1,
                         location: 0,
                     });
                     list
                 },
-                objects: FixedSizeList::new(),
-                entities: FixedSizeList::new(),
+                objects: Vec::new(),
+                entities: Vec::new(),
             });
             locations
         },
         links: {
-            let mut links = FixedSizeList::new();
-            links.add(Link { name: b"north" });
-            links.add(Link { name: b"east" });
-            links.add(Link { name: b"south" });
-            links.add(Link { name: b"west" });
-            links.add(Link { name: b"up" });
-            links.add(Link { name: b"down" });
+            let mut links = Vec::new();
+            links.push(Link {
+                name: Box::from(b"north" as &[u8]),
+            });
+            links.push(Link {
+                name: Box::from(b"east" as &[u8]),
+            });
+            links.push(Link {
+                name: Box::from(b"south" as &[u8]),
+            });
+            links.push(Link {
+                name: Box::from(b"west" as &[u8]),
+            });
+            links.push(Link {
+                name: Box::from(b"up" as &[u8]),
+            });
+            links.push(Link {
+                name: Box::from(b"down" as &[u8]),
+            });
             links
         },
     };
@@ -245,7 +255,7 @@ pub extern "C" fn run() -> ! {
     let mut entity_id = 0;
     loop {
         action_look(&world, entity_id);
-        uart_send_str(world.entities.get(entity_id).unwrap().name);
+        uart_send_str(&world.entities.get(entity_id).unwrap().name);
         uart_send_str(b" > ");
         let mut command_buffer = CursorBuffer::new();
         input(&mut command_buffer);
@@ -284,16 +294,16 @@ fn action_look(world: &World, entity_id: EntityId) {
     let entity = world.entities.get(entity_id).unwrap();
     let location = world.locations.get(entity.location).unwrap();
     uart_send_str(b"u r in ");
-    uart_send_str(location.name);
+    uart_send_str(&location.name);
 
     uart_send_str(b"\r\nu c: ");
     let mut i = 0;
-    for oid in location.objects.iter() {
+    for &oid in location.objects.iter() {
         if i != 0 {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_str(world.objects.get(oid).unwrap().name);
+        uart_send_str(&world.objects.get(oid).unwrap().name);
     }
     if i == 0 {
         uart_send_str(b"nothing");
@@ -301,13 +311,13 @@ fn action_look(world: &World, entity_id: EntityId) {
     uart_send_str(b"\r\n");
 
     let mut i = 0;
-    for eid in location.entities.iter() {
+    for &eid in location.entities.iter() {
         let e = world.entities.get(eid).unwrap();
         if e != entity {
             if i != 0 {
                 uart_send_str(b", ");
             }
-            uart_send_str(e.name);
+            uart_send_str(&e.name);
             i += 1;
         }
     }
@@ -322,7 +332,7 @@ fn action_look(world: &World, entity_id: EntityId) {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_str(world.links.get(lid.link).unwrap().name);
+        uart_send_str(&world.links.get(lid.link).unwrap().name);
     }
     if i == 0 {
         uart_send_str(b"none");
@@ -344,24 +354,20 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     };
 
     // add entity to new location
-    assert!(
-        world
-            .locations
-            .get_mut(to_location_id)
-            .unwrap()
-            .entities
-            .add(entity_id)
-    );
+    world
+        .locations
+        .get_mut(to_location_id)
+        .unwrap()
+        .entities
+        .push(entity_id);
 
     // remove entity from old location
-    assert!(
-        world
-            .locations
-            .get_mut(entity.location)
-            .unwrap()
-            .entities
-            .remove(entity_id)
-    );
+    world
+        .locations
+        .get_mut(entity.location)
+        .unwrap()
+        .entities
+        .retain(|&x| x != entity_id);
 
     // update entity location
     entity.location = to_location_id;
@@ -372,12 +378,12 @@ fn action_inventory(world: &World, entity_id: EntityId) {
     let entity = world.entities.get(entity_id).unwrap();
     uart_send_str(b"u have: ");
     let mut i = 0;
-    for oid in entity.objects.iter() {
+    for &oid in entity.objects.iter() {
         if i != 0 {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_str(world.objects.get(oid).unwrap().name);
+        uart_send_str(&world.objects.get(oid).unwrap().name);
     }
     if i == 0 {
         uart_send_str(b"nothing");
@@ -402,8 +408,8 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_index = None;
     let mut object_id = None;
 
-    for (index, oid) in location.objects.iter().enumerate() {
-        if world.objects.get(oid).unwrap().name == object_name {
+    for (index, &oid) in location.objects.iter().enumerate() {
+        if world.objects.get(oid).unwrap().name.deref() == object_name {
             object_index = Some(index);
             object_id = Some(oid);
             break;
@@ -420,10 +426,10 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // remove object from location
-    assert!(location.objects.remove_at(object_index));
+    location.objects.remove(object_index);
 
     // add object to entity
-    assert!(entity.objects.add(object_id));
+    entity.objects.push(object_id);
 
     uart_send_str(b"ok\r\n\r\n");
 }
@@ -442,8 +448,8 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_index = None;
     let mut object_id = None;
 
-    for (index, oid) in entity.objects.iter().enumerate() {
-        if world.objects.get(oid).unwrap().name == object_name {
+    for (index, &oid) in entity.objects.iter().enumerate() {
+        if world.objects.get(oid).unwrap().name.deref() == object_name {
             object_index = Some(index);
             object_id = Some(oid);
             break;
@@ -461,17 +467,15 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // remove object from entity
-    assert!(entity.objects.remove_at(object_index));
+    entity.objects.remove(object_index);
 
     // add object to location
-    assert!(
-        world
-            .locations
-            .get_mut(entity.location)
-            .unwrap()
-            .objects
-            .add(object_id)
-    );
+    world
+        .locations
+        .get_mut(entity.location)
+        .unwrap()
+        .objects
+        .push(object_id);
 
     uart_send_str(b"ok\r\n\r\n");
 }
@@ -496,13 +500,13 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // find "to" entity
-    let to_entity_id = match world
+    let &to_entity_id = match world
         .locations
         .get(world.entities.get(entity_id).unwrap().location)
         .unwrap()
         .entities
         .iter()
-        .find(|&x| world.entities.get(x).unwrap().name == to_entity_name)
+        .find(|&&x| world.entities.get(x).unwrap().name.deref() == to_entity_name)
     {
         Some(id) => id,
         None => {
@@ -518,8 +522,8 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_index = None;
     let mut object_id = None;
 
-    for (index, oid) in from_entity.objects.iter().enumerate() {
-        if world.objects.get(oid).unwrap().name == object_name {
+    for (index, &oid) in from_entity.objects.iter().enumerate() {
+        if world.objects.get(oid).unwrap().name.deref() == object_name {
             object_index = Some(index);
             object_id = Some(oid);
             break;
@@ -537,17 +541,15 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // remove object from entity
-    assert!(from_entity.objects.remove_at(object_index));
+    from_entity.objects.remove(object_index);
 
     // add object to "to" entity
-    assert!(
-        world
-            .entities
-            .get_mut(to_entity_id)
-            .unwrap()
-            .objects
-            .add(object_id)
-    );
+    world
+        .entities
+        .get_mut(to_entity_id)
+        .unwrap()
+        .objects
+        .push(object_id);
 
     uart_send_str(b"ok\r\n\r\n");
 }

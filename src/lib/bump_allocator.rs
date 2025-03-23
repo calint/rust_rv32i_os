@@ -1,4 +1,4 @@
-// use super::api::*;
+use super::api::*;
 use super::api_unsafe::__heap_start__;
 use core::alloc::{GlobalAlloc, Layout};
 
@@ -11,7 +11,7 @@ unsafe impl GlobalAlloc for BumpAllocator {
         let size = layout.size();
         let align = layout.align();
         let aligned_next = (self.next + align - 1) & !(align - 1);
-        // uart_send_str(b"alloc: at ");
+        // uart_send_str(b"\r\nalloc: at ");
         // uart_send_hex_u32(aligned_next as u32, true);
         // uart_send_str(b" size: ");
         // uart_send_hex_u32(size as u32, true);
@@ -23,7 +23,13 @@ unsafe impl GlobalAlloc for BumpAllocator {
         aligned_next as *mut u8
     }
 
-    unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {}
+    unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
+        // uart_send_str(b"\r\nde-alloc: at ");
+        // uart_send_hex_u32(ptr as u32, true);
+        // uart_send_str(b" size: ");
+        // uart_send_hex_u32(layout.size() as u32, true);
+        // uart_send_str(b"\r\n");
+    }
 }
 
 #[global_allocator]

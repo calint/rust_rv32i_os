@@ -35,8 +35,12 @@ unsafe impl GlobalAlloc for BumpAllocator {
 #[global_allocator]
 static mut ALLOCATOR: BumpAllocator = BumpAllocator { next: 0 };
 
-pub fn init_bump_allocator() {
+pub fn allocator_init() {
     unsafe {
         ALLOCATOR.next = &__heap_start__ as *const u8 as usize;
     }
+}
+
+pub fn allocator_current_next() -> usize {
+    unsafe { ALLOCATOR.next }
 }

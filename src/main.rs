@@ -47,14 +47,12 @@ mod lib {
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use alloc::vec::Vec;
 use core::arch::global_asm;
-use core::ops::Deref;
 use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
-use lib::bump_allocator::init_bump_allocator;
+use lib::bump_allocator::*;
 use lib::cursor_buffer::*;
 
 const COMMAND_BUFFER_SIZE: usize = 80;
@@ -136,7 +134,7 @@ global_asm!(include_str!("startup.s"));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
-    init_bump_allocator();
+    allocator_init();
 
     let mut world = World {
         objects: {
@@ -579,6 +577,9 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 fn action_memory_info() {
     uart_send_str(b"   heap start: ");
     uart_send_hex_u32(memory_heap_start(), true);
+    uart_send_str(b"\r\n");
+    uart_send_str(b"heap position: ");
+    uart_send_hex_u32(allocator_current_next() as u32, true);
     uart_send_str(b"\r\n");
     uart_send_str(b"stack pointer: ");
     uart_send_hex_u32(memory_stack_pointer(), true);

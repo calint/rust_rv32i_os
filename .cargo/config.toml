@@ -2,4 +2,4 @@
 target = "riscv32i-unknown-none-elf"
 
 [target.riscv32i-unknown-none-elf]
-rustflags = ["-C", "link-arg=-Tlinker.ld", "-Z", "unstable-options"]
+rustflags = ["-C", "link-arg=-Tlinker.ld"]

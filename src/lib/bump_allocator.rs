@@ -16,8 +16,9 @@ unsafe impl GlobalAlloc for BumpAllocator {
         // uart_send_str(b" size: ");
         // uart_send_hex_u32(size as u32, true);
         // uart_send_str(b"\r\n");
+        let self_mut_ptr = self as *const Self as *mut Self;
         unsafe {
-            (self as *const Self as *mut Self).as_mut().unwrap().next = aligned_next + size;
+            (*self_mut_ptr).next = aligned_next + size;
         }
         aligned_next as *mut u8
     }

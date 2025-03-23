@@ -49,6 +49,7 @@ use core::arch::global_asm;
 use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
+use lib::bump_allocator::init_bump_allocator;
 use lib::cursor_buffer::*;
 use lib::fixed_size_list::*;
 
@@ -112,11 +113,16 @@ struct World {
     links: FixedSizeList<Link, MAX_LINKS>,
 }
 
+// extern crate alloc;
+// use alloc::boxed::Box;
+
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
+    init_bump_allocator();
+
     let mut world = World {
         objects: {
             let mut objects = FixedSizeList::new();
@@ -224,6 +230,12 @@ pub extern "C" fn run() -> ! {
             links
         },
     };
+
+    // let o1 = Box::new(Object { name: b"object1" });
+    // let o2 = Box::new(Object { name: b"object2" });
+
+    // uart_send_str(o1.name);
+    // uart_send_str(o2.name);
 
     led_set(0b0000); // turn all leds on
 

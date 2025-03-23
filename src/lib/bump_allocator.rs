@@ -10,11 +10,11 @@ unsafe impl GlobalAlloc for BumpAllocator {
         let size = layout.size();
         let align = layout.align();
         let aligned_next = (self.next + align - 1) & !(align - 1);
-        // uart_send_str(b"\r\nalloc: at ");
-        // uart_send_hex_u32(aligned_next as u32, true);
-        // uart_send_str(b" size: ");
-        // uart_send_hex_u32(size as u32, true);
-        // uart_send_str(b"\r\n");
+        // super::api::uart_send_str(b"alloc: at ");
+        // super::api::uart_send_hex_u32(aligned_next as u32, true);
+        // super::api::uart_send_str(b" size: ");
+        // super::api::uart_send_hex_u32(size as u32, true);
+        // super::api::uart_send_str(b"\r\n");
         let self_mut_ptr = self as *const Self as *mut Self;
         unsafe {
             (*self_mut_ptr).next = aligned_next + size;
@@ -23,11 +23,11 @@ unsafe impl GlobalAlloc for BumpAllocator {
     }
 
     unsafe fn dealloc(&self, _ptr: *mut u8, _layout: Layout) {
-        // uart_send_str(b"\r\nde-alloc: at ");
-        // uart_send_hex_u32(ptr as u32, true);
-        // uart_send_str(b" size: ");
-        // uart_send_hex_u32(layout.size() as u32, true);
-        // uart_send_str(b"\r\n");
+        // super::api::uart_send_str(b"de-alloc: at ");
+        // super::api::uart_send_hex_u32(ptr as u32, true);
+        // super::api::uart_send_str(b" size: ");
+        // super::api::uart_send_hex_u32(layout.size() as u32, true);
+        // super::api::uart_send_str(b"\r\n");
     }
 }
 

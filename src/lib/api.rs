@@ -1,19 +1,25 @@
 use super::api_unsafe::*;
 use super::constants::*;
 
-#[inline(always)]
 pub fn memory_end() -> u32 {
     MEMORY_END
 }
 
-#[inline(always)]
 pub fn memory_heap_start() -> u32 {
     &raw const super::api::__heap_start__ as u32
 }
 
-#[inline(always)]
 pub fn uart_send_str(s: &[u8]) {
     for &byte in s {
+        uart_send_char(byte);
+    }
+}
+
+pub fn uart_send_cstr(s: &[u8]) {
+    for &byte in s {
+        if byte == 0 {
+            break;
+        }
         uart_send_char(byte);
     }
 }

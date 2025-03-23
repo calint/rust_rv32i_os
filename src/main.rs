@@ -64,7 +64,6 @@ const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
 const CHAR_ESCAPE: u8 = 0x1b;
 
-type Name = [u8; NAME_SIZE];
 type LocationId = usize;
 type LinkId = usize;
 type EntityId = usize;
@@ -72,6 +71,32 @@ type ObjectId = usize;
 
 type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 type CommandBufferIterator<'a> = CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
+
+struct Name {
+    data: [u8; NAME_SIZE],
+}
+
+impl Name {
+    fn new() -> Self {
+        Name {
+            data: [0u8; NAME_SIZE],
+        }
+    }
+
+    fn from(src: &[u8]) -> Self {
+        let mut name = Name::new();
+        let len = src.len().min(NAME_SIZE);
+        name.data[..len].copy_from_slice(&src[..len]);
+        name
+    }
+
+    fn equals(&self, compare_with: &[u8]) -> bool {
+        if compare_with.len() > NAME_SIZE {
+            return false;
+        }
+        self.data.starts_with(compare_with) && self.data[compare_with.len()] == 0
+    }
+}
 
 struct Object {
     name: Name,
@@ -117,20 +142,20 @@ pub extern "C" fn run() -> ! {
         objects: {
             let mut objects = Vec::new();
             objects.push(Object {
-                name: name_from(b"notebook"),
+                name: Name::from(b"notebook"),
             });
             objects.push(Object {
-                name: name_from(b"mirror"),
+                name: Name::from(b"mirror"),
             });
             objects.push(Object {
-                name: name_from(b"lighter"),
+                name: Name::from(b"lighter"),
             });
             objects
         },
         entities: {
             let mut entities = Vec::new();
             entities.push(Entity {
-                name: name_from(b"me"),
+                name: Name::from(b"me"),
                 location: 0,
                 objects: {
                     let mut list = Vec::new();
@@ -139,7 +164,7 @@ pub extern "C" fn run() -> ! {
                 },
             });
             entities.push(Entity {
-                name: name_from(b"u"),
+                name: Name::from(b"u"),
                 location: 1,
                 objects: Vec::new(),
             });
@@ -148,7 +173,7 @@ pub extern "C" fn run() -> ! {
         locations: {
             let mut locations = Vec::new();
             locations.push(Location {
-                name: name_from(b"roome"),
+                name: Name::from(b"roome"),
                 links: {
                     let mut list = Vec::new();
                     list.push(LocationLink {
@@ -173,7 +198,7 @@ pub extern "C" fn run() -> ! {
                 },
             });
             locations.push(Location {
-                name: name_from(b"office"),
+                name: Name::from(b"office"),
                 links: {
                     let mut list = Vec::new();
                     list.push(LocationLink {
@@ -195,13 +220,13 @@ pub extern "C" fn run() -> ! {
                 },
             });
             locations.push(Location {
-                name: name_from(b"bathroom"),
+                name: Name::from(b"bathroom"),
                 links: Vec::new(),
                 objects: Vec::new(),
                 entities: Vec::new(),
             });
             locations.push(Location {
-                name: name_from(b"kitchen"),
+                name: Name::from(b"kitchen"),
                 links: {
                     let mut list = Vec::new();
                     list.push(LocationLink {
@@ -218,22 +243,22 @@ pub extern "C" fn run() -> ! {
         links: {
             let mut links = Vec::new();
             links.push(Link {
-                name: name_from(b"north"),
+                name: Name::from(b"north"),
             });
             links.push(Link {
-                name: name_from(b"east"),
+                name: Name::from(b"east"),
             });
             links.push(Link {
-                name: name_from(b"south"),
+                name: Name::from(b"south"),
             });
             links.push(Link {
-                name: name_from(b"west"),
+                name: Name::from(b"west"),
             });
             links.push(Link {
-                name: name_from(b"up"),
+                name: Name::from(b"up"),
             });
             links.push(Link {
-                name: name_from(b"down"),
+                name: Name::from(b"down"),
             });
             links
         },
@@ -252,7 +277,7 @@ pub extern "C" fn run() -> ! {
     let mut entity_id = 0;
     loop {
         action_look(&world, entity_id);
-        uart_send_cstr(&world.entities.get(entity_id).unwrap().name);
+        uart_send_cstr(&world.entities.get(entity_id).unwrap().name.data);
         uart_send_str(b" > ");
         let mut command_buffer = CursorBuffer::new();
         input(&mut command_buffer);
@@ -291,7 +316,7 @@ fn action_look(world: &World, entity_id: EntityId) {
     let entity = world.entities.get(entity_id).unwrap();
     let location = world.locations.get(entity.location).unwrap();
     uart_send_str(b"u r in ");
-    uart_send_cstr(&location.name);
+    uart_send_cstr(&location.name.data);
 
     uart_send_str(b"\r\nu c: ");
     let mut i = 0;
@@ -300,7 +325,7 @@ fn action_look(world: &World, entity_id: EntityId) {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_cstr(&world.objects.get(oid).unwrap().name);
+        uart_send_cstr(&world.objects.get(oid).unwrap().name.data);
     }
     if i == 0 {
         uart_send_str(b"nothing");
@@ -314,7 +339,7 @@ fn action_look(world: &World, entity_id: EntityId) {
             if i != 0 {
                 uart_send_str(b", ");
             }
-            uart_send_cstr(&e.name);
+            uart_send_cstr(&e.name.data);
             i += 1;
         }
     }
@@ -329,7 +354,7 @@ fn action_look(world: &World, entity_id: EntityId) {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_cstr(&world.links.get(lid.link).unwrap().name);
+        uart_send_cstr(&world.links.get(lid.link).unwrap().name.data);
     }
     if i == 0 {
         uart_send_str(b"none");
@@ -380,7 +405,7 @@ fn action_inventory(world: &World, entity_id: EntityId) {
             uart_send_str(b", ");
         }
         i += 1;
-        uart_send_cstr(&world.objects.get(oid).unwrap().name);
+        uart_send_cstr(&world.objects.get(oid).unwrap().name.data);
     }
     if i == 0 {
         uart_send_str(b"nothing");
@@ -406,7 +431,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_id = None;
 
     for (index, &oid) in location.objects.iter().enumerate() {
-        if name_equals(&world.objects.get(oid).unwrap().name, object_name) {
+        if world.objects.get(oid).unwrap().name.equals(object_name) {
             object_index = Some(index);
             object_id = Some(oid);
             break;
@@ -446,7 +471,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_id = None;
 
     for (index, &oid) in entity.objects.iter().enumerate() {
-        if name_equals(&world.objects.get(oid).unwrap().name, object_name) {
+        if world.objects.get(oid).unwrap().name.equals(object_name) {
             object_index = Some(index);
             object_id = Some(oid);
             break;
@@ -503,7 +528,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         .unwrap()
         .entities
         .iter()
-        .find(|&&x| name_equals(&world.entities.get(x).unwrap().name, to_entity_name))
+        .find(|&&x| world.entities.get(x).unwrap().name.equals(to_entity_name))
     {
         Some(id) => id,
         None => {
@@ -520,7 +545,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_id = None;
 
     for (index, &oid) in from_entity.objects.iter().enumerate() {
-        if name_equals(&world.objects.get(oid).unwrap().name, object_name) {
+        if world.objects.get(oid).unwrap().name.equals(object_name) {
             object_index = Some(index);
             object_id = Some(oid);
             break;
@@ -626,20 +651,6 @@ fn string_to_u32(number_as_str: &[u8]) -> u32 {
         num = num * 10 + (ch - b'0') as u32;
     }
     num
-}
-
-fn name_from(src: &[u8]) -> Name {
-    let mut name = [0u8; NAME_SIZE];
-    let len = src.len().min(NAME_SIZE);
-    name[..len].copy_from_slice(&src[..len]);
-    name
-}
-
-fn name_equals(name: &[u8; NAME_SIZE], compare_with: &[u8]) -> bool {
-    if compare_with.len() > NAME_SIZE {
-        return false;
-    }
-    name.starts_with(compare_with) && name[compare_with.len()] == 0
 }
 
 fn input(command_buffer: &mut CommandBuffer) {

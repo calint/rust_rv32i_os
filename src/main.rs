@@ -83,13 +83,15 @@ impl Name {
 
     fn from(src: &[u8]) -> Self {
         let mut name = Name::new();
-        let len = src.len().min(NAME_SIZE);
+        let len = src.len().min(NAME_SIZE - 1);
+        // note: -1 to enabled string terminator at the end of string
         name.data[..len].copy_from_slice(&src[..len]);
         name
     }
 
     fn equals(&self, compare_with: &[u8]) -> bool {
         if compare_with.len() >= NAME_SIZE {
+            // note: >= to ensure the end of string terminator can be compared
             return false;
         }
         self.data.starts_with(compare_with) && self.data[compare_with.len()] == 0

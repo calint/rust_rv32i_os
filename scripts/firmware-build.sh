@@ -9,6 +9,7 @@ FIRMWARE=firmware
 
 cd ..
 
+cargo clean
 cargo build --release
 $OBJCOPY -O binary $ELF $FIRMWARE.img
 #$OBJDUMP --source-comment -Mnumeric,no-aliases -Sr $ELF > firmware.lst

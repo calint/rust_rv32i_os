@@ -8,5 +8,8 @@ SECTIONS
     *(.bss .bss.*) *(COMMON)
     __bss_end__ = .;
   }
-  __heap_start__ = .;
+  .heap (NOLOAD) : {
+    . = ALIGN(16);
+    __heap_start__ = .;
+  }
 }

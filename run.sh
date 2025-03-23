@@ -2,7 +2,7 @@
 set -e
 cd $(dirname "$0")
 
-scripts/build-firmware.sh
+scripts/firmware-build.sh
 
 # run
 echo " * build emulator"

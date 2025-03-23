@@ -12,4 +12,4 @@ emulator/make.sh
 qa/emulate/test.sh
 
 echo " * run emulator"
-emulator/osqa firmware.bin sdcard.bin
+emulator/osqa firmware.img sdcard.img

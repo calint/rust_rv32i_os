@@ -277,8 +277,12 @@ pub extern "C" fn run() -> ! {
     loop {
         let entities_count = world.entities.len();
         for entity_id in 0..entities_count {
+            let entity = match world.entities.get(entity_id) {
+                Some(e) => e,
+                None => continue,
+            };
             action_look(&world, entity_id);
-            uart_send_cstr(&world.entities.get(entity_id).unwrap().name.data);
+            uart_send_cstr(&entity.name.data);
             uart_send_str(b" > ");
             let mut command_buffer = CursorBuffer::new();
             input(&mut command_buffer);

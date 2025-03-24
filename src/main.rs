@@ -274,19 +274,16 @@ pub extern "C" fn run() -> ! {
     uart_send_str(ASCII_ART);
     uart_send_str(HELLO);
 
-    let mut entity_id = 0;
     loop {
-        action_look(&world, entity_id);
-        uart_send_cstr(&world.entities.get(entity_id).unwrap().name.data);
-        uart_send_str(b" > ");
-        let mut command_buffer = CursorBuffer::new();
-        input(&mut command_buffer);
-        uart_send_str(b"\r\n");
-        handle_input(&mut world, entity_id, &command_buffer);
-        if entity_id == 0 {
-            entity_id = 1;
-        } else {
-            entity_id = 0;
+        let entities_count = world.entities.len();
+        for entity_id in 0..entities_count {
+            action_look(&world, entity_id);
+            uart_send_cstr(&world.entities.get(entity_id).unwrap().name.data);
+            uart_send_str(b" > ");
+            let mut command_buffer = CursorBuffer::new();
+            input(&mut command_buffer);
+            uart_send_str(b"\r\n");
+            handle_input(&mut world, entity_id, &command_buffer);
         }
     }
 }

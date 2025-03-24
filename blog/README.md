@@ -52,3 +52,58 @@ AIs are fantastic at tutoring the noob questions.
 With a background in C++ everything so far makes sense. However, for a programming noob, it is just to much to know at once before being able to do something meaningful.
 
 Looking forward to acquire the formal knowledge from the Rust book and reference.
+
+## Day 5. Strings
+Pondering whether to use String or custom data type for "name". Fixed size `u8` array gives better cache coherence although it does not matter in this application. String gives built-in UTF-8 support but results in more allocations.
+
+Log of allocator output for the `[u8;NAME_SIZE]` custom data type and using String.
+
+Custom data type using `[u8;NAME_SIZE]` gives:
+```
+binary size: 14000 B
+alloc: at 0000:36C0 size: 0000:0080
+alloc: at 0000:3740 size: 0000:0010
+alloc: at 0000:3750 size: 0000:00C0
+alloc: at 0000:3810 size: 0000:0020
+alloc: at 0000:3830 size: 0000:0010
+alloc: at 0000:3840 size: 0000:0110
+alloc: at 0000:3950 size: 0000:0020
+alloc: at 0000:3970 size: 0000:0010
+alloc: at 0000:3980 size: 0000:0010
+alloc: at 0000:3990 size: 0000:0020
+alloc: at 0000:39B0 size: 0000:0080
+alloc: at 0000:3A30 size: 0000:0100
+de-alloc: at 0000:39B0 size: 0000:0080
+```
+
+Using String gives:
+```
+binary size: 16400 B
+alloc: at 0000:4020 size: 0000:0008
+alloc: at 0000:4028 size: 0000:0030
+alloc: at 0000:4058 size: 0000:0006
+alloc: at 0000:405E size: 0000:0007
+alloc: at 0000:4065 size: 0000:0002
+alloc: at 0000:4068 size: 0000:0010
+alloc: at 0000:4078 size: 0000:0070
+alloc: at 0000:40E8 size: 0000:0001
+alloc: at 0000:40E9 size: 0000:0005
+alloc: at 0000:40F0 size: 0000:0020
+alloc: at 0000:4110 size: 0000:0010
+alloc: at 0000:4120 size: 0000:00C0
+alloc: at 0000:41E0 size: 0000:0006
+alloc: at 0000:41E8 size: 0000:0020
+alloc: at 0000:4208 size: 0000:0010
+alloc: at 0000:4218 size: 0000:0010
+alloc: at 0000:4228 size: 0000:0008
+alloc: at 0000:4230 size: 0000:0007
+alloc: at 0000:4238 size: 0000:0020
+alloc: at 0000:4258 size: 0000:0005
+alloc: at 0000:4260 size: 0000:0030
+alloc: at 0000:4290 size: 0000:0004
+alloc: at 0000:4294 size: 0000:0005
+alloc: at 0000:4299 size: 0000:0004
+alloc: at 0000:429D size: 0000:0002
+alloc: at 0000:42A0 size: 0000:0060
+de-alloc: at 0000:4260 size: 0000:0030
+```

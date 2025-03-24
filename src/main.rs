@@ -284,7 +284,7 @@ pub extern "C" fn run() -> ! {
             action_look(&world, entity_id);
             uart_send_cstr(&entity.name.data);
             uart_send_str(b" > ");
-            let mut command_buffer = CursorBuffer::new();
+            let mut command_buffer = CommandBuffer::new();
             input(&mut command_buffer);
             uart_send_str(b"\r\n");
             handle_input(&mut world, entity_id, &command_buffer);

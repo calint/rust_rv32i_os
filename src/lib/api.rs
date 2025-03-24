@@ -9,7 +9,7 @@ pub fn memory_heap_start() -> u32 {
     &raw const super::api::__heap_start__ as u32
 }
 
-pub fn uart_send_str(s: &[u8]) {
+pub fn uart_send_bytes(s: &[u8]) {
     for &byte in s {
         uart_send_char(byte);
     }

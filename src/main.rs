@@ -271,8 +271,8 @@ pub extern "C" fn run() -> ! {
 
     led_set(0b0000); // turn all leds on
 
-    uart_send_str(ASCII_ART);
-    uart_send_str(HELLO);
+    uart_send_bytes(ASCII_ART);
+    uart_send_bytes(HELLO);
 
     loop {
         let entities_count = world.entities.len();
@@ -283,10 +283,10 @@ pub extern "C" fn run() -> ! {
             };
             action_look(&world, entity_id);
             uart_send_cstr(&entity.name.data);
-            uart_send_str(b" > ");
+            uart_send_bytes(b" > ");
             let mut command_buffer = CommandBuffer::new();
             input(&mut command_buffer);
-            uart_send_str(b"\r\n");
+            uart_send_bytes(b"\r\n");
             handle_input(&mut world, entity_id, &command_buffer);
         }
     }
@@ -310,58 +310,64 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"led") => action_led_set(&mut it),
         Some(b"help") => action_help(),
         Some(b"no") => action_new_object(world, entity_id, &mut it),
-        _ => uart_send_str(b"not understood\r\n\r\n"),
+        _ => uart_send_bytes(b"not understood\r\n\r\n"),
     }
 }
 
 fn action_look(world: &World, entity_id: EntityId) {
-    let entity = world.entities.get(entity_id).unwrap();
-    let location = world.locations.get(entity.location).unwrap();
-    uart_send_str(b"u r in ");
+    let entity = match world.entities.get(entity_id) {
+        Some(e) => e,
+        None => return,
+    };
+    let location = match world.locations.get(entity.location) {
+        Some(l) => l,
+        None => return,
+    };
+    uart_send_bytes(b"u r in ");
     uart_send_cstr(&location.name.data);
 
-    uart_send_str(b"\r\nu c: ");
+    uart_send_bytes(b"\r\nu c: ");
     let mut i = 0;
     for &oid in location.objects.iter() {
         if i != 0 {
-            uart_send_str(b", ");
+            uart_send_bytes(b", ");
         }
         i += 1;
         uart_send_cstr(&world.objects.get(oid).unwrap().name.data);
     }
     if i == 0 {
-        uart_send_str(b"nothing");
+        uart_send_bytes(b"nothing");
     }
-    uart_send_str(b"\r\n");
+    uart_send_bytes(b"\r\n");
 
     let mut i = 0;
     for &eid in location.entities.iter() {
         let e = world.entities.get(eid).unwrap();
         if eid != entity_id {
             if i != 0 {
-                uart_send_str(b", ");
+                uart_send_bytes(b", ");
             }
             uart_send_cstr(&e.name.data);
             i += 1;
         }
     }
     if i > 0 {
-        uart_send_str(b" is here\r\n");
+        uart_send_bytes(b" is here\r\n");
     }
 
-    uart_send_str(b"exits: ");
+    uart_send_bytes(b"exits: ");
     let mut i = 0;
     for lid in location.links.iter() {
         if i != 0 {
-            uart_send_str(b", ");
+            uart_send_bytes(b", ");
         }
         i += 1;
         uart_send_cstr(&world.links.get(lid.link).unwrap().name.data);
     }
     if i == 0 {
-        uart_send_str(b"none");
+        uart_send_bytes(b"none");
     }
-    uart_send_str(b"\r\n");
+    uart_send_bytes(b"\r\n");
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
@@ -372,7 +378,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     let to_location_id = match location.links.iter().find(|x| x.link == link_id) {
         Some(lnk) => lnk.location,
         None => {
-            uart_send_str(b"can't go there\r\n\r\n");
+            uart_send_bytes(b"can't go there\r\n\r\n");
             return;
         }
     };
@@ -395,24 +401,24 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
 
     // update entity location
     entity.location = to_location_id;
-    uart_send_str(b"ok\r\n\r\n");
+    uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_inventory(world: &World, entity_id: EntityId) {
     let entity = world.entities.get(entity_id).unwrap();
-    uart_send_str(b"u have: ");
+    uart_send_bytes(b"u have: ");
     let mut i = 0;
     for &oid in entity.objects.iter() {
         if i != 0 {
-            uart_send_str(b", ");
+            uart_send_bytes(b", ");
         }
         i += 1;
         uart_send_cstr(&world.objects.get(oid).unwrap().name.data);
     }
     if i == 0 {
-        uart_send_str(b"nothing");
+        uart_send_bytes(b"nothing");
     }
-    uart_send_str(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n\r\n");
 }
 
 fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -423,7 +429,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let object_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_str(b"take what?\r\n\r\n");
+            uart_send_bytes(b"take what?\r\n\r\n");
             return;
         }
     };
@@ -443,8 +449,8 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let (object_index, object_id) = match object_id {
         Some(id) => (object_index.unwrap(), id),
         None => {
-            uart_send_str(object_name);
-            uart_send_str(b" is not here\r\n\r\n");
+            uart_send_bytes(object_name);
+            uart_send_bytes(b" is not here\r\n\r\n");
             return;
         }
     };
@@ -455,7 +461,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // add object to entity
     entity.objects.push(object_id);
 
-    uart_send_str(b"ok\r\n\r\n");
+    uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -463,7 +469,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let object_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_str(b"drop what?\r\n\r\n");
+            uart_send_bytes(b"drop what?\r\n\r\n");
             return;
         }
     };
@@ -483,9 +489,9 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let (object_index, object_id) = match object_id {
         Some(id) => (object_index.unwrap(), id),
         None => {
-            uart_send_str(b"don't have ");
-            uart_send_str(object_name);
-            uart_send_str(b"\r\n\r\n");
+            uart_send_bytes(b"don't have ");
+            uart_send_bytes(object_name);
+            uart_send_bytes(b"\r\n\r\n");
             return;
         }
     };
@@ -501,7 +507,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         .objects
         .push(object_id);
 
-    uart_send_str(b"ok\r\n\r\n");
+    uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -509,7 +515,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let object_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_str(b"give what?\r\n\r\n");
+            uart_send_bytes(b"give what?\r\n\r\n");
             return;
         }
     };
@@ -518,7 +524,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let to_entity_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_str(b"give to whom?\r\n\r\n");
+            uart_send_bytes(b"give to whom?\r\n\r\n");
             return;
         }
     };
@@ -534,8 +540,8 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     {
         Some(id) => id,
         None => {
-            uart_send_str(to_entity_name);
-            uart_send_str(b" not here\r\n\r\n");
+            uart_send_bytes(to_entity_name);
+            uart_send_bytes(b" not here\r\n\r\n");
             return;
         }
     };
@@ -557,9 +563,9 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let (object_index, object_id) = match object_id {
         Some(id) => (object_index.unwrap(), id),
         None => {
-            uart_send_str(b"don't have ");
-            uart_send_str(object_name);
-            uart_send_str(b"\r\n\r\n");
+            uart_send_bytes(b"don't have ");
+            uart_send_bytes(object_name);
+            uart_send_bytes(b"\r\n\r\n");
             return;
         }
     };
@@ -575,35 +581,35 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         .objects
         .push(object_id);
 
-    uart_send_str(b"ok\r\n\r\n");
+    uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_memory_info() {
-    uart_send_str(b"   heap start: ");
+    uart_send_bytes(b"   heap start: ");
     uart_send_hex_u32(memory_heap_start(), true);
-    uart_send_str(b"\r\n");
-    uart_send_str(b"heap position: ");
+    uart_send_bytes(b"\r\n");
+    uart_send_bytes(b"heap position: ");
     uart_send_hex_u32(allocator_current_next() as u32, true);
-    uart_send_str(b"\r\n");
-    uart_send_str(b"stack pointer: ");
+    uart_send_bytes(b"\r\n");
+    uart_send_bytes(b"stack pointer: ");
     uart_send_hex_u32(memory_stack_pointer(), true);
-    uart_send_str(b"\r\n");
-    uart_send_str(b"   memory end: ");
+    uart_send_bytes(b"\r\n");
+    uart_send_bytes(b"   memory end: ");
     uart_send_hex_u32(memory_end(), true);
-    uart_send_str(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n\r\n");
 }
 
 fn action_sdcard_status() {
-    uart_send_str(b"SDCARD_STATUS: 0x");
+    uart_send_bytes(b"SDCARD_STATUS: 0x");
     uart_send_hex_u32(sdcard_status() as u32, true);
-    uart_send_str(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n\r\n");
 }
 
 fn action_sdcard_read(it: &mut CommandBufferIterator) {
     let sector = match it.next() {
         Some(sector) => u8_slice_to_u32(sector),
         None => {
-            uart_send_str(b"what sector\r\n\r\n");
+            uart_send_bytes(b"what sector\r\n\r\n");
             return;
         }
     };
@@ -611,14 +617,14 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
     let mut buf = [0; 512];
     sdcard_read_blocking(sector, &mut buf);
     buf.iter().for_each(|&x| uart_send_char(x));
-    uart_send_str(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n\r\n");
 }
 
 fn action_sdcard_write(it: &mut CommandBufferIterator) {
     let sector = match it.next() {
         Some(sector) => u8_slice_to_u32(sector),
         None => {
-            uart_send_str(b"what sector\r\n\r\n");
+            uart_send_bytes(b"what sector\r\n\r\n");
             return;
         }
     };
@@ -628,14 +634,14 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     let mut buf = [0u8; 512];
     buf[..len].copy_from_slice(&rest[..len]);
     sdcard_write_blocking(sector, &buf);
-    uart_send_str(b"ok\r\n\r\n");
+    uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_led_set(it: &mut CommandBufferIterator) {
     let bits = match it.next() {
         Some(bits) => u8_slice_to_u32(bits),
         None => {
-            uart_send_str(b"which leds in bits 0 being on\r\n\r\n");
+            uart_send_bytes(b"which leds in bits 0 being on\r\n\r\n");
             return;
         }
     };
@@ -644,7 +650,7 @@ fn action_led_set(it: &mut CommandBufferIterator) {
 }
 
 fn action_help() {
-    uart_send_str(HELP);
+    uart_send_bytes(HELP);
 }
 
 fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -652,7 +658,7 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
     let object_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_str(b"what object name\r\n\r\n");
+            uart_send_bytes(b"what object name\r\n\r\n");
             return;
         }
     };
@@ -667,7 +673,7 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
     let entity = world.entities.get_mut(entity_id).unwrap();
     entity.objects.push(object_id);
 
-    uart_send_str(b"ok\r\n\r\n");
+    uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn input(command_buffer: &mut CommandBuffer) {
@@ -722,13 +728,13 @@ fn input(command_buffer: &mut CommandBuffer) {
                         b'D' => {
                             // arrow left
                             if command_buffer.move_cursor_left() {
-                                uart_send_str(b"\x1B[D");
+                                uart_send_bytes(b"\x1B[D");
                             }
                         }
                         b'C' => {
                             // arrow right
                             if command_buffer.move_cursor_right() {
-                                uart_send_str(b"\x1B[C");
+                                uart_send_bytes(b"\x1B[C");
                             }
                         }
                         b'~' => {
@@ -755,6 +761,6 @@ fn input(command_buffer: &mut CommandBuffer) {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    uart_send_str(b"PANIC!!!");
+    uart_send_bytes(b"PANIC!!!");
     loop {}
 }

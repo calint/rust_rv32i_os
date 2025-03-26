@@ -14,7 +14,7 @@ def extract_text(filename):
                     trimmed_text = match.group(1).strip()
                     print(trimmed_text)
     except FileNotFoundError:
-        print(f"Error: File '{filename}' not found in script directory.")
+        print(f"Error: File '{filename}' not found")
     except Exception as e:
         print(f"An error occurred: {e}")
 

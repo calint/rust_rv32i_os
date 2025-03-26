@@ -1,5 +1,5 @@
 pub struct CursorBuffer<const SIZE: usize, T> {
-    line: [T; SIZE],
+    buffer: [T; SIZE],
     end: usize,
     cursor: usize,
 }
@@ -7,7 +7,7 @@ pub struct CursorBuffer<const SIZE: usize, T> {
 impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
     pub fn new() -> Self {
         CursorBuffer {
-            line: [T::default(); SIZE],
+            buffer: [T::default(); SIZE],
             end: 0,
             cursor: 0,
         }
@@ -19,16 +19,16 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         }
 
         if self.cursor == self.end {
-            self.line[self.cursor] = ch;
+            self.buffer[self.cursor] = ch;
             self.cursor += 1;
             self.end += 1;
             return true;
         }
 
         self.end += 1;
-        self.line
+        self.buffer
             .copy_within(self.cursor..self.end - 1, self.cursor + 1);
-        self.line[self.cursor] = ch;
+        self.buffer[self.cursor] = ch;
         self.cursor += 1;
         true
     }
@@ -38,7 +38,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
             return;
         }
 
-        self.line
+        self.buffer
             .copy_within(self.cursor + 1..self.end, self.cursor);
         self.end -= 1;
     }
@@ -54,7 +54,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
             return true;
         }
 
-        self.line
+        self.buffer
             .copy_within(self.cursor..self.end, self.cursor - 1);
         self.cursor -= 1;
         self.end -= 1;
@@ -92,7 +92,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         F: Fn(T),
     {
         for i in self.cursor..self.end {
-            f(self.line[i]);
+            f(self.buffer[i]);
         }
     }
 
@@ -128,7 +128,7 @@ where
     F: Fn(&T) -> bool,
 {
     pub fn rest(&self) -> &'a [T] {
-        &self.cmd_buf.line[self.index..self.cmd_buf.end]
+        &self.cmd_buf.buffer[self.index..self.cmd_buf.end]
     }
 }
 
@@ -141,7 +141,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         // todo this can be done with only 2 loops by skipping the leading delimiters before creation of iterator
         // skip leading delimiters and find the start of the next chunk
-        while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index]) {
+        while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.buffer[self.index]) {
             self.index += 1;
         }
 
@@ -151,7 +151,7 @@ where
 
         // find the end of the chunk
         let start = self.index;
-        while self.index < self.cmd_buf.end && !(self.delimiter)(&self.cmd_buf.line[self.index]) {
+        while self.index < self.cmd_buf.end && !(self.delimiter)(&self.cmd_buf.buffer[self.index]) {
             self.index += 1;
         }
 
@@ -163,10 +163,10 @@ where
         let end = self.index;
 
         // skip trailing delimiters
-        while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index]) {
+        while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.buffer[self.index]) {
             self.index += 1;
         }
 
-        Some(&self.cmd_buf.line[start..end])
+        Some(&self.cmd_buf.buffer[start..end])
     }
 }

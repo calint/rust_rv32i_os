@@ -33,7 +33,23 @@ static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
 :      | |\r\n\
 \r\n";
 
-static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
+static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
+
+static CREATION: &[u8] = br#"nl north south office
+n
+no notebook
+d notebook
+no lighter
+d lighter
+s
+no mirror
+nl west east kitchen
+nl east none bathroom
+n
+ne u
+s
+wait
+"#;
 
 mod lib {
     pub mod api;
@@ -141,6 +157,10 @@ impl World {
                 self.links.push(Link {
                     name: Name::from(link_name),
                 });
+                // uart_send_bytes(b"created link: ");
+                // uart_send_hex_u32(id as u32, true);
+                // uart_send_cstr(&self.links[id].name.data);
+                // uart_send_bytes(b"\r\n");
                 id
             }
         }
@@ -152,6 +172,17 @@ impl World {
             name: Name::from(object_name),
         });
         object_id
+    }
+
+    fn add_entity(&mut self, entity_name: &[u8], location_id: LocationId) -> EntityId {
+        let entity_id = self.entities.len();
+        self.entities.push(Entity {
+            name: Name::from(entity_name),
+            location: location_id,
+            objects: vec![],
+        });
+        self.locations[location_id].entities.push(entity_id);
+        entity_id
     }
 }
 
@@ -173,6 +204,36 @@ fn find_object_in_entity_inventory<'a>(
         })
 }
 
+fn execute_creation(world: &mut World, entity_id: EntityId) {
+    for line in CREATION.split(|&c| c == b'\n') {
+        if line.is_empty() {
+            continue;
+        }
+
+        let mut command_buffer = CommandBuffer::new();
+        for &byte in line {
+            if !command_buffer.insert(byte) {
+                break;
+            }
+        }
+
+        handle_input(world, entity_id, &command_buffer);
+    }
+
+    // world.locations.iter().for_each(|x| {
+    //     uart_send_cstr(&x.name.data);
+    //     uart_send_bytes(b"\r\n");
+    // });
+    // world.entities.iter().for_each(|x| {
+    //     uart_send_cstr(&x.name.data);
+    //     uart_send_bytes(b"\r\n");
+    // });
+    // world.objects.iter().for_each(|x| {
+    //     uart_send_cstr(&x.name.data);
+    //     uart_send_bytes(b"\r\n");
+    // });
+}
+
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
@@ -181,135 +242,22 @@ pub extern "C" fn run() -> ! {
     allocator_init();
 
     let mut world = World {
-        objects: {
-            let mut objects = Vec::new();
-            objects.push(Object {
-                name: Name::from(b"notebook"),
-            });
-            objects.push(Object {
-                name: Name::from(b"mirror"),
-            });
-            objects.push(Object {
-                name: Name::from(b"lighter"),
-            });
-            objects
-        },
-        entities: {
-            let mut entities = Vec::new();
-            entities.push(Entity {
-                name: Name::from(b"me"),
-                location: 0,
-                objects: {
-                    let mut list = Vec::new();
-                    list.push(1);
-                    list
-                },
-            });
-            entities.push(Entity {
-                name: Name::from(b"u"),
-                location: 1,
-                objects: Vec::new(),
-            });
-            entities
-        },
-        locations: {
-            let mut locations = Vec::new();
-            locations.push(Location {
-                name: Name::from(b"roome"),
-                links: {
-                    let mut list = Vec::new();
-                    list.push(LocationLink {
-                        link: 0,
-                        location: 1,
-                    });
-                    list.push(LocationLink {
-                        link: 1,
-                        location: 2,
-                    });
-                    list.push(LocationLink {
-                        link: 3,
-                        location: 3,
-                    });
-                    list
-                },
-                objects: Vec::new(),
-                entities: {
-                    let mut list = Vec::new();
-                    list.push(0);
-                    list
-                },
-            });
-            locations.push(Location {
-                name: Name::from(b"office"),
-                links: {
-                    let mut list = Vec::new();
-                    list.push(LocationLink {
-                        link: 2,
-                        location: 0,
-                    });
-                    list
-                },
-                objects: {
-                    let mut list = Vec::new();
-                    list.push(0);
-                    list.push(2);
-                    list
-                },
-                entities: {
-                    let mut list = Vec::new();
-                    list.push(1);
-                    list
-                },
-            });
-            locations.push(Location {
-                name: Name::from(b"bathroom"),
-                links: Vec::new(),
-                objects: Vec::new(),
-                entities: Vec::new(),
-            });
-            locations.push(Location {
-                name: Name::from(b"kitchen"),
-                links: {
-                    let mut list = Vec::new();
-                    list.push(LocationLink {
-                        link: 1,
-                        location: 0,
-                    });
-                    list
-                },
-                objects: Vec::new(),
-                entities: Vec::new(),
-            });
-            locations
-        },
-        links: {
-            let mut links = Vec::new();
-            links.push(Link {
-                name: Name::from(b"north"),
-            });
-            links.push(Link {
-                name: Name::from(b"east"),
-            });
-            links.push(Link {
-                name: Name::from(b"south"),
-            });
-            links.push(Link {
-                name: Name::from(b"west"),
-            });
-            links.push(Link {
-                name: Name::from(b"up"),
-            });
-            links.push(Link {
-                name: Name::from(b"down"),
-            });
-            links
-        },
+        entities: vec![Entity {
+            name: Name::from(b"me"),
+            location: 0,
+            objects: vec![],
+        }],
+        locations: vec![Location {
+            name: Name::from(b"roome"),
+            links: vec![],
+            objects: vec![],
+            entities: vec![0],
+        }],
+        objects: vec![],
+        links: vec![],
     };
-    // let o1 = Box::new(Object { name: b"object1" });
-    // let o2 = Box::new(Object { name: b"object2" });
 
-    // uart_send_str(o1.name);
-    // uart_send_str(o2.name);
+    execute_creation(&mut world, 0);
 
     led_set(0b0000); // turn all leds on
 
@@ -336,11 +284,13 @@ pub extern "C" fn run() -> ! {
 
 fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &CommandBuffer) {
     let mut it: CommandBufferIterator = command_buffer.iter_words(|x| x.is_ascii_whitespace());
+    // uart_send_hex_u32(world.entities[entity_id].location as u32, true);
     match it.next() {
-        Some(b"n") => action_go(world, entity_id, 0),
-        Some(b"e") => action_go(world, entity_id, 1),
-        Some(b"s") => action_go(world, entity_id, 2),
-        Some(b"w") => action_go(world, entity_id, 3),
+        Some(b"go") => action_go(world, entity_id, &mut it),
+        Some(b"n") => action_go_named_link(world, entity_id, b"north"),
+        Some(b"e") => action_go_named_link(world, entity_id, b"east"),
+        Some(b"s") => action_go_named_link(world, entity_id, b"south"),
+        Some(b"w") => action_go_named_link(world, entity_id, b"west"),
         Some(b"i") => action_inventory(world, entity_id),
         Some(b"t") => action_take(world, entity_id, &mut it),
         Some(b"d") => action_drop(world, entity_id, &mut it),
@@ -353,6 +303,8 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"help") => action_help(),
         Some(b"no") => action_new_object(world, entity_id, &mut it),
         Some(b"nl") => action_new_location(world, entity_id, &mut it),
+        Some(b"ne") => action_new_entity(world, entity_id, &mut it),
+        Some(b"wait") => action_wait(world, entity_id, &mut it),
         _ => uart_send_bytes(b"not understood\r\n\r\n"),
     }
 }
@@ -405,7 +357,28 @@ fn action_look(world: &World, entity_id: EntityId) {
     uart_send_bytes(b"\r\n");
 }
 
-fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
+fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let named_link = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_bytes(b"go where");
+            return;
+        }
+    };
+
+    action_go_named_link(world, entity_id, named_link);
+}
+
+fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) {
+    // find link id
+    let link_id = match world.links.iter().position(|x| x.name.equals(link_name)) {
+        Some(id) => id,
+        None => {
+            uart_send_bytes(b"no such exit\r\n\r\n");
+            return;
+        }
+    };
+
     let entity = &mut world.entities[entity_id];
     let location = &world.locations[entity.location];
 
@@ -432,7 +405,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
 
     // update entity location
     entity.location = to_location_id;
-    uart_send_bytes(b"ok\r\n\r\n");
+    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_inventory(world: &World, entity_id: EntityId) {
@@ -486,7 +459,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // add object to entity
     entity.objects.push(object_id);
 
-    uart_send_bytes(b"ok\r\n\r\n");
+    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -517,7 +490,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // add object to location
     world.locations[entity.location].objects.push(object_id);
 
-    uart_send_bytes(b"ok\r\n\r\n");
+    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -570,7 +543,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // add object to "to" entity
     world.entities[to_entity_id].objects.push(object_id);
 
-    uart_send_bytes(b"ok\r\n\r\n");
+    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_memory_info() {
@@ -623,7 +596,8 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     let mut buf = [0u8; 512];
     buf[..len].copy_from_slice(&rest[..len]);
     sdcard_write_blocking(sector, &buf);
-    uart_send_bytes(b"ok\r\n\r\n");
+
+    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_led_set(it: &mut CommandBufferIterator) {
@@ -661,7 +635,7 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
 
     world.entities[entity_id].objects.push(object_id);
 
-    uart_send_bytes(b"ok\r\n\r\n");
+    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -723,8 +697,30 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         location: new_location_id,
     });
 
-    uart_send_bytes(b"ok\r\n\r\n");
+    // uart_send_bytes(b"ok\r\n\r\n");
 }
+
+fn action_new_entity(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    // get object name
+    let entity_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_bytes(b"what entity name\r\n\r\n");
+            return;
+        }
+    };
+
+    if world.entities.iter().any(|x| x.name.equals(entity_name)) {
+        uart_send_bytes(b"entity already exists\r\n\r\n");
+        return;
+    }
+
+    world.add_entity(entity_name, world.entities[entity_id].location);
+
+    // uart_send_bytes(b"ok\r\n\r\n");
+}
+
+fn action_wait(_world: &mut World, _entity_id: EntityId, _it: &mut CommandBufferIterator) {}
 
 fn input(command_buffer: &mut CommandBuffer) {
     enum InputState {

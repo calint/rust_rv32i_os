@@ -108,7 +108,7 @@ alloc: at 0000:42A0 size: 0000:0060
 de-alloc: at 0000:4260 size: 0000:0030
 ```
 ## Day 6. roome
-Refining the use of built-in operations in iter. Powerful functions such as find, position, enumeration, any explored.
+Refining the use of built-in operations in iter. Powerful functions such as find, find_map, position, enumeration, any explored.
 
 Getting acquainted with foundational trait Default and implementing it on some structs.
 

@@ -738,7 +738,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
     let from_location_id = world.entities[entity_id].location;
 
     // add location and link it back to from location
-    let to_location_id = world.locations.len();
+    let new_location_id = world.locations.len();
     world.locations.push(Location {
         name: Name::from(new_location_name),
         links: vec![LocationLink {
@@ -751,7 +751,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
 
     world.locations[from_location_id].links.push(LocationLink {
         link: to_link_id,
-        location: to_location_id,
+        location: new_location_id,
     });
 
     uart_send_bytes(b"ok\r\n\r\n");

@@ -35,7 +35,8 @@ static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
 
 static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
 
-static CREATION: &[u8] = br#"nl none back office
+static CREATION: &[u8] = br#"nln todo: find an exit
+nl none back office
 go none
 no notebook
 d notebook
@@ -72,6 +73,7 @@ use lib::cursor_buffer::*;
 
 const COMMAND_BUFFER_SIZE: usize = 80;
 const NAME_SIZE: usize = 32;
+const NOTE_SIZE: usize = 128;
 
 const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
@@ -113,6 +115,30 @@ impl Name {
     }
 }
 
+struct Note {
+    data: [u8; NOTE_SIZE],
+}
+
+impl Note {
+    fn new() -> Self {
+        Note {
+            data: [0u8; NOTE_SIZE],
+        }
+    }
+
+    fn from(src: &[u8]) -> Self {
+        let mut note = Note::new();
+        let len = src.len().min(NOTE_SIZE - 1);
+        // note: -1 to enabled string terminator at the end of string
+        note.data[..len].copy_from_slice(&src[..len]);
+        note
+    }
+
+    fn is_empty(&self) -> bool {
+        self.data[0] == 0
+    }
+}
+
 struct Object {
     name: Name,
 }
@@ -134,6 +160,7 @@ struct LocationLink {
 
 struct Location {
     name: Name,
+    note: Note,
     links: Vec<LocationLink>,
     objects: Vec<ObjectId>,
     entities: Vec<EntityId>,
@@ -247,6 +274,7 @@ pub extern "C" fn run() -> ! {
         }],
         locations: vec![Location {
             name: Name::from(b"roome"),
+            note: Note::new(),
             links: vec![],
             objects: vec![],
             entities: vec![0],
@@ -301,6 +329,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"help") => action_help(),
         Some(b"no") => action_new_object(world, entity_id, &mut it),
         Some(b"nl") => action_new_location(world, entity_id, &mut it),
+        Some(b"nln") => action_set_location_note(world, entity_id, &mut it),
         Some(b"ne") => action_new_entity(world, entity_id, &mut it),
         Some(b"wait") => action_wait(world, entity_id, &mut it),
         _ => uart_send_bytes(b"not understood\r\n\r\n"),
@@ -353,6 +382,11 @@ fn action_look(world: &World, entity_id: EntityId) {
         uart_send_bytes(b"none");
     }
     uart_send_bytes(b"\r\n");
+
+    if !location.note.is_empty() {
+        uart_send_cstr(&location.note.data);
+        uart_send_bytes(b"\r\n");
+    }
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -682,6 +716,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
     let new_location_id = world.locations.len();
     world.locations.push(Location {
         name: Name::from(new_location_name),
+        note: Note::new(),
         links: vec![LocationLink {
             link: back_link_id,
             location: from_location_id,
@@ -716,6 +751,14 @@ fn action_new_entity(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
     world.add_entity(entity_name, world.entities[entity_id].location);
 
     // uart_send_bytes(b"ok\r\n\r\n");
+}
+
+fn action_set_location_note(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) {
+    world.locations[world.entities[entity_id].location].note = Note::from(it.rest());
 }
 
 fn action_wait(_world: &mut World, _entity_id: EntityId, _it: &mut CommandBufferIterator) {}

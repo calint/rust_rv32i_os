@@ -466,19 +466,13 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // find object id and index in list
-    let mut object_index = None;
-    let mut object_id = None;
-
-    for (index, &oid) in location.objects.iter().enumerate() {
-        if world.objects[oid].name.equals(object_name) {
-            object_index = Some(index);
-            object_id = Some(oid);
-            break;
-        }
-    }
-
-    let (object_index, object_id) = match object_id {
-        Some(id) => (object_index.unwrap(), id),
+    let (object_index, object_id) = match location
+        .objects
+        .iter()
+        .enumerate()
+        .find(|&(_, &oid)| world.objects[oid].name.equals(object_name))
+    {
+        Some((index, &oid)) => (index, oid),
         None => {
             uart_send_bytes(object_name);
             uart_send_bytes(b" is not here\r\n\r\n");

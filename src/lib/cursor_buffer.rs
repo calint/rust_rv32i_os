@@ -139,7 +139,7 @@ where
     type Item = &'a [T];
 
     fn next(&mut self) -> Option<Self::Item> {
-        //! this can be done with only 2 loops by skipping the leading delimiters before creation of iterator
+        // todo this can be done with only 2 loops by skipping the leading delimiters before creation of iterator
         // skip leading delimiters and find the start of the next chunk
         while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.line[self.index]) {
             self.index += 1;

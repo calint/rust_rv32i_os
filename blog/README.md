@@ -116,4 +116,6 @@ Borrow checker will not allow passing a mutable reference to a function as immut
 
 ... unless it is an argument to called function and unused prior to the target call.
 
-Settling for no UTF-8 support and no String use yet the creation script is done and roome is created.
+Settling for no UTF-8 support and no String use yet.
+
+The creation script is done and roome is created.

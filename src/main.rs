@@ -72,7 +72,7 @@ use lib::cursor_buffer::*;
 
 const COMMAND_BUFFER_SIZE: usize = 80;
 const NAME_SIZE: usize = 32;
-const NOTE_SIZE: usize = 128;
+const NOTE_SIZE: usize = 64;
 
 const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
@@ -243,19 +243,6 @@ fn execute_creation(world: &mut World, entity_id: EntityId) {
 
         handle_input(world, entity_id, &command_buffer);
     }
-
-    // world.locations.iter().for_each(|x| {
-    //     uart_send_cstr(&x.name.data);
-    //     uart_send_bytes(b"\r\n");
-    // });
-    // world.entities.iter().for_each(|x| {
-    //     uart_send_cstr(&x.name.data);
-    //     uart_send_bytes(b"\r\n");
-    // });
-    // world.objects.iter().for_each(|x| {
-    //     uart_send_cstr(&x.name.data);
-    //     uart_send_bytes(b"\r\n");
-    // });
 }
 
 // setup stack and jump to 'run()'
@@ -291,12 +278,8 @@ pub extern "C" fn run() -> ! {
 
     loop {
         for entity_id in 0..world.entities.len() {
-            let entity = match world.entities.get(entity_id) {
-                Some(e) => e,
-                None => continue,
-            };
             action_look(&world, entity_id);
-            uart_send_cstr(&entity.name.data);
+            uart_send_cstr(&world.entities[entity_id].name.data);
             uart_send_bytes(b" > ");
             let mut command_buffer = CommandBuffer::default();
             input(&mut command_buffer);
@@ -308,7 +291,6 @@ pub extern "C" fn run() -> ! {
 
 fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &CommandBuffer) {
     let mut it: CommandBufferIterator = command_buffer.iter_words(|x| x.is_ascii_whitespace());
-    // uart_send_hex_u32(world.entities[entity_id].location as u32, true);
     match it.next() {
         Some(b"go") => action_go(world, entity_id, &mut it),
         Some(b"n") => action_go_named_link(world, entity_id, b"north"),
@@ -435,7 +417,6 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
 
     // update entity location
     entity.location = to_location_id;
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_inventory(world: &World, entity_id: EntityId) {
@@ -488,8 +469,6 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     // add object to entity
     entity.objects.push(object_id);
-
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -519,8 +498,6 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     // add object to location
     world.locations[entity.location].objects.push(object_id);
-
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -572,8 +549,6 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     // add object to "to" entity
     world.entities[to_entity_id].objects.push(object_id);
-
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_memory_info() {
@@ -626,8 +601,6 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     let mut buf = [0u8; 512];
     buf[..len].copy_from_slice(&rest[..len]);
     sdcard_write_blocking(sector, &buf);
-
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_led_set(it: &mut CommandBufferIterator) {
@@ -664,8 +637,6 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
     let object_id = world.add_object(object_name);
 
     world.entities[entity_id].objects.push(object_id);
-
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -727,8 +698,6 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         link: to_link_id,
         location: new_location_id,
     });
-
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_new_entity(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -747,8 +716,6 @@ fn action_new_entity(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
     }
 
     world.add_entity(entity_name, world.entities[entity_id].location);
-
-    // uart_send_bytes(b"ok\r\n\r\n");
 }
 
 fn action_set_location_note(

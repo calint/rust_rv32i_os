@@ -132,6 +132,27 @@ struct World {
     links: Vec<Link>,
 }
 
+impl World {
+    fn find_or_add_link(&mut self, link_name: &[u8]) -> LinkId {
+        match self.links.iter().position(|x| x.name.equals(link_name)) {
+            Some(id) => id,
+            None => {
+                let id = self.links.len();
+                self.links.push(Link {
+                    name: Name::from(link_name),
+                });
+                id
+            }
+        }
+    }
+
+    fn add_object(&mut self, object_name: Name) -> ObjectId {
+        let object_id = self.objects.len();
+        self.objects.push(Object { name: object_name });
+        object_id
+    }
+}
+
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
@@ -670,15 +691,14 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
         return;
     }
 
-    let object = Object {
-        name: Name::from(object_name),
-    };
+    let object_id = world.add_object(Name::from(object_name));
 
-    let object_id = world.objects.len();
-    world.objects.push(object);
-
-    let entity = world.entities.get_mut(entity_id).unwrap();
-    entity.objects.push(object_id);
+    world
+        .entities
+        .get_mut(entity_id)
+        .unwrap()
+        .objects
+        .push(object_id);
 
     uart_send_bytes(b"ok\r\n\r\n");
 }
@@ -719,33 +739,9 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         return;
     }
 
-    // find link id using 'to link name'
-    let to_link_id = match world.links.iter().position(|x| x.name.equals(to_link_name)) {
-        Some(id) => id,
-        None => {
-            let id = world.links.len();
-            world.links.push(Link {
-                name: Name::from(to_link_name),
-            });
-            id
-        }
-    };
+    let to_link_id = world.find_or_add_link(to_link_name);
 
-    // find link id using 'from link name'
-    let back_link_id = match world
-        .links
-        .iter()
-        .position(|x| x.name.equals(back_link_name))
-    {
-        Some(id) => id,
-        None => {
-            let id = world.links.len();
-            world.links.push(Link {
-                name: Name::from(to_link_name),
-            });
-            id
-        }
-    };
+    let back_link_id = world.find_or_add_link(back_link_name);
 
     let from_location_id = world.entities[entity_id].location;
 

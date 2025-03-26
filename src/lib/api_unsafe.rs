@@ -7,14 +7,14 @@ unsafe extern "C" {
     pub unsafe static __heap_start__: u8;
 }
 
-pub fn uart_send_char(ch: u8) {
+pub fn uart_send_byte(ch: u8) {
     unsafe {
         while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
         write_volatile(UART_OUT_ADDR as *mut u8, ch);
     }
 }
 
-pub fn uart_read_char() -> u8 {
+pub fn uart_read_byte() -> u8 {
     unsafe {
         loop {
             let input = read_volatile(UART_IN_ADDR as *const i32);

@@ -11,7 +11,7 @@ pub fn memory_heap_start() -> u32 {
 
 pub fn uart_send_bytes(s: &[u8]) {
     for &byte in s {
-        uart_send_char(byte);
+        uart_send_byte(byte);
     }
 }
 
@@ -20,7 +20,7 @@ pub fn uart_send_cstr(s: &[u8]) {
         if byte == 0 {
             break;
         }
-        uart_send_char(byte);
+        uart_send_byte(byte);
     }
 }
 
@@ -28,7 +28,7 @@ pub fn uart_send_hex_u32(i: u32, separate_half_words: bool) {
     uart_send_hex_byte((i >> 24) as u8);
     uart_send_hex_byte((i >> 16) as u8);
     if separate_half_words {
-        uart_send_char(b':');
+        uart_send_byte(b':');
     }
     uart_send_hex_byte((i >> 8) as u8);
     uart_send_hex_byte(i as u8);
@@ -41,15 +41,15 @@ pub fn uart_send_hex_byte(ch: u8) {
 
 pub fn uart_send_hex_nibble(nibble: u8) {
     if nibble < 10 {
-        uart_send_char(b'0' + nibble);
+        uart_send_byte(b'0' + nibble);
     } else {
-        uart_send_char(b'A' + (nibble - 10));
+        uart_send_byte(b'A' + (nibble - 10));
     }
 }
 
 pub fn uart_send_move_back(count: usize) {
     for _ in 0..count {
-        uart_send_char(8);
+        uart_send_byte(8);
     }
 }
 

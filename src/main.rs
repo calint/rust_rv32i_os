@@ -47,6 +47,7 @@ mod lib {
 
 extern crate alloc;
 
+use alloc::vec;
 use alloc::vec::Vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
@@ -310,6 +311,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"led") => action_led_set(&mut it),
         Some(b"help") => action_help(),
         Some(b"no") => action_new_object(world, entity_id, &mut it),
+        Some(b"nl") => action_new_location(world, entity_id, &mut it),
         _ => uart_send_bytes(b"not understood\r\n\r\n"),
     }
 }
@@ -616,7 +618,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
 
     let mut buf = [0; 512];
     sdcard_read_blocking(sector, &mut buf);
-    buf.iter().for_each(|&x| uart_send_char(x));
+    buf.iter().for_each(|&x| uart_send_byte(x));
     uart_send_bytes(b"\r\n\r\n");
 }
 
@@ -676,6 +678,85 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
     uart_send_bytes(b"ok\r\n\r\n");
 }
 
+fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let to_link_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_bytes(b"what to link name\r\n\r\n");
+            return;
+        }
+    };
+
+    // todo check if link is already used
+
+    let back_link_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_bytes(b"what back link name\r\n\r\n");
+            return;
+        }
+    };
+
+    let new_location_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_bytes(b"what new location name\r\n\r\n");
+            return;
+        }
+    };
+
+    // todo check if location name already exists
+
+    // find link id using 'to link name'
+    let to_link_id = match world.links.iter().position(|x| x.name.equals(to_link_name)) {
+        Some(id) => id,
+        None => {
+            let id = world.links.len();
+            world.links.push(Link {
+                name: Name::from(to_link_name),
+            });
+            id
+        }
+    };
+
+    // find link id using 'from link name'
+    let back_link_id = match world
+        .links
+        .iter()
+        .position(|x| x.name.equals(back_link_name))
+    {
+        Some(id) => id,
+        None => {
+            let id = world.links.len();
+            world.links.push(Link {
+                name: Name::from(to_link_name),
+            });
+            id
+        }
+    };
+
+    let from_location_id = world.entities[entity_id].location;
+
+    // add location and link it back to from location
+    let to_location_id = world.locations.len();
+    world.locations.push(Location {
+        name: Name::from(new_location_name),
+        links: vec![LocationLink {
+            link: back_link_id,
+            location: from_location_id,
+        }],
+        objects: vec![],
+        entities: vec![],
+    });
+
+    world.locations[from_location_id].links.push(LocationLink {
+        link: to_link_id,
+        location: to_location_id,
+    });
+
+    uart_send_bytes(b"ok\r\n\r\n");
+}
+
 fn input(command_buffer: &mut CommandBuffer) {
     enum InputState {
         Normal,
@@ -689,7 +770,7 @@ fn input(command_buffer: &mut CommandBuffer) {
     command_buffer.reset();
 
     loop {
-        let ch = uart_read_char();
+        let ch = uart_read_byte();
         led_set(!ch);
 
         match state {
@@ -698,17 +779,17 @@ fn input(command_buffer: &mut CommandBuffer) {
                     state = InputState::Escape;
                 } else if ch == CHAR_BACKSPACE {
                     if command_buffer.backspace() {
-                        uart_send_char(ch);
-                        command_buffer.for_each_from_cursor(|c| uart_send_char(c));
-                        uart_send_char(b' ');
+                        uart_send_byte(ch);
+                        command_buffer.for_each_from_cursor(|c| uart_send_byte(c));
+                        uart_send_byte(b' ');
                         uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
                     }
                 } else if ch == CHAR_CARRIAGE_RETURN || command_buffer.is_full() {
                     return;
                 } else {
                     if command_buffer.insert(ch) {
-                        uart_send_char(ch);
-                        command_buffer.for_each_from_cursor(|x| uart_send_char(x));
+                        uart_send_byte(ch);
+                        command_buffer.for_each_from_cursor(|x| uart_send_byte(x));
                         uart_send_move_back(command_buffer.elements_after_cursor_count());
                     }
                 }
@@ -742,8 +823,8 @@ fn input(command_buffer: &mut CommandBuffer) {
                             if escape_sequence_parameter == 3 {
                                 // delete key
                                 command_buffer.del();
-                                command_buffer.for_each_from_cursor(|x| uart_send_char(x));
-                                uart_send_char(b' ');
+                                command_buffer.for_each_from_cursor(|x| uart_send_byte(x));
+                                uart_send_byte(b' ');
                                 uart_send_move_back(
                                     command_buffer.elements_after_cursor_count() + 1,
                                 );

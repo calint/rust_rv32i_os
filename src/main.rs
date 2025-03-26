@@ -33,7 +33,7 @@ static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
 :      | |\r\n\
 \r\n";
 
-static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  help: this message\r\n\r\n";
+static HELP:&[u8]=b"\r\ncommand:\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
 
 mod lib {
     pub mod api;
@@ -665,6 +665,11 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
         }
     };
 
+    if world.objects.iter().any(|x| x.name.equals(object_name)) {
+        uart_send_bytes(b"object already exists\r\n\r\n");
+        return;
+    }
+
     let object = Object {
         name: Name::from(object_name),
     };
@@ -705,7 +710,14 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         }
     };
 
-    // todo check if location name already exists
+    if world
+        .locations
+        .iter()
+        .any(|x| x.name.equals(new_location_name))
+    {
+        uart_send_bytes(b"location already exists\r\n\r\n");
+        return;
+    }
 
     // find link id using 'to link name'
     let to_link_id = match world.links.iter().position(|x| x.name.equals(to_link_name)) {

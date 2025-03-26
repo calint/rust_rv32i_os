@@ -1,31 +1,33 @@
 i
+t lighter
+go none
+g lighter me
 i
-n
 t notebook
 d mirror
-t mirror
-i
-g mirror u
-i
-sds
-sdw 1 hello sector 1
-sdw 2 hello sector 2
-sdr 1
-sdr 2
-s
-s
-e
 w
 e
-d mirror
-i
 e
+w
+wait
 no pen
-e
-g pen u
+wait
 d pen
-i
-nl south north bedroom
-s
-i
+t pen
+nl north south balcony
 n
+wait
+s
+ne su
+wait
+wait
+wait
+sdw 1 sector 1
+sdr 1
+sdw 1 sector 1 again
+sdw 2 sector 2
+sdr 1
+sdr 2
+sdw 2 sector 2 again
+sdr 1
+sdr 2

@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(allocator_api)]
 
 static HELLO: &[u8] = b"welcome to adventure #5\r\n    type 'help'\r\n\r\n";
 
@@ -234,12 +233,8 @@ fn find_object_in_entity_inventory<'a>(
 }
 
 fn execute_creation(world: &mut World, entity_id: EntityId) {
-    for line in CREATION.split(|&c| c == b'\n') {
-        if line.is_empty() {
-            continue;
-        }
-
-        let mut command_buffer = CommandBuffer::new();
+    for line in CREATION.split(|&c| c == b'\n').filter(|x| !x.is_empty()) {
+        let mut command_buffer = CommandBuffer::default();
         for &byte in line {
             if !command_buffer.insert(byte) {
                 break;
@@ -295,8 +290,7 @@ pub extern "C" fn run() -> ! {
     uart_send_bytes(HELLO);
 
     loop {
-        let entities_count = world.entities.len();
-        for entity_id in 0..entities_count {
+        for entity_id in 0..world.entities.len() {
             let entity = match world.entities.get(entity_id) {
                 Some(e) => e,
                 None => continue,
@@ -304,7 +298,7 @@ pub extern "C" fn run() -> ! {
             action_look(&world, entity_id);
             uart_send_cstr(&entity.name.data);
             uart_send_bytes(b" > ");
-            let mut command_buffer = CommandBuffer::new();
+            let mut command_buffer = CommandBuffer::default();
             input(&mut command_buffer);
             uart_send_bytes(b"\r\n");
             handle_input(&mut world, entity_id, &command_buffer);

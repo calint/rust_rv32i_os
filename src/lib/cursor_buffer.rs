@@ -4,15 +4,17 @@ pub struct CursorBuffer<const SIZE: usize, T> {
     cursor: usize,
 }
 
-impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
-    pub fn new() -> Self {
-        CursorBuffer {
+impl<const SIZE: usize, T: Default + Copy> Default for CursorBuffer<SIZE, T> {
+    fn default() -> Self {
+        Self {
             buffer: [T::default(); SIZE],
             end: 0,
             cursor: 0,
         }
     }
+}
 
+impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
     pub fn insert(&mut self, ch: T) -> bool {
         if self.end == SIZE {
             return false;

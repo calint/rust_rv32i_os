@@ -107,3 +107,13 @@ alloc: at 0000:429D size: 0000:0002
 alloc: at 0000:42A0 size: 0000:0060
 de-alloc: at 0000:4260 size: 0000:0030
 ```
+## Day 6. roome
+Refining the use of built-in operations in iter. Powerful functions such as find, position, enumeration, any explored.
+
+Getting acquainted with foundational trait Default and implementing it on some structs.
+
+Borrow checker will not allow passing a mutable reference to a function as immutable although single threaded, thus safe.
+
+... unless it is an argument to calling function and unused prior to the target call.
+
+Settling for no UTF-8 support and no String use yet the creation script is done and roome is created.

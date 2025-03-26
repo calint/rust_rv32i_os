@@ -91,15 +91,17 @@ struct Name {
     data: [u8; NAME_SIZE],
 }
 
-impl Name {
-    fn new() -> Self {
+impl Default for Name {
+    fn default() -> Self {
         Name {
             data: [0u8; NAME_SIZE],
         }
     }
+}
 
+impl Name {
     fn from(src: &[u8]) -> Self {
-        let mut name = Name::new();
+        let mut name = Self::default();
         let len = src.len().min(NAME_SIZE - 1);
         // note: -1 to enabled string terminator at the end of string
         name.data[..len].copy_from_slice(&src[..len]);
@@ -119,15 +121,17 @@ struct Note {
     data: [u8; NOTE_SIZE],
 }
 
-impl Note {
-    fn new() -> Self {
+impl Default for Note {
+    fn default() -> Self {
         Note {
             data: [0u8; NOTE_SIZE],
         }
     }
+}
 
+impl Note {
     fn from(src: &[u8]) -> Self {
-        let mut note = Note::new();
+        let mut note = Self::default();
         let len = src.len().min(NOTE_SIZE - 1);
         // note: -1 to enabled string terminator at the end of string
         note.data[..len].copy_from_slice(&src[..len]);
@@ -274,7 +278,7 @@ pub extern "C" fn run() -> ! {
         }],
         locations: vec![Location {
             name: Name::from(b"roome"),
-            note: Note::new(),
+            note: Note::default(),
             links: vec![],
             objects: vec![],
             entities: vec![0],
@@ -716,7 +720,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
     let new_location_id = world.locations.len();
     world.locations.push(Location {
         name: Name::from(new_location_name),
-        note: Note::new(),
+        note: Note::default(),
         links: vec![LocationLink {
             link: back_link_id,
             location: from_location_id,

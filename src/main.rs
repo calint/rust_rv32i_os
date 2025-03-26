@@ -146,11 +146,31 @@ impl World {
         }
     }
 
-    fn add_object(&mut self, object_name: Name) -> ObjectId {
+    fn add_object(&mut self, object_name: &[u8]) -> ObjectId {
         let object_id = self.objects.len();
-        self.objects.push(Object { name: object_name });
+        self.objects.push(Object {
+            name: Name::from(object_name),
+        });
         object_id
     }
+}
+
+fn find_object_in_entity_inventory<'a>(
+    world: &'a World,
+    entity_id: EntityId,
+    object_name: &[u8],
+) -> Option<(usize, ObjectId)> {
+    world.entities[entity_id]
+        .objects
+        .iter()
+        .enumerate()
+        .find_map(|(index, &oid)| {
+            if world.objects[oid].name.equals(object_name) {
+                Some((index, oid))
+            } else {
+                None
+            }
+        })
 }
 
 // setup stack and jump to 'run()'
@@ -338,14 +358,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
 }
 
 fn action_look(world: &World, entity_id: EntityId) {
-    let entity = match world.entities.get(entity_id) {
-        Some(e) => e,
-        None => return,
-    };
-    let location = match world.locations.get(entity.location) {
-        Some(l) => l,
-        None => return,
-    };
+    let location = &world.locations[world.entities[entity_id].location];
     uart_send_bytes(b"u r in ");
     uart_send_cstr(&location.name.data);
 
@@ -356,7 +369,7 @@ fn action_look(world: &World, entity_id: EntityId) {
             uart_send_bytes(b", ");
         }
         i += 1;
-        uart_send_cstr(&world.objects.get(oid).unwrap().name.data);
+        uart_send_cstr(&world.objects[oid].name.data);
     }
     if i == 0 {
         uart_send_bytes(b"nothing");
@@ -365,12 +378,11 @@ fn action_look(world: &World, entity_id: EntityId) {
 
     let mut i = 0;
     for &eid in location.entities.iter() {
-        let e = world.entities.get(eid).unwrap();
         if eid != entity_id {
             if i != 0 {
                 uart_send_bytes(b", ");
             }
-            uart_send_cstr(&e.name.data);
+            uart_send_cstr(&world.entities[eid].name.data);
             i += 1;
         }
     }
@@ -385,7 +397,7 @@ fn action_look(world: &World, entity_id: EntityId) {
             uart_send_bytes(b", ");
         }
         i += 1;
-        uart_send_cstr(&world.links.get(lid.link).unwrap().name.data);
+        uart_send_cstr(&world.links[lid.link].name.data);
     }
     if i == 0 {
         uart_send_bytes(b"none");
@@ -394,8 +406,8 @@ fn action_look(world: &World, entity_id: EntityId) {
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
-    let entity = world.entities.get_mut(entity_id).unwrap();
-    let location = world.locations.get(entity.location).unwrap();
+    let entity = &mut world.entities[entity_id];
+    let location = &world.locations[entity.location];
 
     // find "to" location id
     let to_location_id = match location.links.iter().find(|x| x.link == link_id) {
@@ -407,20 +419,16 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
     };
 
     // add entity to new location
-    world
-        .locations
-        .get_mut(to_location_id)
-        .unwrap()
-        .entities
-        .push(entity_id);
+    world.locations[to_location_id].entities.push(entity_id);
 
     // remove entity from old location
-    world
-        .locations
-        .get_mut(entity.location)
-        .unwrap()
+    if let Some(pos) = world.locations[entity.location]
         .entities
-        .retain(|&x| x != entity_id);
+        .iter()
+        .position(|&x| x == entity_id)
+    {
+        world.locations[entity.location].entities.remove(pos);
+    }
 
     // update entity location
     entity.location = to_location_id;
@@ -428,7 +436,7 @@ fn action_go(world: &mut World, entity_id: EntityId, link_id: LinkId) {
 }
 
 fn action_inventory(world: &World, entity_id: EntityId) {
-    let entity = world.entities.get(entity_id).unwrap();
+    let entity = &world.entities[entity_id];
     uart_send_bytes(b"u have: ");
     let mut i = 0;
     for &oid in entity.objects.iter() {
@@ -436,7 +444,7 @@ fn action_inventory(world: &World, entity_id: EntityId) {
             uart_send_bytes(b", ");
         }
         i += 1;
-        uart_send_cstr(&world.objects.get(oid).unwrap().name.data);
+        uart_send_cstr(&world.objects[oid].name.data);
     }
     if i == 0 {
         uart_send_bytes(b"nothing");
@@ -445,8 +453,8 @@ fn action_inventory(world: &World, entity_id: EntityId) {
 }
 
 fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let entity = world.entities.get_mut(entity_id).unwrap();
-    let location = world.locations.get_mut(entity.location).unwrap();
+    let entity = &mut world.entities[entity_id];
+    let location = &mut world.locations[entity.location];
 
     // get object name
     let object_name = match it.next() {
@@ -462,7 +470,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let mut object_id = None;
 
     for (index, &oid) in location.objects.iter().enumerate() {
-        if world.objects.get(oid).unwrap().name.equals(object_name) {
+        if world.objects[oid].name.equals(object_name) {
             object_index = Some(index);
             object_id = Some(oid);
             break;
@@ -486,9 +494,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     uart_send_bytes(b"ok\r\n\r\n");
 }
-
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let entity = world.entities.get_mut(entity_id).unwrap();
     let object_name = match it.next() {
         Some(name) => name,
         None => {
@@ -497,38 +503,24 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    // find object id and index in entity inventory
-    let mut object_index = None;
-    let mut object_id = None;
+    let (object_index, object_id) =
+        match find_object_in_entity_inventory(world, entity_id, object_name) {
+            Some(result) => result,
+            None => {
+                uart_send_bytes(b"don't have ");
+                uart_send_bytes(object_name);
+                uart_send_bytes(b"\r\n\r\n");
+                return;
+            }
+        };
 
-    for (index, &oid) in entity.objects.iter().enumerate() {
-        if world.objects.get(oid).unwrap().name.equals(object_name) {
-            object_index = Some(index);
-            object_id = Some(oid);
-            break;
-        }
-    }
-
-    let (object_index, object_id) = match object_id {
-        Some(id) => (object_index.unwrap(), id),
-        None => {
-            uart_send_bytes(b"don't have ");
-            uart_send_bytes(object_name);
-            uart_send_bytes(b"\r\n\r\n");
-            return;
-        }
-    };
+    let entity = &mut world.entities[entity_id];
 
     // remove object from entity
     entity.objects.remove(object_index);
 
     // add object to location
-    world
-        .locations
-        .get_mut(entity.location)
-        .unwrap()
-        .objects
-        .push(object_id);
+    world.locations[entity.location].objects.push(object_id);
 
     uart_send_bytes(b"ok\r\n\r\n");
 }
@@ -553,13 +545,10 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // find "to" entity
-    let &to_entity_id = match world
-        .locations
-        .get(world.entities.get(entity_id).unwrap().location)
-        .unwrap()
+    let &to_entity_id = match world.locations[world.entities[entity_id].location]
         .entities
         .iter()
-        .find(|&&x| world.entities.get(x).unwrap().name.equals(to_entity_name))
+        .find(|&&x| world.entities[x].name.equals(to_entity_name))
     {
         Some(id) => id,
         None => {
@@ -569,40 +558,22 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    let from_entity = world.entities.get_mut(entity_id).unwrap();
-
-    // find object in "from" entity
-    let mut object_index = None;
-    let mut object_id = None;
-
-    for (index, &oid) in from_entity.objects.iter().enumerate() {
-        if world.objects.get(oid).unwrap().name.equals(object_name) {
-            object_index = Some(index);
-            object_id = Some(oid);
-            break;
-        }
-    }
-
-    let (object_index, object_id) = match object_id {
-        Some(id) => (object_index.unwrap(), id),
-        None => {
-            uart_send_bytes(b"don't have ");
-            uart_send_bytes(object_name);
-            uart_send_bytes(b"\r\n\r\n");
-            return;
-        }
-    };
+    let (object_index, object_id) =
+        match find_object_in_entity_inventory(world, entity_id, object_name) {
+            Some(result) => result,
+            None => {
+                uart_send_bytes(b"don't have ");
+                uart_send_bytes(object_name);
+                uart_send_bytes(b"\r\n\r\n");
+                return;
+            }
+        };
 
     // remove object from entity
-    from_entity.objects.remove(object_index);
+    world.entities[entity_id].objects.remove(object_index);
 
     // add object to "to" entity
-    world
-        .entities
-        .get_mut(to_entity_id)
-        .unwrap()
-        .objects
-        .push(object_id);
+    world.entities[to_entity_id].objects.push(object_id);
 
     uart_send_bytes(b"ok\r\n\r\n");
 }
@@ -691,14 +662,9 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
         return;
     }
 
-    let object_id = world.add_object(Name::from(object_name));
+    let object_id = world.add_object(object_name);
 
-    world
-        .entities
-        .get_mut(entity_id)
-        .unwrap()
-        .objects
-        .push(object_id);
+    world.entities[entity_id].objects.push(object_id);
 
     uart_send_bytes(b"ok\r\n\r\n");
 }

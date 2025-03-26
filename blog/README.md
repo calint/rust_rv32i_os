@@ -114,6 +114,6 @@ Getting acquainted with foundational trait Default and implementing it on some s
 
 Borrow checker will not allow passing a mutable reference to a function as immutable although single threaded, thus safe.
 
-... unless it is an argument to calling function and unused prior to the target call.
+... unless it is an argument to called function and unused prior to the target call.
 
 Settling for no UTF-8 support and no String use yet the creation script is done and roome is created.

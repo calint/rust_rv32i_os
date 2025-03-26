@@ -488,6 +488,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     uart_send_bytes(b"ok\r\n\r\n");
 }
+
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let object_name = match it.next() {
         Some(name) => name,

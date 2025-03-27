@@ -550,14 +550,11 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 fn action_memory_info() {
     uart_send_bytes(b"   heap start: ");
     uart_send_hex_u32(memory_heap_start(), true);
-    uart_send_bytes(b"\r\n");
-    uart_send_bytes(b"heap position: ");
+    uart_send_bytes(b"\r\nheap position: ");
     uart_send_hex_u32(allocator_current_next() as u32, true);
-    uart_send_bytes(b"\r\n");
-    uart_send_bytes(b"stack pointer: ");
+    uart_send_bytes(b"\r\nstack pointer: ");
     uart_send_hex_u32(memory_stack_pointer(), true);
-    uart_send_bytes(b"\r\n");
-    uart_send_bytes(b"   memory end: ");
+    uart_send_bytes(b"\r\n   memory end: ");
     uart_send_hex_u32(memory_end(), true);
     uart_send_bytes(b"\r\n\r\n");
 }

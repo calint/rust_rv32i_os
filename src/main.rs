@@ -92,7 +92,7 @@ struct Name {
 
 impl Default for Name {
     fn default() -> Self {
-        Name {
+        Self {
             data: [0u8; NAME_SIZE],
         }
     }
@@ -122,7 +122,7 @@ struct Note {
 
 impl Default for Note {
     fn default() -> Self {
-        Note {
+        Self {
             data: [0u8; NOTE_SIZE],
         }
     }

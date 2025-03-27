@@ -108,9 +108,9 @@ alloc: at 0000:42A0 size: 0000:0060
 de-alloc: at 0000:4260 size: 0000:0030
 ```
 ## Day 6. roome
-Refining the use of built-in operations in iter. Powerful functions such as find, find_map, position, enumeration, any explored.
+Refining the use of built-in operations in iter. Powerful functions such as find, position, find_map, enumeration and any explored.
 
-Getting acquainted with foundational trait Default and implementing it on some structs.
+Getting acquainted with foundational trait Default and implementing it for some structs.
 
 Borrow checker will not allow passing a mutable reference to a function as immutable although single threaded, thus safe.
 
@@ -118,4 +118,9 @@ Borrow checker will not allow passing a mutable reference to a function as immut
 
 Settling for no UTF-8 support and no String use yet.
 
+Using AIs to examine code and suggest changes where the Rust idioms are not used.
+
 The creation script is done and roome is created.
+
+## Day 7. Formal
+Started reading "Programming Rust" by Jim Blandy amongst others for a summary formal overview before exploring reference manuals and reading the rust-book.

@@ -185,10 +185,6 @@ impl World {
                 self.links.push(Link {
                     name: Name::from(link_name),
                 });
-                // uart_send_bytes(b"created link: ");
-                // uart_send_hex_u32(id as u32, true);
-                // uart_send_cstr(&self.links[id].name.data);
-                // uart_send_bytes(b"\r\n");
                 id
             }
         }

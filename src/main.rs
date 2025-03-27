@@ -210,8 +210,8 @@ impl World {
     }
 }
 
-fn find_object_in_entity_inventory<'a>(
-    world: &'a World,
+fn find_object_in_entity_inventory(
+    world: &World,
     entity_id: EntityId,
     object_name: &[u8],
 ) -> Option<(usize, ObjectId)> {

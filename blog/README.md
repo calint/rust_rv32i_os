@@ -123,6 +123,8 @@ Using AIs to examine code and suggest changes where the Rust idioms are not used
 The creation script is done and roome is created.
 
 ## Day 7. Formal
-Started reading "Programming Rust" by Jim Blandy amongst others for a summary formal overview before exploring reference manuals and reading the rust-book. First 8 chapters offer no surprises.
+Started reading "Programming Rust" by Jim Blandy amongst others for a summary formal overview before exploring reference manuals and reading the rust-book. First 9 chapters offer no surprises. An interesting detail is Cell<T> and RefCell<T> which allow mutating such a field in a struct without holding a mutate reference.
+
+Second part of chapter 10 covering pattern matching is as overwhelming as powerful. From a C++ perspective this is a novelty.
 
 Impressed with the refactoring of Rust code in VS Code, specifically renaming which is fast and accurate compared to the equivalent in C++.

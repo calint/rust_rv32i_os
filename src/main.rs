@@ -98,7 +98,7 @@ impl Name {
     }
 
     fn from(src: &[u8]) -> Self {
-        let mut name = Self::new();
+        let mut name = Name::new();
         let len = src.len().min(NAME_SIZE - 1);
         // note: -1 to enabled string terminator at the end of string
         name.data[..len].copy_from_slice(&src[..len]);
@@ -126,7 +126,7 @@ impl Note {
     }
 
     fn from(src: &[u8]) -> Self {
-        let mut note = Self::new();
+        let mut note = Note::new();
         let len = src.len().min(NOTE_SIZE - 1);
         // note: -1 to enabled string terminator at the end of string
         note.data[..len].copy_from_slice(&src[..len]);

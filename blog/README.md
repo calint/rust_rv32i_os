@@ -125,4 +125,4 @@ The creation script is done and roome is created.
 ## Day 7. Formal
 Started reading "Programming Rust" by Jim Blandy amongst others for a summary formal overview before exploring reference manuals and reading the rust-book.
 
-Impressed with the accurate refactoring of Rust code in VS Code, specifically renaming which is fast and accurate compared to the equivalent in C++.
+Impressed with the refactoring of Rust code in VS Code, specifically renaming which is fast and accurate compared to the equivalent in C++.

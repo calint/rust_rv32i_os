@@ -791,6 +791,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                                 uart_send_byte(b' ');
                                 uart_send_move_back(
                                     command_buffer.elements_after_cursor_count() + 1,
+                                    // note: +1 to compensate for the ' ' done to erase last character
                                 );
                             }
                         }

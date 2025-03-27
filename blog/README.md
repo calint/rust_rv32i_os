@@ -114,7 +114,7 @@ Getting acquainted with foundational trait Default and implementing it for some 
 
 Borrow checker will not allow passing a mutable reference to a function as immutable although single threaded, thus safe.
 
-... unless it is an argument to called function and unused prior to the target call.
+... unless it is an argument to called function and not borrowed prior to the target call.
 
 Settling for no UTF-8 support and no String use yet.
 

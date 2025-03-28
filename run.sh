@@ -7,7 +7,7 @@ scripts/firmware-build.sh
 # run
 echo " * build emulator"
 emulator/make.sh
-emulator/qa/qa.sh
+emulator/qa/test.sh
 
 # run tests
 qa/emulator/test.sh

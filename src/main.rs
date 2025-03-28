@@ -226,7 +226,7 @@ fn find_object_in_entity_inventory(
 
 fn execute_creation(world: &mut World, entity_id: EntityId) {
     for line in CREATION.split(|&c| c == b'\n').filter(|x| !x.is_empty()) {
-        let mut command_buffer = CommandBuffer::default();
+        let mut command_buffer = CommandBuffer::new();
         for &byte in line {
             if !command_buffer.insert(byte) {
                 break;
@@ -273,7 +273,7 @@ pub extern "C" fn run() -> ! {
             action_look(&world, entity_id);
             uart_send_cstr(&world.entities[entity_id].name.data);
             uart_send_bytes(b" > ");
-            let mut command_buffer = CommandBuffer::default();
+            let mut command_buffer = CommandBuffer::new();
             input(&mut command_buffer);
             uart_send_bytes(b"\r\n");
             handle_input(&mut world, entity_id, &command_buffer);

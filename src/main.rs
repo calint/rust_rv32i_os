@@ -315,7 +315,7 @@ fn action_look(world: &World, entity_id: EntityId) {
 
     uart_send_bytes(b"\r\nu c: ");
     let mut i = 0;
-    for &oid in location.objects.iter() {
+    for &oid in &location.objects {
         if i != 0 {
             uart_send_bytes(b", ");
         }
@@ -328,7 +328,7 @@ fn action_look(world: &World, entity_id: EntityId) {
     uart_send_bytes(b"\r\n");
 
     let mut i = 0;
-    for &eid in location.entities.iter() {
+    for &eid in &location.entities {
         if eid != entity_id {
             if i != 0 {
                 uart_send_bytes(b", ");
@@ -343,7 +343,7 @@ fn action_look(world: &World, entity_id: EntityId) {
 
     uart_send_bytes(b"exits: ");
     let mut i = 0;
-    for lid in location.links.iter() {
+    for lid in &location.links {
         if i != 0 {
             uart_send_bytes(b", ");
         }
@@ -415,7 +415,7 @@ fn action_inventory(world: &World, entity_id: EntityId) {
     let entity = &world.entities[entity_id];
     uart_send_bytes(b"u have: ");
     let mut i = 0;
-    for &oid in entity.objects.iter() {
+    for &oid in &entity.objects {
         if i != 0 {
             uart_send_bytes(b", ");
         }

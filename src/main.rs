@@ -242,6 +242,8 @@ global_asm!(include_str!("startup.s"));
 
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
+    led_set(0b0000); // turn all leds on
+
     allocator_init();
 
     let mut world = World {
@@ -262,8 +264,6 @@ pub extern "C" fn run() -> ! {
     };
 
     execute_creation(&mut world, 0);
-
-    led_set(0b0000); // turn all leds on
 
     uart_send_bytes(ASCII_ART);
     uart_send_bytes(HELLO);

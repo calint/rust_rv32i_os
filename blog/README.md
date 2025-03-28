@@ -134,7 +134,7 @@ Applying newly acquired insights to roome application rendered a few minor chang
 ## Day 8. The fire hydrant
 Chapters 11 through 15 offer a lot of information density. The traits, generics, closures and dyn chapters covering syntax is a bit much for a rookie. Getting fluent at syntax will eventually happen. However, the ideas are simple and make perfect sense. Especially delighted by the possibility of implementing traits on other objects. From a C++ background that is another novelty. Many ideas presented are a relief for someone that has used the C++ foot gun.
 
-Chapters 16 through 17: Learned more about iterators, consumers, collections and strings. Skipped collections that are not available in [no_std] mode.
+Chapters 16 through 17: Learned more about iterators, consumers, collections and strings. Skipped collections that are not available in `[no_std]` mode.
 
 For now - considering the application is single threaded FPGA implementation - the rest of the book is less interesting. I will be back finishing it at some other occasion. 
 

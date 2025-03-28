@@ -112,7 +112,7 @@ Refining the use of built-in operations in iter. Powerful functions such as find
 
 Getting acquainted with foundational trait Default and implementing it for some structs.
 
-Borrow checker will not allow passing a mutable reference to a function as immutable although single threaded, thus safe.
+Borrow checker will not allow passing any element of the access chain of a borrowed mutable reference to a function as immutable although single threaded, thus safe.
 
 ... unless it is an argument to called function and not borrowed prior to the target call.
 
@@ -123,11 +123,19 @@ Using AIs to examine code and suggest changes where the Rust idioms are not used
 The creation script is done and roome is created.
 
 ## Day 7. Formal
-Started reading "Programming Rust" by Jim Blandy amongst others for a summary formal overview before exploring reference manuals and reading the rust-book. First 9 chapters offer no surprises. An interesting detail is Cell<T> and RefCell<T> which allow mutating a field in a struct without holding a mutable reference.
+Started reading "Programming Rust" by Jim Blandy amongst others for a summary formal overview before exploring reference manuals and reading the rust-book. First 10 chapters offer no surprises. An interesting detail is Cell<T> and RefCell<T> which allow mutating a field in a struct without holding a mutable reference.
 
 Second part of chapter 10 covering pattern matching is as overwhelming as powerful. From a C++ perspective this is a novelty.
 
 Impressed with the refactoring of Rust code in VS Code, specifically renaming which is fast and accurate compared to the equivalent in C++.
 
+Applying newly acquired insights to roome application rendered a few minor changes.
+
 ## Day 8. The fire hydrant
-Chapters 9 through 14 offer a lot of information density. The traits chapter covering syntax is overwhelming. However, the ideas are simple and make perfect sense. Especially delighted by the possibility of implementing traits on other objects.
+Chapters 11 through 15 offer a lot of information density. The traits, generics, closures and dyn chapters covering syntax is a bit much for a rookie. Getting fluent at syntax will eventually happen. However, the ideas are simple and make perfect sense. Especially delighted by the possibility of implementing traits on other objects. From a C++ background that is another novelty. Many ideas presented are a relief for someone that has used the C++ foot gun.
+
+Chapters 16 through 17: Learned more about iterators, consumers, collections and strings. Skipped collections that are not available in [no_std] mode.
+
+For now - considering the application is single threaded FPGA implementation - the rest of the book is less interesting. I will be back finishing it at some other occasion. 
+
+Trying to think how to apply newly acquired knowledge of Rust to the roome application without adding unnecessary complexity ...

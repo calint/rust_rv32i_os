@@ -56,7 +56,8 @@ mod lib {
     pub mod cursor_buffer;
     // pub mod fixed_size_list;
     // pub mod gen_list;
-    pub mod bump_allocator;
+    // pub mod bump_allocator;
+    pub mod global_allocator;
 }
 
 extern crate alloc;
@@ -67,8 +68,9 @@ use core::arch::global_asm;
 use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
-use lib::bump_allocator::*;
 use lib::cursor_buffer::*;
+use lib::global_allocator::global_allocator_debug_free_list;
+use lib::global_allocator::global_allocator_init;
 
 const COMMAND_BUFFER_SIZE: usize = 80;
 const NAME_SIZE: usize = 32;
@@ -244,7 +246,7 @@ global_asm!(include_str!("startup.s"));
 pub extern "C" fn run() -> ! {
     led_set(0b0000); // turn all leds on
 
-    allocator_init();
+    global_allocator_init(memory_end() as usize);
 
     let mut world = World {
         entities: vec![Entity {
@@ -546,13 +548,13 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 fn action_memory_info() {
     uart_send_bytes(b"   heap start: ");
     uart_send_hex_u32(memory_heap_start(), true);
-    uart_send_bytes(b"\r\nheap position: ");
-    uart_send_hex_u32(allocator_current_next() as u32, true);
     uart_send_bytes(b"\r\nstack pointer: ");
     uart_send_hex_u32(memory_stack_pointer(), true);
     uart_send_bytes(b"\r\n   memory end: ");
     uart_send_hex_u32(memory_end(), true);
-    uart_send_bytes(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n\r\nheap blocks:\r\n");
+    global_allocator_debug_free_list();
+    uart_send_bytes(b"\r\n");
 }
 
 fn action_sdcard_status() {

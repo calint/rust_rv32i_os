@@ -155,7 +155,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
 
 fn action_look(world: &mut World, entity_id: EntityId) {
     {
-        let entity = &world.entities[entity_id];
+        let entity = &mut world.entities[entity_id];
         let location = &world.locations[entity.location];
 
         let messages = &entity.messages;
@@ -163,6 +163,9 @@ fn action_look(world: &mut World, entity_id: EntityId) {
             uart_send_cstr(&x.data);
             uart_send_bytes(b"\r\n");
         });
+
+        // clear messages after displayed
+        entity.messages.clear();
 
         uart_send_bytes(b"u r in ");
         uart_send_cstr(&location.name.data);
@@ -214,9 +217,6 @@ fn action_look(world: &mut World, entity_id: EntityId) {
             uart_send_bytes(b"\r\n");
         }
     }
-
-    // clear messages after displayed
-    world.entities[entity_id].messages.clear();
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {

@@ -633,12 +633,12 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     // find "to" entity
-    let &to_entity_id = match world.locations[world.entities[entity_id].location]
+    let to_entity_id = match world.locations[world.entities[entity_id].location]
         .entities
         .iter()
         .find(|&&x| world.entities[x].name.equals(to_entity_name))
     {
-        Some(id) => id,
+        Some(&id) => id,
         None => {
             uart_send_bytes(to_entity_name);
             uart_send_bytes(b" not here\r\n\r\n");

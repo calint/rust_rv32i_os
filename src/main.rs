@@ -54,13 +54,9 @@ mod lib {
     pub mod api_unsafe;
     pub mod constants;
     pub mod cursor_buffer;
-    // pub mod fixed_size_list;
-    // pub mod gen_list;
-    // pub mod bump_allocator;
     pub mod global_allocator;
 }
 mod model;
-use model::*;
 
 extern crate alloc;
 
@@ -72,6 +68,7 @@ use lib::api_unsafe::*;
 use lib::cursor_buffer::*;
 use lib::global_allocator::global_allocator_debug_block_list;
 use lib::global_allocator::global_allocator_init;
+use model::*;
 
 const COMMAND_BUFFER_SIZE: usize = 80;
 

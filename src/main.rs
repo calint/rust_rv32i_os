@@ -242,15 +242,13 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     };
 
     // move entity
-    let from_location_id;
-    let to_location_id;
-    {
+    let (from_location_id, to_location_id) = {
         let entity = &mut world.entities[entity_id];
-        from_location_id = entity.location;
+        let from_location_id = entity.location;
         let from_location = &mut world.locations[from_location_id];
 
         // find "to" location id
-        to_location_id = match from_location.links.iter().find(|x| x.link == link_id) {
+        let to_location_id = match from_location.links.iter().find(|x| x.link == link_id) {
             Some(lnk) => lnk.location,
             None => {
                 uart_send_bytes(b"can't go there\r\n\r\n");
@@ -268,7 +266,9 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
 
         // update entity location
         entity.location = to_location_id;
-    }
+
+        (from_location_id, to_location_id)
+    };
 
     // send message to entities in 'from_location' that entity has left
     send_message_to_location_entities(

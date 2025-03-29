@@ -3,7 +3,7 @@ use alloc::vec::Vec;
 
 const NAME_SIZE: usize = 32;
 const NOTE_SIZE: usize = 64;
-const ENTITY_MESSAGE_SIZE: usize = 64;
+const ENTITY_MESSAGE_SIZE: usize = 128;
 
 pub type LocationId = usize;
 pub type LinkId = usize;

@@ -289,6 +289,25 @@ fn execute_creation(world: &mut World, entity_id: EntityId) {
     }
 }
 
+fn send_message_to_location_entities(
+    world: &mut World,
+    location_id: LocationId,
+    exclude_entities_id: &[EntityId],
+    message: EntityMessage,
+) {
+    for &eid in &world.locations[location_id].entities {
+        if !exclude_entities_id.contains(&eid) {
+            world.entities[eid].messages.push(message.clone());
+        }
+    }
+}
+
+fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: EntityMessage) {
+    for &eid in entities {
+        world.entities[eid].messages.push(message.clone());
+    }
+}
+
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
@@ -437,25 +456,6 @@ fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferItera
     };
 
     action_go_named_link(world, entity_id, named_link);
-}
-
-fn send_message_to_location_entities(
-    world: &mut World,
-    location_id: LocationId,
-    exclude_entities_id: &[EntityId],
-    message: EntityMessage,
-) {
-    for &eid in &world.locations[location_id].entities {
-        if !exclude_entities_id.contains(&eid) {
-            world.entities[eid].messages.push(message.clone());
-        }
-    }
-}
-
-fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: EntityMessage) {
-    for &eid in entities {
-        world.entities[eid].messages.push(message.clone());
-    }
 }
 
 fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) {

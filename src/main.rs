@@ -460,15 +460,17 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
             return;
         }
     };
+
     // move entity
     let from_location_id;
+    let to_location_id;
     {
         let entity = &mut world.entities[entity_id];
         from_location_id = entity.location;
         let from_location = &mut world.locations[from_location_id];
 
         // find "to" location id
-        let to_location_id = match from_location.links.iter().find(|x| x.link == link_id) {
+        to_location_id = match from_location.links.iter().find(|x| x.link == link_id) {
             Some(lnk) => lnk.location,
             None => {
                 uart_send_bytes(b"can't go there\r\n\r\n");
@@ -492,17 +494,41 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         entity.location = to_location_id;
     }
 
-    // add message to entities in 'from_location' that entity has left
-    let message = EntityMessage::from(&[
-        &world.entities[entity_id].name.data,
-        b" left to ",
-        link_name,
-    ]);
+    // send message to entities in 'from_location' that entity has left
     send_message_to_location_entities_excluding_from_entity(
         world,
         from_location_id,
         entity_id,
-        message,
+        EntityMessage::from(&[
+            &world.entities[entity_id].name.data,
+            b" left to ",
+            link_name,
+        ]),
+    );
+
+    // find link name that leads from to_location_id to from_location_id
+    let link_id = world.locations[to_location_id]
+        .links
+        .iter()
+        .find_map(|x| {
+            if x.location == from_location_id {
+                Some(x.link)
+            } else {
+                None
+            }
+        })
+        .unwrap();
+
+    // send message to entities in 'to_location' that entity has arrived
+    send_message_to_location_entities_excluding_from_entity(
+        world,
+        to_location_id,
+        entity_id,
+        EntityMessage::from(&[
+            &world.entities[entity_id].name.data,
+            b" arrived from ",
+            &world.links[link_id].name.data,
+        ]),
     );
 }
 

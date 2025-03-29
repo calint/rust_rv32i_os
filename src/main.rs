@@ -686,7 +686,7 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
 }
 
 fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let tell_to_name = match it.next() {
+    let to_name = match it.next() {
         Some(name) => name,
         None => {
             uart_send_bytes(b"tell to whom?\r\n");
@@ -694,8 +694,8 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    let rest = it.rest();
-    if rest.len() == 0 {
+    let tell = it.rest();
+    if tell.len() == 0 {
         uart_send_bytes(b"tell what?\r\n");
         return;
     };
@@ -705,7 +705,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let to_entity_id = match world.locations[entity.location]
         .entities
         .iter()
-        .find(|&&x| world.entities[x].name.equals(tell_to_name))
+        .find(|&&x| world.entities[x].name.equals(to_name))
     {
         Some(&id) => id,
         None => {
@@ -714,7 +714,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    let message = EntityMessage::from(&[&entity.name.data, b" tells u ", &rest]);
+    let message = EntityMessage::from(&[&entity.name.data, b" tells u ", &tell]);
     world.entities[to_entity_id].messages.push(message);
 }
 

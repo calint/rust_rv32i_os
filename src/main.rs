@@ -331,7 +331,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let object_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_bytes(b"take what?\r\n\r\n");
+            uart_send_bytes(b"take what\r\n\r\n");
             return;
         }
     };
@@ -378,7 +378,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let object_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_bytes(b"drop what?\r\n\r\n");
+            uart_send_bytes(b"drop what\r\n\r\n");
             return;
         }
     };
@@ -421,7 +421,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let object_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_bytes(b"give what?\r\n\r\n");
+            uart_send_bytes(b"give what\r\n\r\n");
             return;
         }
     };
@@ -430,7 +430,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let to_entity_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_bytes(b"give to whom?\r\n\r\n");
+            uart_send_bytes(b"give to whom\r\n\r\n");
             return;
         }
     };

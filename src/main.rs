@@ -32,7 +32,7 @@ static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
 :      | |\r\n\
 \r\n";
 
-static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
+static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  say <what>: say to all in location\r\n  tell <whom> <what>: tells entity in location\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
 
 static CREATION: &[u8] = br#"nln todo: find an exit
 nl none back office
@@ -147,6 +147,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"nln") => action_set_location_note(world, entity_id, &mut it),
         Some(b"ne") => action_new_entity(world, entity_id, &mut it),
         Some(b"say") => action_say(world, entity_id, &mut it),
+        Some(b"tell") => action_tell(world, entity_id, &mut it),
         Some(b"wait") => action_wait(),
         _ => uart_send_bytes(b"not understood\r\n\r\n"),
     }
@@ -682,6 +683,46 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
         &[entity_id],
         EntityMessage::from(&[&entity.name.data, b" says ", rest]),
     );
+}
+
+fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let tell_to_name = match it.next() {
+        Some(name) => name,
+        None => {
+            uart_send_bytes(b"tell to whom?\r\n");
+            return;
+        }
+    };
+
+    let rest = it.rest();
+    if rest.len() == 0 {
+        uart_send_bytes(b"tell what?\r\n");
+        return;
+    };
+
+    let to_entity_id = match world
+        .entities
+        .iter()
+        .position(|x| x.name.equals(tell_to_name))
+    {
+        Some(id) => id,
+        None => {
+            uart_send_bytes(b"not found\r\n");
+            return;
+        }
+    };
+
+    if !world.locations[world.entities[entity_id].location]
+        .entities
+        .iter()
+        .any(|&x| x == to_entity_id)
+    {
+        uart_send_bytes(b"not here\r\n");
+        return;
+    }
+
+    let message = EntityMessage::from(&[&world.entities[entity_id].name.data, b" tells u ", &rest]);
+    world.entities[to_entity_id].messages.push(message);
 }
 
 fn action_wait() {}

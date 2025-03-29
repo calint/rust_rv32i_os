@@ -59,11 +59,12 @@ mod lib {
     // pub mod bump_allocator;
     pub mod global_allocator;
 }
+mod model;
+use model::*;
 
 extern crate alloc;
 
 use alloc::vec;
-use alloc::vec::Vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use lib::api::*;
@@ -73,240 +74,13 @@ use lib::global_allocator::global_allocator_debug_block_list;
 use lib::global_allocator::global_allocator_init;
 
 const COMMAND_BUFFER_SIZE: usize = 80;
-const NAME_SIZE: usize = 32;
-const NOTE_SIZE: usize = 64;
-const ENTITY_MESSAGE_SIZE: usize = 64;
 
 const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
 const CHAR_ESCAPE: u8 = 0x1b;
 
-type LocationId = usize;
-type LinkId = usize;
-type EntityId = usize;
-type ObjectId = usize;
-
 type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 type CommandBufferIterator<'a> = CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
-
-struct Location {
-    name: Name,
-    note: Note,
-    links: Vec<LocationLink>,
-    objects: Vec<ObjectId>,
-    entities: Vec<EntityId>,
-}
-
-struct Name {
-    data: [u8; NAME_SIZE],
-}
-
-impl Name {
-    fn new() -> Self {
-        Self {
-            data: [0u8; NAME_SIZE],
-        }
-    }
-
-    fn from(src: &[u8]) -> Self {
-        let mut name = Self::new();
-        let len = src.len().min(NAME_SIZE - 1);
-        // note: -1 to enabled string terminator at the end of string
-        name.data[..len].copy_from_slice(&src[..len]);
-        name
-    }
-
-    fn equals(&self, compare_with: &[u8]) -> bool {
-        if compare_with.len() >= NAME_SIZE {
-            // note: >= to ensure the end of string terminator can be compared
-            return false;
-        }
-        self.data.starts_with(compare_with) && self.data[compare_with.len()] == 0
-    }
-}
-
-struct Note {
-    data: [u8; NOTE_SIZE],
-}
-
-impl Note {
-    fn new() -> Self {
-        Self {
-            data: [0u8; NOTE_SIZE],
-        }
-    }
-
-    fn from(src: &[u8]) -> Self {
-        let mut note = Self::new();
-        let len = src.len().min(NOTE_SIZE - 1);
-        // note: -1 to enabled string terminator at the end of string
-        note.data[..len].copy_from_slice(&src[..len]);
-        note
-    }
-
-    fn is_empty(&self) -> bool {
-        self.data[0] == 0
-    }
-}
-
-struct LocationLink {
-    link: LinkId,
-    location: LocationId,
-}
-
-struct Link {
-    name: Name,
-}
-
-struct Object {
-    name: Name,
-}
-
-struct Entity {
-    name: Name,
-    location: LocationId,
-    objects: Vec<ObjectId>,
-    messages: Vec<EntityMessage>,
-}
-
-#[derive(Clone)]
-struct EntityMessage {
-    data: [u8; ENTITY_MESSAGE_SIZE],
-}
-
-impl EntityMessage {
-    fn new() -> Self {
-        Self {
-            data: [0u8; ENTITY_MESSAGE_SIZE],
-        }
-    }
-    fn from(parts: &[&[u8]]) -> Self {
-        let mut message = EntityMessage::new();
-        set_u8_buffer_from_parts(&mut message.data, parts);
-        message
-    }
-}
-
-fn set_u8_buffer_from_parts(buffer: &mut [u8], parts: &[&[u8]]) {
-    let mut index = 0;
-
-    // Helper to copy a part into the buffer, considering null termination
-    fn copy_part(buffer: &mut [u8], index: &mut usize, part: &[u8]) {
-        let part_len = part.iter().position(|&c| c == 0).unwrap_or(part.len());
-        for &byte in &part[..part_len] {
-            if *index >= buffer.len() {
-                break;
-            }
-            buffer[*index] = byte;
-            *index += 1;
-        }
-    }
-
-    // Copy each part into the buffer
-    for &part in parts {
-        copy_part(buffer, &mut index, part);
-    }
-
-    // Null-terminate the buffer if there's space
-    if index < buffer.len() {
-        buffer[index] = 0;
-    }
-}
-
-struct World {
-    objects: Vec<Object>,
-    entities: Vec<Entity>,
-    locations: Vec<Location>,
-    links: Vec<Link>,
-}
-
-impl World {
-    fn find_or_add_link(&mut self, link_name: &[u8]) -> LinkId {
-        match self.links.iter().position(|x| x.name.equals(link_name)) {
-            Some(id) => id,
-            None => {
-                let id = self.links.len();
-                self.links.push(Link {
-                    name: Name::from(link_name),
-                });
-                id
-            }
-        }
-    }
-
-    fn add_object(&mut self, object_name: &[u8]) -> ObjectId {
-        let object_id = self.objects.len();
-        self.objects.push(Object {
-            name: Name::from(object_name),
-        });
-        object_id
-    }
-
-    fn add_entity(&mut self, entity_name: &[u8], location_id: LocationId) -> EntityId {
-        let entity_id = self.entities.len();
-        self.entities.push(Entity {
-            name: Name::from(entity_name),
-            location: location_id,
-            objects: vec![],
-            messages: vec![],
-        });
-        self.locations[location_id].entities.push(entity_id);
-        entity_id
-    }
-}
-
-fn find_object_in_entity_inventory(
-    world: &World,
-    entity_id: EntityId,
-    object_name: &[u8],
-) -> Option<(usize, ObjectId)> {
-    world.entities[entity_id]
-        .objects
-        .iter()
-        .enumerate()
-        .find_map(|(index, &oid)| {
-            if world.objects[oid].name.equals(object_name) {
-                Some((index, oid))
-            } else {
-                None
-            }
-        })
-}
-
-fn execute_creation(world: &mut World, entity_id: EntityId) {
-    for line in CREATION.split(|&c| c == b'\n').filter(|x| !x.is_empty()) {
-        let mut command_buffer = CommandBuffer::new();
-        for &byte in line {
-            if !command_buffer.insert(byte) {
-                break;
-            }
-        }
-
-        handle_input(world, entity_id, &command_buffer);
-
-        // clear messages on all entities in case input generated messages
-        world.entities.iter_mut().for_each(|x| x.messages.clear());
-    }
-}
-
-fn send_message_to_location_entities(
-    world: &mut World,
-    location_id: LocationId,
-    exclude_entities_id: &[EntityId],
-    message: EntityMessage,
-) {
-    for &eid in &world.locations[location_id].entities {
-        if !exclude_entities_id.contains(&eid) {
-            world.entities[eid].messages.push(message.clone());
-        }
-    }
-}
-
-fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: EntityMessage) {
-    for &eid in entities {
-        world.entities[eid].messages.push(message.clone());
-    }
-}
 
 // setup stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
@@ -996,6 +770,22 @@ fn input(command_buffer: &mut CommandBuffer) {
                 }
             }
         }
+    }
+}
+
+fn execute_creation(world: &mut World, entity_id: EntityId) {
+    for line in CREATION.split(|&c| c == b'\n').filter(|x| !x.is_empty()) {
+        let mut command_buffer = CommandBuffer::new();
+        for &byte in line {
+            if !command_buffer.insert(byte) {
+                break;
+            }
+        }
+
+        handle_input(world, entity_id, &command_buffer);
+
+        // clear messages on all entities in case input generated messages
+        world.entities.iter_mut().for_each(|x| x.messages.clear());
     }
 }
 

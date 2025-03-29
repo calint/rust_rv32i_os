@@ -689,6 +689,20 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     // add object to "to" entity
     world.entities[to_entity_id].objects.push(object_id);
+
+    // send message
+    send_message_to_location_entities(
+        world,
+        world.entities[entity_id].location,
+        &[entity_id, to_entity_id],
+        EntityMessage::from(&[
+            &world.entities[entity_id].name.data,
+            b" gave ",
+            &world.objects[object_id].name.data,
+            b" to ",
+            &world.entities[to_entity_id].name.data,
+        ]),
+    );
 }
 
 fn action_memory_info() {

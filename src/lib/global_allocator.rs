@@ -145,7 +145,7 @@ pub fn global_allocator_init(heap_size: usize) {
     }
 }
 
-pub fn global_allocator_debug_free_list() {
+pub fn global_allocator_debug_block_list() {
     unsafe {
         let mut current = HEAP_ALLOCATOR.free_list;
         while !current.is_null() {

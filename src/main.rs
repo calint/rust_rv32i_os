@@ -69,7 +69,7 @@ use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
 use lib::cursor_buffer::*;
-use lib::global_allocator::global_allocator_debug_free_list;
+use lib::global_allocator::global_allocator_debug_block_list;
 use lib::global_allocator::global_allocator_init;
 
 const COMMAND_BUFFER_SIZE: usize = 80;
@@ -553,7 +553,7 @@ fn action_memory_info() {
     uart_send_bytes(b"\r\n   memory end: ");
     uart_send_hex_u32(memory_end(), true);
     uart_send_bytes(b"\r\n\r\nheap blocks:\r\n");
-    global_allocator_debug_free_list();
+    global_allocator_debug_block_list();
     uart_send_bytes(b"\r\n");
 }
 

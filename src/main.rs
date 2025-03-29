@@ -368,7 +368,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             world,
             entity.location,
             &[entity_id],
-            EntityMessage::from(&[&entity.name.data, b" took ", &object_name]),
+            EntityMessage::from(&[&entity.name.data, b" took ", object_name]),
         );
     }
 }
@@ -410,7 +410,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             world,
             entity.location,
             &[entity_id],
-            EntityMessage::from(&[&entity.name.data, b" dropped ", &object_name]),
+            EntityMessage::from(&[&entity.name.data, b" dropped ", object_name]),
         );
     }
 }
@@ -664,7 +664,7 @@ fn action_set_location_note(
 
 fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let say = it.rest();
-    if say.len() == 0 {
+    if say.is_empty() {
         uart_send_bytes(b"say what");
         return;
     }
@@ -688,7 +688,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     let tell = it.rest();
-    if tell.len() == 0 {
+    if tell.is_empty() {
         uart_send_bytes(b"tell what\r\n");
         return;
     };
@@ -707,7 +707,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    let message = EntityMessage::from(&[&entity.name.data, b" tells u ", &tell]);
+    let message = EntityMessage::from(&[&entity.name.data, b" tells u ", tell]);
     world.entities[to_entity_id].messages.push(message);
 }
 
@@ -736,18 +736,16 @@ fn input(command_buffer: &mut CommandBuffer) {
                 } else if ch == CHAR_BACKSPACE {
                     if command_buffer.backspace() {
                         uart_send_byte(ch);
-                        command_buffer.for_each_from_cursor(|c| uart_send_byte(c));
+                        command_buffer.for_each_from_cursor(uart_send_byte);
                         uart_send_byte(b' ');
                         uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
                     }
                 } else if ch == CHAR_CARRIAGE_RETURN || command_buffer.is_full() {
                     return;
-                } else {
-                    if command_buffer.insert(ch) {
-                        uart_send_byte(ch);
-                        command_buffer.for_each_from_cursor(|x| uart_send_byte(x));
-                        uart_send_move_back(command_buffer.elements_after_cursor_count());
-                    }
+                } else if command_buffer.insert(ch) {
+                    uart_send_byte(ch);
+                    command_buffer.for_each_from_cursor(uart_send_byte);
+                    uart_send_move_back(command_buffer.elements_after_cursor_count());
                 }
             }
             InputState::Escape => {
@@ -758,7 +756,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                 }
             }
             InputState::EscapeBracket => {
-                if ch >= b'0' && ch <= b'9' {
+                if ch.is_ascii_digit() {
                     escape_sequence_parameter = escape_sequence_parameter * 10 + (ch - b'0');
                 } else {
                     match ch {
@@ -779,7 +777,7 @@ fn input(command_buffer: &mut CommandBuffer) {
                             if escape_sequence_parameter == 3 {
                                 // delete key
                                 command_buffer.del();
-                                command_buffer.for_each_from_cursor(|x| uart_send_byte(x));
+                                command_buffer.for_each_from_cursor(uart_send_byte);
                                 uart_send_byte(b' ');
                                 uart_send_move_back(
                                     command_buffer.elements_after_cursor_count() + 1,

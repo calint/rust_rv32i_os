@@ -56,7 +56,7 @@ pub fn uart_send_move_back(count: usize) {
 pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;
     for &ch in number_as_str {
-        if ch < b'0' || ch > b'9' {
+        if !(b'0'..=b'9').contains(&ch) {
             return num;
         }
         num = num * 10 + (ch - b'0') as u32;

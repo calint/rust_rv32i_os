@@ -79,8 +79,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
         unsafe {
             // Get the block header
-            let block =
-                (ptr as *mut u8).sub(core::mem::size_of::<BlockHeader>()) as *mut BlockHeader;
+            let block = ptr.sub(core::mem::size_of::<BlockHeader>()) as *mut BlockHeader;
 
             // Mark block as free
             (*block).is_free = true;
@@ -91,7 +90,10 @@ unsafe impl GlobalAlloc for GlobalAllocator {
             // Merge with next block if possible
             if !(*current).next.is_null()
                 && (*(*current).next).is_free
-                && (current as *mut u8).add((*current).size) == (*current).next as *mut u8
+                && core::ptr::eq(
+                    (current as *mut u8).add((*current).size),
+                    (*current).next as *mut u8,
+                )
             {
                 (*current).size += (*(*current).next).size;
                 (*current).next = (*(*current).next).next;
@@ -103,7 +105,10 @@ unsafe impl GlobalAlloc for GlobalAllocator {
             // Merge with previous block if possible
             if !(*current).prev.is_null()
                 && (*(*current).prev).is_free
-                && (current as *mut u8) == ((*current).prev as *mut u8).add((*(*current).prev).size)
+                && core::ptr::eq(
+                    current as *mut u8,
+                    ((*current).prev as *mut u8).add((*(*current).prev).size),
+                )
             {
                 (*(*current).prev).size += (*current).size;
                 (*(*current).prev).next = (*current).next;

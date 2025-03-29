@@ -180,6 +180,37 @@ impl EntityMessage {
             data: [0u8; ENTITY_MESSAGE_SIZE],
         }
     }
+    fn from(parts: &[&[u8]]) -> Self {
+        let mut message = EntityMessage::new();
+        set_u8_buffer_from_parts(&mut message.data, parts);
+        message
+    }
+}
+
+fn set_u8_buffer_from_parts(buffer: &mut [u8], parts: &[&[u8]]) {
+    let mut index = 0;
+
+    // Helper to copy a part into the buffer, considering null termination
+    fn copy_part(buffer: &mut [u8], index: &mut usize, part: &[u8]) {
+        let part_len = part.iter().position(|&c| c == 0).unwrap_or(part.len());
+        for &byte in &part[..part_len] {
+            if *index >= buffer.len() {
+                break;
+            }
+            buffer[*index] = byte;
+            *index += 1;
+        }
+    }
+
+    // Copy each part into the buffer
+    for &part in parts {
+        copy_part(buffer, &mut index, part);
+    }
+
+    // Null-terminate the buffer if there's space
+    if index < buffer.len() - 1 {
+        buffer[index] = 0;
+    }
 }
 
 struct World {
@@ -407,32 +438,6 @@ fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferItera
     action_go_named_link(world, entity_id, named_link);
 }
 
-fn set_message_data(message: &mut EntityMessage, parts: &[&[u8]]) {
-    let mut index = 0;
-
-    // Helper to copy a part into the buffer, considering null termination
-    fn copy_part(buffer: &mut [u8], index: &mut usize, part: &[u8]) {
-        let part_len = part.iter().position(|&c| c == 0).unwrap_or(part.len());
-        for &byte in &part[..part_len] {
-            if *index >= buffer.len() {
-                break;
-            }
-            buffer[*index] = byte;
-            *index += 1;
-        }
-    }
-
-    // Copy each part into the buffer
-    for &part in parts {
-        copy_part(&mut message.data, &mut index, part);
-    }
-
-    // Null-terminate the buffer if there's space
-    if index < message.data.len() {
-        message.data[index] = 0;
-    }
-}
-
 fn send_message_to_location_entities_excluding_from_entity(
     world: &mut World,
     location_id: LocationId,
@@ -488,15 +493,11 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     }
 
     // add message to entities in 'from_location' that entity has left
-    let mut message = EntityMessage::new();
-    set_message_data(
-        &mut message,
-        &[
-            &world.entities[entity_id].name.data,
-            b" left to ",
-            link_name,
-        ],
-    );
+    let message = EntityMessage::from(&[
+        &world.entities[entity_id].name.data,
+        b" left to ",
+        link_name,
+    ]);
     send_message_to_location_entities_excluding_from_entity(
         world,
         from_location_id,

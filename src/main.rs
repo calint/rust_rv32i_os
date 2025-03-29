@@ -506,7 +506,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         ]),
     );
 
-    // find link name that leads from to_location_id to from_location_id
+    // find link name that leads from 'to_location_id' to 'from_location_id'
     let link_id = world.locations[to_location_id]
         .links
         .iter()

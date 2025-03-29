@@ -75,6 +75,7 @@ use lib::global_allocator::global_allocator_init;
 const COMMAND_BUFFER_SIZE: usize = 80;
 const NAME_SIZE: usize = 32;
 const NOTE_SIZE: usize = 64;
+const ENTITY_MESSAGE_SIZE: usize = 64;
 
 const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
@@ -87,6 +88,14 @@ type ObjectId = usize;
 
 type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 type CommandBufferIterator<'a> = CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
+
+struct Location {
+    name: Name,
+    note: Note,
+    links: Vec<LocationLink>,
+    objects: Vec<ObjectId>,
+    entities: Vec<EntityId>,
+}
 
 struct Name {
     data: [u8; NAME_SIZE],
@@ -140,6 +149,15 @@ impl Note {
     }
 }
 
+struct LocationLink {
+    link: LinkId,
+    location: LocationId,
+}
+
+struct Link {
+    name: Name,
+}
+
 struct Object {
     name: Name,
 }
@@ -148,23 +166,20 @@ struct Entity {
     name: Name,
     location: LocationId,
     objects: Vec<ObjectId>,
+    messages: Vec<EntityMessage>,
 }
 
-struct Link {
-    name: Name,
+#[derive(Clone)]
+struct EntityMessage {
+    data: [u8; ENTITY_MESSAGE_SIZE],
 }
 
-struct LocationLink {
-    link: LinkId,
-    location: LocationId,
-}
-
-struct Location {
-    name: Name,
-    note: Note,
-    links: Vec<LocationLink>,
-    objects: Vec<ObjectId>,
-    entities: Vec<EntityId>,
+impl EntityMessage {
+    fn new() -> Self {
+        Self {
+            data: [0u8; ENTITY_MESSAGE_SIZE],
+        }
+    }
 }
 
 struct World {
@@ -202,6 +217,7 @@ impl World {
             name: Name::from(entity_name),
             location: location_id,
             objects: vec![],
+            messages: vec![],
         });
         self.locations[location_id].entities.push(entity_id);
         entity_id
@@ -236,6 +252,9 @@ fn execute_creation(world: &mut World, entity_id: EntityId) {
         }
 
         handle_input(world, entity_id, &command_buffer);
+
+        // clear messages on all entities in case input generated messages
+        world.entities.iter_mut().for_each(|x| x.messages.clear());
     }
 }
 
@@ -253,6 +272,7 @@ pub extern "C" fn run() -> ! {
             name: Name::from(b"me"),
             location: 0,
             objects: vec![],
+            messages: vec![],
         }],
         locations: vec![Location {
             name: Name::from(b"roome"),
@@ -272,7 +292,7 @@ pub extern "C" fn run() -> ! {
 
     loop {
         for entity_id in 0..world.entities.len() {
-            action_look(&world, entity_id);
+            action_look(&mut world, entity_id);
             uart_send_cstr(&world.entities[entity_id].name.data);
             uart_send_bytes(b" > ");
             let mut command_buffer = CommandBuffer::new();
@@ -310,57 +330,68 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
     }
 }
 
-fn action_look(world: &World, entity_id: EntityId) {
-    let location = &world.locations[world.entities[entity_id].location];
-    uart_send_bytes(b"u r in ");
-    uart_send_cstr(&location.name.data);
+fn action_look(world: &mut World, entity_id: EntityId) {
+    {
+        let location = &world.locations[world.entities[entity_id].location];
+        uart_send_bytes(b"u r in ");
+        uart_send_cstr(&location.name.data);
 
-    uart_send_bytes(b"\r\nu c: ");
-    let mut i = 0;
-    for &oid in &location.objects {
-        if i != 0 {
-            uart_send_bytes(b", ");
-        }
-        i += 1;
-        uart_send_cstr(&world.objects[oid].name.data);
-    }
-    if i == 0 {
-        uart_send_bytes(b"nothing");
-    }
-    uart_send_bytes(b"\r\n");
-
-    let mut i = 0;
-    for &eid in &location.entities {
-        if eid != entity_id {
+        uart_send_bytes(b"\r\nu c: ");
+        let mut i = 0;
+        for &oid in &location.objects {
             if i != 0 {
                 uart_send_bytes(b", ");
             }
-            uart_send_cstr(&world.entities[eid].name.data);
             i += 1;
+            uart_send_cstr(&world.objects[oid].name.data);
         }
-    }
-    if i > 0 {
-        uart_send_bytes(b" is here\r\n");
-    }
-
-    uart_send_bytes(b"exits: ");
-    let mut i = 0;
-    for lid in &location.links {
-        if i != 0 {
-            uart_send_bytes(b", ");
+        if i == 0 {
+            uart_send_bytes(b"nothing");
         }
-        i += 1;
-        uart_send_cstr(&world.links[lid.link].name.data);
-    }
-    if i == 0 {
-        uart_send_bytes(b"none");
-    }
-    uart_send_bytes(b"\r\n");
-
-    if !location.note.is_empty() {
-        uart_send_cstr(&location.note.data);
         uart_send_bytes(b"\r\n");
+
+        let mut i = 0;
+        for &eid in &location.entities {
+            if eid != entity_id {
+                if i != 0 {
+                    uart_send_bytes(b", ");
+                }
+                uart_send_cstr(&world.entities[eid].name.data);
+                i += 1;
+            }
+        }
+        if i > 0 {
+            uart_send_bytes(b" is here\r\n");
+        }
+
+        uart_send_bytes(b"exits: ");
+        let mut i = 0;
+        for lid in &location.links {
+            if i != 0 {
+                uart_send_bytes(b", ");
+            }
+            i += 1;
+            uart_send_cstr(&world.links[lid.link].name.data);
+        }
+        if i == 0 {
+            uart_send_bytes(b"none");
+        }
+        uart_send_bytes(b"\r\n");
+
+        if !location.note.is_empty() {
+            uart_send_cstr(&location.note.data);
+            uart_send_bytes(b"\r\n");
+        }
+
+        let messages = &world.entities[entity_id].messages;
+        messages.iter().for_each(|x| {
+            uart_send_cstr(&x.data);
+            uart_send_bytes(b"\r\n");
+        });
     }
+
+    // clear messages after displayed
+    world.entities[entity_id].messages.clear();
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -375,6 +406,45 @@ fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferItera
     action_go_named_link(world, entity_id, named_link);
 }
 
+fn set_message_data(message: &mut EntityMessage, parts: &[&[u8]]) {
+    let mut index = 0;
+
+    // Helper to copy a part into the buffer, considering null termination
+    fn copy_part(buffer: &mut [u8], index: &mut usize, part: &[u8]) {
+        let part_len = part.iter().position(|&c| c == 0).unwrap_or(part.len());
+        for &byte in &part[..part_len] {
+            if *index >= buffer.len() {
+                break;
+            }
+            buffer[*index] = byte;
+            *index += 1;
+        }
+    }
+
+    // Copy each part into the buffer
+    for &part in parts {
+        copy_part(&mut message.data, &mut index, part);
+    }
+
+    // Null-terminate the buffer if there's space
+    if index < message.data.len() {
+        message.data[index] = 0;
+    }
+}
+
+fn send_message_to_location_entities_excluding_from_entity(
+    world: &mut World,
+    location_id: LocationId,
+    from_entity_id: EntityId,
+    message: EntityMessage,
+) {
+    for &eid in &world.locations[location_id].entities {
+        if eid != from_entity_id {
+            world.entities[eid].messages.push(message.clone());
+        }
+    }
+}
+
 fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) {
     // find link id
     let link_id = match world.links.iter().position(|x| x.name.equals(link_name)) {
@@ -384,33 +454,54 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
             return;
         }
     };
-
-    let entity = &mut world.entities[entity_id];
-    let location = &world.locations[entity.location];
-
-    // find "to" location id
-    let to_location_id = match location.links.iter().find(|x| x.link == link_id) {
-        Some(lnk) => lnk.location,
-        None => {
-            uart_send_bytes(b"can't go there\r\n\r\n");
-            return;
-        }
-    };
-
-    // add entity to new location
-    world.locations[to_location_id].entities.push(entity_id);
-
-    // remove entity from old location
-    if let Some(pos) = world.locations[entity.location]
-        .entities
-        .iter()
-        .position(|&x| x == entity_id)
+    // move entity
+    let from_location_id;
     {
-        world.locations[entity.location].entities.remove(pos);
+        let entity = &mut world.entities[entity_id];
+        from_location_id = entity.location;
+        let from_location = &mut world.locations[from_location_id];
+
+        // find "to" location id
+        let to_location_id = match from_location.links.iter().find(|x| x.link == link_id) {
+            Some(lnk) => lnk.location,
+            None => {
+                uart_send_bytes(b"can't go there\r\n\r\n");
+                return;
+            }
+        };
+
+        // add entity to new location
+        world.locations[to_location_id].entities.push(entity_id);
+
+        // remove entity from old location
+        if let Some(pos) = world.locations[entity.location]
+            .entities
+            .iter()
+            .position(|&x| x == entity_id)
+        {
+            world.locations[entity.location].entities.remove(pos);
+        }
+
+        // update entity location
+        entity.location = to_location_id;
     }
 
-    // update entity location
-    entity.location = to_location_id;
+    // add message to entities in 'from_location' that entity has left
+    let mut message = EntityMessage::new();
+    set_message_data(
+        &mut message,
+        &[
+            &world.entities[entity_id].name.data,
+            b" left to ",
+            link_name,
+        ],
+    );
+    send_message_to_location_entities_excluding_from_entity(
+        world,
+        from_location_id,
+        entity_id,
+        message,
+    );
 }
 
 fn action_inventory(world: &World, entity_id: EntityId) {

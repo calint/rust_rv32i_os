@@ -148,16 +148,23 @@ pub fn global_allocator_init(heap_size: usize) {
 pub fn global_allocator_debug_block_list() {
     unsafe {
         let mut current = HEAP_ALLOCATOR.free_list;
+        let mut total: usize = 0;
         while !current.is_null() {
             uart_send_bytes(b"at: ");
             uart_send_hex_u32(current as u32, true);
             uart_send_bytes(b", size: ");
             uart_send_hex_u32((*current).size as u32, true);
+            if !(*current).is_free {
+                total += (*current).size;
+            }
             uart_send_bytes(b", free: ");
             uart_send_byte(if (*current).is_free { b'y' } else { b'n' });
             uart_send_bytes(b"\r\n");
 
             current = (*current).next;
         }
+        uart_send_bytes(b"total: ");
+        uart_send_hex_u32(total as u32, true);
+        uart_send_bytes(b"\r\n");
     }
 }

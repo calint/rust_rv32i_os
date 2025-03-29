@@ -671,17 +671,18 @@ fn action_set_location_note(
 }
 
 fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let rest = it.rest();
-    if rest.len() == 0 {
-        uart_send_bytes(b"say what?");
+    let say = it.rest();
+    if say.len() == 0 {
+        uart_send_bytes(b"say what");
         return;
     }
+
     let entity = &world.entities[entity_id];
     send_message_to_location_entities(
         world,
         entity.location,
         &[entity_id],
-        EntityMessage::from(&[&entity.name.data, b" says ", rest]),
+        EntityMessage::from(&[&entity.name.data, b" says ", say]),
     );
 }
 
@@ -689,14 +690,14 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let to_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_bytes(b"tell to whom?\r\n");
+            uart_send_bytes(b"tell to whom\r\n");
             return;
         }
     };
 
     let tell = it.rest();
     if tell.len() == 0 {
-        uart_send_bytes(b"tell what?\r\n");
+        uart_send_bytes(b"tell what\r\n");
         return;
     };
 

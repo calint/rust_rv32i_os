@@ -49,6 +49,8 @@ go back
 wait
 "#;
 
+extern crate alloc;
+
 mod lib {
     pub mod api;
     pub mod api_unsafe;
@@ -58,16 +60,13 @@ mod lib {
 }
 mod model;
 
-extern crate alloc;
-
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use lib::api::*;
 use lib::api_unsafe::*;
 use lib::cursor_buffer::*;
-use lib::global_allocator::global_allocator_debug_block_list;
-use lib::global_allocator::global_allocator_init;
+use lib::global_allocator::*;
 use model::*;
 
 const COMMAND_BUFFER_SIZE: usize = 80;

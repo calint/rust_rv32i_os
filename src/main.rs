@@ -208,7 +208,7 @@ fn set_u8_buffer_from_parts(buffer: &mut [u8], parts: &[&[u8]]) {
     }
 
     // Null-terminate the buffer if there's space
-    if index < buffer.len() - 1 {
+    if index < buffer.len() {
         buffer[index] = 0;
     }
 }
@@ -524,9 +524,6 @@ fn action_inventory(world: &World, entity_id: EntityId) {
 }
 
 fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let entity = &mut world.entities[entity_id];
-    let location = &mut world.locations[entity.location];
-
     // get object name
     let object_name = match it.next() {
         Some(name) => name,
@@ -536,26 +533,42 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    // find object id and index in list
-    let (object_index, object_id) = match location
-        .objects
-        .iter()
-        .enumerate()
-        .find(|&(_, &oid)| world.objects[oid].name.equals(object_name))
     {
-        Some((index, &oid)) => (index, oid),
-        None => {
-            uart_send_bytes(object_name);
-            uart_send_bytes(b" is not here\r\n\r\n");
-            return;
-        }
-    };
+        let entity = &mut world.entities[entity_id];
+        let location = &mut world.locations[entity.location];
 
-    // remove object from location
-    location.objects.remove(object_index);
+        // find object id and index in list
+        let (object_index, object_id) = match location
+            .objects
+            .iter()
+            .enumerate()
+            .find(|&(_, &oid)| world.objects[oid].name.equals(object_name))
+        {
+            Some((index, &oid)) => (index, oid),
+            None => {
+                uart_send_bytes(object_name);
+                uart_send_bytes(b" is not here\r\n\r\n");
+                return;
+            }
+        };
 
-    // add object to entity
-    entity.objects.push(object_id);
+        // remove object from location
+        location.objects.remove(object_index);
+
+        // add object to entity
+        entity.objects.push(object_id);
+    }
+
+    // send message
+    {
+        let entity = &world.entities[entity_id];
+        send_message_to_location_entities_excluding_from_entity(
+            world,
+            entity.location,
+            entity_id,
+            EntityMessage::from(&[&entity.name.data, b" took ", &object_name]),
+        );
+    }
 }
 
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -567,24 +580,37 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    let (object_index, object_id) =
-        match find_object_in_entity_inventory(world, entity_id, object_name) {
-            Some(result) => result,
-            None => {
-                uart_send_bytes(b"don't have ");
-                uart_send_bytes(object_name);
-                uart_send_bytes(b"\r\n\r\n");
-                return;
-            }
-        };
+    {
+        let (object_index, object_id) =
+            match find_object_in_entity_inventory(world, entity_id, object_name) {
+                Some(result) => result,
+                None => {
+                    uart_send_bytes(b"don't have ");
+                    uart_send_bytes(object_name);
+                    uart_send_bytes(b"\r\n\r\n");
+                    return;
+                }
+            };
 
-    let entity = &mut world.entities[entity_id];
+        let entity = &mut world.entities[entity_id];
 
-    // remove object from entity
-    entity.objects.remove(object_index);
+        // remove object from entity
+        entity.objects.remove(object_index);
 
-    // add object to location
-    world.locations[entity.location].objects.push(object_id);
+        // add object to location
+        world.locations[entity.location].objects.push(object_id);
+    }
+
+    // send message
+    {
+        let entity = &world.entities[entity_id];
+        send_message_to_location_entities_excluding_from_entity(
+            world,
+            entity.location,
+            entity_id,
+            EntityMessage::from(&[&entity.name.data, b" dropped ", &object_name]),
+        );
+    }
 }
 
 fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {

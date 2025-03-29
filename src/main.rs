@@ -451,6 +451,12 @@ fn send_message_to_location_entities(
     }
 }
 
+fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: EntityMessage) {
+    for &eid in entities {
+        world.entities[eid].messages.push(message.clone());
+    }
+}
+
 fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) {
     // find link id
     let link_id = match world.links.iter().position(|x| x.name.equals(link_name)) {
@@ -690,17 +696,27 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // add object to "to" entity
     world.entities[to_entity_id].objects.push(object_id);
 
-    // send message
+    // send messages
     send_message_to_location_entities(
         world,
         world.entities[entity_id].location,
-        &[entity_id, to_entity_id],
+        &[to_entity_id],
         EntityMessage::from(&[
             &world.entities[entity_id].name.data,
             b" gave ",
             &world.objects[object_id].name.data,
             b" to ",
             &world.entities[to_entity_id].name.data,
+        ]),
+    );
+
+    send_message_to_entities(
+        world,
+        &[to_entity_id],
+        EntityMessage::from(&[
+            &world.entities[entity_id].name.data,
+            b" gave u ",
+            &world.objects[object_id].name.data,
         ]),
     );
 }

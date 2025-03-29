@@ -14,12 +14,16 @@ emulator/qa/test.sh
 # run tests
 qa/emulator/test.sh
 
-old_size=$(stat -c%s "firmware.img.bak")
-new_size=$(stat -c%s "firmware.img")
-size_diff=$((new_size - old_size))
+echo " * comparing previous firmware.img with current"
+if cmp -s firmware.img firmware.img.bak; then
+    echo "no change"
+else
+    old_size=$(stat -c%s firmware.img.bak)
+    new_size=$(stat -c%s firmware.img)
+    size_diff=$((new_size - old_size))
+    echo "size changed: $size_diff bytes"
+fi
 
-echo " * stats"
-echo "binary size change: $size_diff bytes"
 rm firmware.img.bak
 
 echo " * run emulator"

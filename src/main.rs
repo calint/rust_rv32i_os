@@ -147,7 +147,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"nln") => action_set_location_note(world, entity_id, &mut it),
         Some(b"ne") => action_new_entity(world, entity_id, &mut it),
         Some(b"say") => action_say(world, entity_id, &mut it),
-        Some(b"wait") => action_wait(world, entity_id, &mut it),
+        Some(b"wait") => action_wait(),
         _ => uart_send_bytes(b"not understood\r\n\r\n"),
     }
 }
@@ -684,7 +684,7 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
     );
 }
 
-fn action_wait(_world: &mut World, _entity_id: EntityId, _it: &mut CommandBufferIterator) {}
+fn action_wait() {}
 
 fn input(command_buffer: &mut CommandBuffer) {
     enum InputState {

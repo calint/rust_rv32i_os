@@ -438,14 +438,14 @@ fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferItera
     action_go_named_link(world, entity_id, named_link);
 }
 
-fn send_message_to_location_entities_excluding_from_entity(
+fn send_message_to_location_entities(
     world: &mut World,
     location_id: LocationId,
-    from_entity_id: EntityId,
+    exclude_entities_id: &[EntityId],
     message: EntityMessage,
 ) {
     for &eid in &world.locations[location_id].entities {
-        if eid != from_entity_id {
+        if !exclude_entities_id.contains(&eid) {
             world.entities[eid].messages.push(message.clone());
         }
     }
@@ -495,10 +495,10 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     }
 
     // send message to entities in 'from_location' that entity has left
-    send_message_to_location_entities_excluding_from_entity(
+    send_message_to_location_entities(
         world,
         from_location_id,
-        entity_id,
+        &[entity_id],
         EntityMessage::from(&[
             &world.entities[entity_id].name.data,
             b" left to ",
@@ -507,6 +507,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     );
 
     // find link name that leads from 'to_location_id' to 'from_location_id'
+    // note: assumes links are bi-directional thus unwrap
     let link_id = world.locations[to_location_id]
         .links
         .iter()
@@ -520,10 +521,10 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         .unwrap();
 
     // send message to entities in 'to_location' that entity has arrived
-    send_message_to_location_entities_excluding_from_entity(
+    send_message_to_location_entities(
         world,
         to_location_id,
-        entity_id,
+        &[entity_id],
         EntityMessage::from(&[
             &world.entities[entity_id].name.data,
             b" arrived from ",
@@ -588,10 +589,10 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // send message
     {
         let entity = &world.entities[entity_id];
-        send_message_to_location_entities_excluding_from_entity(
+        send_message_to_location_entities(
             world,
             entity.location,
-            entity_id,
+            &[entity_id],
             EntityMessage::from(&[&entity.name.data, b" took ", &object_name]),
         );
     }
@@ -630,10 +631,10 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // send message
     {
         let entity = &world.entities[entity_id];
-        send_message_to_location_entities_excluding_from_entity(
+        send_message_to_location_entities(
             world,
             entity.location,
-            entity_id,
+            &[entity_id],
             EntityMessage::from(&[&entity.name.data, b" dropped ", &object_name]),
         );
     }

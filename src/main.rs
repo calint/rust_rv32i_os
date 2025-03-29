@@ -700,28 +700,21 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         return;
     };
 
-    let to_entity_id = match world
+    let entity = &world.entities[entity_id];
+
+    let to_entity_id = match world.locations[entity.location]
         .entities
         .iter()
-        .position(|x| x.name.equals(tell_to_name))
+        .find(|&&x| world.entities[x].name.equals(tell_to_name))
     {
-        Some(id) => id,
+        Some(&id) => id,
         None => {
-            uart_send_bytes(b"not found\r\n");
+            uart_send_bytes(b"not here\r\n");
             return;
         }
     };
 
-    if !world.locations[world.entities[entity_id].location]
-        .entities
-        .iter()
-        .any(|&x| x == to_entity_id)
-    {
-        uart_send_bytes(b"not here\r\n");
-        return;
-    }
-
-    let message = EntityMessage::from(&[&world.entities[entity_id].name.data, b" tells u ", &rest]);
+    let message = EntityMessage::from(&[&entity.name.data, b" tells u ", &rest]);
     world.entities[to_entity_id].messages.push(message);
 }
 

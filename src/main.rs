@@ -155,9 +155,10 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
 
 fn action_look(world: &mut World, entity_id: EntityId) {
     {
-        let location = &world.locations[world.entities[entity_id].location];
+        let entity = &world.entities[entity_id];
+        let location = &world.locations[entity.location];
 
-        let messages = &world.entities[entity_id].messages;
+        let messages = &entity.messages;
         messages.iter().for_each(|x| {
             uart_send_cstr(&x.data);
             uart_send_bytes(b"\r\n");

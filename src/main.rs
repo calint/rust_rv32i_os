@@ -356,6 +356,7 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
         Some(b"nl") => action_new_location(world, entity_id, &mut it),
         Some(b"nln") => action_set_location_note(world, entity_id, &mut it),
         Some(b"ne") => action_new_entity(world, entity_id, &mut it),
+        Some(b"say") => action_say(world, entity_id, &mut it),
         Some(b"wait") => action_wait(world, entity_id, &mut it),
         _ => uart_send_bytes(b"not understood\r\n\r\n"),
     }
@@ -895,6 +896,21 @@ fn action_set_location_note(
     it: &mut CommandBufferIterator,
 ) {
     world.locations[world.entities[entity_id].location].note = Note::from(it.rest());
+}
+
+fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+    let rest = it.rest();
+    if rest.len() == 0 {
+        uart_send_bytes(b"say what?");
+        return;
+    }
+    let entity = &world.entities[entity_id];
+    send_message_to_location_entities(
+        world,
+        entity.location,
+        &[entity_id],
+        EntityMessage::from(&[&entity.name.data, b" says ", rest]),
+    );
 }
 
 fn action_wait(_world: &mut World, _entity_id: EntityId, _it: &mut CommandBufferIterator) {}

@@ -333,6 +333,13 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
 fn action_look(world: &mut World, entity_id: EntityId) {
     {
         let location = &world.locations[world.entities[entity_id].location];
+
+        let messages = &world.entities[entity_id].messages;
+        messages.iter().for_each(|x| {
+            uart_send_cstr(&x.data);
+            uart_send_bytes(b"\r\n");
+        });
+
         uart_send_bytes(b"u r in ");
         uart_send_cstr(&location.name.data);
 
@@ -382,12 +389,6 @@ fn action_look(world: &mut World, entity_id: EntityId) {
             uart_send_cstr(&location.note.data);
             uart_send_bytes(b"\r\n");
         }
-
-        let messages = &world.entities[entity_id].messages;
-        messages.iter().for_each(|x| {
-            uart_send_cstr(&x.data);
-            uart_send_bytes(b"\r\n");
-        });
     }
 
     // clear messages after displayed

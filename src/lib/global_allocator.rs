@@ -21,10 +21,11 @@ pub struct GlobalAllocator {
 
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        let request_size = layout.size();
-
         // Adjust size to include header and ensure alignment
-        let aligned_size = Self::align_size(request_size + core::mem::size_of::<BlockHeader>());
+        let aligned_size = {
+            let size = layout.size() + core::mem::size_of::<BlockHeader>();
+            (size + ALIGNMENT - 1) & !(ALIGNMENT - 1)
+        };
 
         // Find first suitable free block
         let mut current = self.free_list;
@@ -128,11 +129,6 @@ impl GlobalAllocator {
         GlobalAllocator {
             free_list: first_block,
         }
-    }
-
-    // Align size to nearest multiple of ALIGNMENT
-    fn align_size(size: usize) -> usize {
-        (size + ALIGNMENT - 1) & !(ALIGNMENT - 1)
     }
 }
 

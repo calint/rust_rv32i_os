@@ -18,19 +18,6 @@ pub struct World {
 }
 
 impl World {
-    pub fn find_or_add_link(&mut self, link_name: &[u8]) -> LinkId {
-        match self.links.iter().position(|x| x.name == link_name) {
-            Some(id) => id,
-            None => {
-                let id = self.links.len();
-                self.links.push(Link {
-                    name: Name::from(link_name),
-                });
-                id
-            }
-        }
-    }
-
     pub fn add_object(&mut self, object_name: &[u8]) -> ObjectId {
         let object_id = self.objects.len();
         self.objects.push(Object {
@@ -67,6 +54,19 @@ impl World {
                     None
                 }
             })
+    }
+
+    pub fn find_or_add_link(&mut self, link_name: &[u8]) -> LinkId {
+        match self.links.iter().position(|x| x.name == link_name) {
+            Some(id) => id,
+            None => {
+                let id = self.links.len();
+                self.links.push(Link {
+                    name: Name::from(link_name),
+                });
+                id
+            }
+        }
     }
 
     pub fn send_message_to_location_entities(

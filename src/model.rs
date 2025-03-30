@@ -24,7 +24,7 @@ impl World {
             None => {
                 let id = self.links.len();
                 self.links.push(Link {
-                    name: FixedSizeString::from(link_name),
+                    name: Name::from(link_name),
                 });
                 id
             }
@@ -34,7 +34,7 @@ impl World {
     pub fn add_object(&mut self, object_name: &[u8]) -> ObjectId {
         let object_id = self.objects.len();
         self.objects.push(Object {
-            name: FixedSizeString::from(object_name),
+            name: Name::from(object_name),
         });
         object_id
     }
@@ -42,7 +42,7 @@ impl World {
     pub fn add_entity(&mut self, entity_name: &[u8], location_id: LocationId) -> EntityId {
         let entity_id = self.entities.len();
         self.entities.push(Entity {
-            name: FixedSizeString::from(entity_name),
+            name: Name::from(entity_name),
             location: location_id,
             objects: vec![],
             messages: vec![],

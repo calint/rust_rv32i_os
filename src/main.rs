@@ -619,7 +619,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         .iter()
         .any(|x| x.link == to_link_id)
     {
-        uart_send_bytes(b"this location already uses link");
+        uart_send_bytes(b"link already exists in this location");
         return;
     }
 

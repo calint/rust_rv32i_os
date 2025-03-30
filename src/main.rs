@@ -49,8 +49,7 @@ go back
 wait
 "#;
 
-extern crate alloc;
-
+mod model;
 mod lib {
     pub mod api;
     pub mod api_unsafe;
@@ -59,7 +58,8 @@ mod lib {
     pub mod fixed_size_string;
     pub mod global_allocator;
 }
-mod model;
+
+extern crate alloc;
 
 use alloc::vec;
 use core::arch::global_asm;

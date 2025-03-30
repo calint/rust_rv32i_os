@@ -387,9 +387,8 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             match find_object_in_entity_inventory(world, entity_id, object_name) {
                 Some(result) => result,
                 None => {
-                    uart_send_bytes(b"don't have ");
                     uart_send_bytes(object_name);
-                    uart_send_bytes(b"\r\n\r\n");
+                    uart_send_bytes(b" not in inventory\r\n\r\n");
                     return;
                 }
             };
@@ -434,6 +433,16 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
+    let (object_index, object_id) =
+        match find_object_in_entity_inventory(world, entity_id, object_name) {
+            Some(result) => result,
+            None => {
+                uart_send_bytes(object_name);
+                uart_send_bytes(b" not in inventory\r\n\r\n");
+                return;
+            }
+        };
+
     // find "to" entity
     let to_entity_id = match world.locations[world.entities[entity_id].location]
         .entities
@@ -447,17 +456,6 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             return;
         }
     };
-
-    let (object_index, object_id) =
-        match find_object_in_entity_inventory(world, entity_id, object_name) {
-            Some(result) => result,
-            None => {
-                uart_send_bytes(b"don't have ");
-                uart_send_bytes(object_name);
-                uart_send_bytes(b"\r\n\r\n");
-                return;
-            }
-        };
 
     // remove object from entity
     world.entities[entity_id].objects.remove(object_index);
@@ -543,7 +541,7 @@ fn action_led_set(it: &mut CommandBufferIterator) {
     let bits = match it.next() {
         Some(bits) => u8_slice_to_u32(bits),
         None => {
-            uart_send_bytes(b"which leds in bits 0 being on\r\n\r\n");
+            uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n\r\n");
             return;
         }
     };
@@ -579,7 +577,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
     let to_link_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_bytes(b"what to link name\r\n\r\n");
+            uart_send_bytes(b"what link name\r\n\r\n");
             return;
         }
     };
@@ -619,7 +617,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         .iter()
         .any(|x| x.link == to_link_id)
     {
-        uart_send_bytes(b"link already exists in this location");
+        uart_send_bytes(b"link from this location already exists\r\n\r\n");
         return;
     }
 
@@ -690,14 +688,14 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let to_name = match it.next() {
         Some(name) => name,
         None => {
-            uart_send_bytes(b"tell to whom\r\n");
+            uart_send_bytes(b"tell to whom\r\n\r\n");
             return;
         }
     };
 
     let tell = it.rest();
     if tell.is_empty() {
-        uart_send_bytes(b"tell what\r\n");
+        uart_send_bytes(b"tell what\r\n\r\n");
         return;
     };
 
@@ -710,7 +708,8 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     {
         Some(&id) => id,
         None => {
-            uart_send_bytes(b"not here\r\n");
+            uart_send_bytes(to_name);
+            uart_send_bytes(b" not here\r\n\r\n");
             return;
         }
     };

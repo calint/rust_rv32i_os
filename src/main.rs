@@ -89,14 +89,14 @@ pub extern "C" fn run() -> ! {
 
     let mut world = World {
         entities: vec![Entity {
-            name: Name::from(b"me"),
+            name: FixedSizeCStr::from(b"me"),
             location: 0,
             objects: vec![],
             messages: vec![],
         }],
         locations: vec![Location {
-            name: Name::from(b"roome"),
-            note: Note::new(),
+            name: FixedSizeCStr::from(b"roome"),
+            note: FixedSizeCStr::default(),
             links: vec![],
             objects: vec![],
             entities: vec![0],
@@ -113,7 +113,7 @@ pub extern "C" fn run() -> ! {
     loop {
         for entity_id in 0..world.entities.len() {
             action_look(&mut world, entity_id);
-            uart_send_cstr(&world.entities[entity_id].name.data);
+            uart_send_bytes(&world.entities[entity_id].name);
             uart_send_bytes(b" > ");
             let mut command_buffer = CommandBuffer::new();
             input(&mut command_buffer);
@@ -159,7 +159,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
 
         let messages = &entity.messages;
         messages.iter().for_each(|x| {
-            uart_send_cstr(&x.data);
+            uart_send_bytes(x);
             uart_send_bytes(b"\r\n");
         });
 
@@ -167,7 +167,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
         entity.messages.clear();
 
         uart_send_bytes(b"u r in ");
-        uart_send_cstr(&location.name.data);
+        uart_send_bytes(&location.name);
 
         uart_send_bytes(b"\r\nu c: ");
         let mut i = 0;
@@ -176,7 +176,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
                 uart_send_bytes(b", ");
             }
             i += 1;
-            uart_send_cstr(&world.objects[oid].name.data);
+            uart_send_bytes(&world.objects[oid].name);
         }
         if i == 0 {
             uart_send_bytes(b"nothing");
@@ -189,7 +189,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
                 if i != 0 {
                     uart_send_bytes(b", ");
                 }
-                uart_send_cstr(&world.entities[eid].name.data);
+                uart_send_bytes(&world.entities[eid].name);
                 i += 1;
             }
         }
@@ -204,7 +204,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
                 uart_send_bytes(b", ");
             }
             i += 1;
-            uart_send_cstr(&world.links[lid.link].name.data);
+            uart_send_bytes(&world.links[lid.link].name);
         }
         if i == 0 {
             uart_send_bytes(b"none");
@@ -212,7 +212,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
         uart_send_bytes(b"\r\n");
 
         if !location.note.is_empty() {
-            uart_send_cstr(&location.note.data);
+            uart_send_bytes(&location.note);
             uart_send_bytes(b"\r\n");
         }
     }
@@ -232,7 +232,7 @@ fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferItera
 
 fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) {
     // find link id
-    let link_id = match world.links.iter().position(|x| x.name.equals(link_name)) {
+    let link_id = match world.links.iter().position(|x| x.name == link_name) {
         Some(id) => id,
         None => {
             uart_send_bytes(b"no such exit\r\n\r\n");
@@ -274,11 +274,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         world,
         from_location_id,
         &[entity_id],
-        EntityMessage::from(&[
-            &world.entities[entity_id].name.data,
-            b" left to ",
-            link_name,
-        ]),
+        EntityMessage::from_parts(&[&world.entities[entity_id].name, b" left to ", link_name]),
     );
 
     // find link name that leads from 'to_location_id' to 'from_location_id'
@@ -300,10 +296,10 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         world,
         to_location_id,
         &[entity_id],
-        EntityMessage::from(&[
-            &world.entities[entity_id].name.data,
+        EntityMessage::from_parts(&[
+            &world.entities[entity_id].name,
             b" arrived from ",
-            &world.links[link_id].name.data,
+            &world.links[link_id].name,
         ]),
     );
 }
@@ -317,7 +313,7 @@ fn action_inventory(world: &World, entity_id: EntityId) {
             uart_send_bytes(b", ");
         }
         i += 1;
-        uart_send_cstr(&world.objects[oid].name.data);
+        uart_send_bytes(&world.objects[oid].name);
     }
     if i == 0 {
         uart_send_bytes(b"nothing");
@@ -344,7 +340,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             .objects
             .iter()
             .enumerate()
-            .find(|&(_, &oid)| world.objects[oid].name.equals(object_name))
+            .find(|&(_, &oid)| world.objects[oid].name == object_name)
         {
             Some((index, &oid)) => (index, oid),
             None => {
@@ -368,7 +364,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             world,
             entity.location,
             &[entity_id],
-            EntityMessage::from(&[&entity.name.data, b" took ", object_name]),
+            EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
         );
     }
 }
@@ -409,7 +405,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             world,
             entity.location,
             &[entity_id],
-            EntityMessage::from(&[&entity.name.data, b" dropped ", object_name]),
+            EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
         );
     }
 }
@@ -447,7 +443,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let to_entity_id = match world.locations[world.entities[entity_id].location]
         .entities
         .iter()
-        .find(|&&x| world.entities[x].name.equals(to_entity_name))
+        .find(|&&x| world.entities[x].name == to_entity_name)
     {
         Some(&id) => id,
         None => {
@@ -468,22 +464,22 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         world,
         world.entities[entity_id].location,
         &[to_entity_id],
-        EntityMessage::from(&[
-            &world.entities[entity_id].name.data,
+        EntityMessage::from_parts(&[
+            &world.entities[entity_id].name,
             b" gave ",
-            &world.objects[object_id].name.data,
+            &world.objects[object_id].name,
             b" to ",
-            &world.entities[to_entity_id].name.data,
+            &world.entities[to_entity_id].name,
         ]),
     );
 
     send_message_to_entities(
         world,
         &[to_entity_id],
-        EntityMessage::from(&[
-            &world.entities[entity_id].name.data,
+        EntityMessage::from_parts(&[
+            &world.entities[entity_id].name,
             b" gave u ",
-            &world.objects[object_id].name.data,
+            &world.objects[object_id].name,
         ]),
     );
 }
@@ -563,7 +559,7 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
         }
     };
 
-    if world.objects.iter().any(|x| x.name.equals(object_name)) {
+    if world.objects.iter().any(|x| x.name == object_name) {
         uart_send_bytes(b"object already exists\r\n\r\n");
         return;
     }
@@ -598,11 +594,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         }
     };
 
-    if world
-        .locations
-        .iter()
-        .any(|x| x.name.equals(new_location_name))
-    {
+    if world.locations.iter().any(|x| x.name == new_location_name) {
         uart_send_bytes(b"location already exists\r\n\r\n");
         return;
     }
@@ -626,8 +618,8 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
     // add location and link it back to from location
     let new_location_id = world.locations.len();
     world.locations.push(Location {
-        name: Name::from(new_location_name),
-        note: Note::new(),
+        name: FixedSizeCStr::from(new_location_name),
+        note: FixedSizeCStr::default(),
         links: vec![LocationLink {
             link: back_link_id,
             location: from_location_id,
@@ -652,7 +644,7 @@ fn action_new_entity(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
         }
     };
 
-    if world.entities.iter().any(|x| x.name.equals(entity_name)) {
+    if world.entities.iter().any(|x| x.name == entity_name) {
         uart_send_bytes(b"entity already exists\r\n\r\n");
         return;
     }
@@ -665,7 +657,7 @@ fn action_set_location_note(
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) {
-    world.locations[world.entities[entity_id].location].note = Note::from(it.rest());
+    world.locations[world.entities[entity_id].location].note = FixedSizeCStr::from(it.rest());
 }
 
 fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
@@ -680,7 +672,7 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
         world,
         entity.location,
         &[entity_id],
-        EntityMessage::from(&[&entity.name.data, b" says ", say]),
+        EntityMessage::from_parts(&[&entity.name, b" says ", say]),
     );
 }
 
@@ -704,7 +696,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     let to_entity_id = match world.locations[entity.location]
         .entities
         .iter()
-        .find(|&&x| world.entities[x].name.equals(to_name))
+        .find(|&&x| world.entities[x].name == to_name)
     {
         Some(&id) => id,
         None => {
@@ -714,7 +706,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         }
     };
 
-    let message = EntityMessage::from(&[&entity.name.data, b" tells u ", tell]);
+    let message = EntityMessage::from_parts(&[&entity.name, b" tells u ", tell]);
     world.entities[to_entity_id].messages.push(message);
 }
 

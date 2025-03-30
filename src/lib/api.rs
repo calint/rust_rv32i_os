@@ -15,15 +15,6 @@ pub fn uart_send_bytes(s: &[u8]) {
     }
 }
 
-pub fn uart_send_cstr(s: &[u8]) {
-    for &byte in s {
-        if byte == 0 {
-            break;
-        }
-        uart_send_byte(byte);
-    }
-}
-
 pub fn uart_send_hex_u32(i: u32, separate_half_words: bool) {
     uart_send_hex_byte((i >> 24) as u8);
     uart_send_hex_byte((i >> 16) as u8);

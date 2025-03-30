@@ -271,8 +271,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     };
 
     // send message to entities in 'from_location' that entity has left
-    send_message_to_location_entities(
-        world,
+    world.send_message_to_location_entities(
         from_location_id,
         &[entity_id],
         EntityMessage::from_parts(&[&world.entities[entity_id].name, b" left to ", link_name]),
@@ -293,8 +292,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         .unwrap();
 
     // send message to entities in 'to_location' that entity has arrived
-    send_message_to_location_entities(
-        world,
+    world.send_message_to_location_entities(
         to_location_id,
         &[entity_id],
         EntityMessage::from_parts(&[
@@ -361,8 +359,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // send message
     {
         let entity = &world.entities[entity_id];
-        send_message_to_location_entities(
-            world,
+        world.send_message_to_location_entities(
             entity.location,
             &[entity_id],
             EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
@@ -381,7 +378,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     {
         let (object_index, object_id) =
-            match find_object_in_entity_inventory(world, entity_id, object_name) {
+            match world.find_object_in_entity_inventory(entity_id, object_name) {
                 Some(result) => result,
                 None => {
                     uart_send_bytes(object_name);
@@ -402,8 +399,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // send message
     {
         let entity = &world.entities[entity_id];
-        send_message_to_location_entities(
-            world,
+        world.send_message_to_location_entities(
             entity.location,
             &[entity_id],
             EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
@@ -431,7 +427,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     let (object_index, object_id) =
-        match find_object_in_entity_inventory(world, entity_id, object_name) {
+        match world.find_object_in_entity_inventory(entity_id, object_name) {
             Some(result) => result,
             None => {
                 uart_send_bytes(object_name);
@@ -461,8 +457,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     world.entities[to_entity_id].objects.push(object_id);
 
     // send messages
-    send_message_to_location_entities(
-        world,
+    world.send_message_to_location_entities(
         world.entities[entity_id].location,
         &[to_entity_id],
         EntityMessage::from_parts(&[
@@ -474,8 +469,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         ]),
     );
 
-    send_message_to_entities(
-        world,
+    world.send_message_to_entities(
         &[to_entity_id],
         EntityMessage::from_parts(&[
             &world.entities[entity_id].name,
@@ -669,8 +663,7 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
     }
 
     let entity = &world.entities[entity_id];
-    send_message_to_location_entities(
-        world,
+    world.send_message_to_location_entities(
         entity.location,
         &[entity_id],
         EntityMessage::from_parts(&[&entity.name, b" says ", say]),

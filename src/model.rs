@@ -50,6 +50,43 @@ impl World {
         self.locations[location_id].entities.push(entity_id);
         entity_id
     }
+
+    pub fn find_object_in_entity_inventory(
+        &self,
+        entity_id: EntityId,
+        object_name: &[u8],
+    ) -> Option<(usize, ObjectId)> {
+        self.entities[entity_id]
+            .objects
+            .iter()
+            .enumerate()
+            .find_map(|(index, &oid)| {
+                if self.objects[oid].name == object_name {
+                    Some((index, oid))
+                } else {
+                    None
+                }
+            })
+    }
+
+    pub fn send_message_to_location_entities(
+        &mut self,
+        location_id: LocationId,
+        exclude_entities_id: &[EntityId],
+        message: EntityMessage,
+    ) {
+        for &eid in &self.locations[location_id].entities {
+            if !exclude_entities_id.contains(&eid) {
+                self.entities[eid].messages.push(message);
+            }
+        }
+    }
+
+    pub fn send_message_to_entities(&mut self, entities: &[EntityId], message: EntityMessage) {
+        for &eid in entities {
+            self.entities[eid].messages.push(message);
+        }
+    }
 }
 
 pub struct Location {
@@ -78,41 +115,4 @@ pub struct Entity {
     pub location: LocationId,
     pub objects: Vec<ObjectId>,
     pub messages: Vec<EntityMessage>,
-}
-
-pub fn find_object_in_entity_inventory(
-    world: &World,
-    entity_id: EntityId,
-    object_name: &[u8],
-) -> Option<(usize, ObjectId)> {
-    world.entities[entity_id]
-        .objects
-        .iter()
-        .enumerate()
-        .find_map(|(index, &oid)| {
-            if world.objects[oid].name == object_name {
-                Some((index, oid))
-            } else {
-                None
-            }
-        })
-}
-
-pub fn send_message_to_location_entities(
-    world: &mut World,
-    location_id: LocationId,
-    exclude_entities_id: &[EntityId],
-    message: EntityMessage,
-) {
-    for &eid in &world.locations[location_id].entities {
-        if !exclude_entities_id.contains(&eid) {
-            world.entities[eid].messages.push(message);
-        }
-    }
-}
-
-pub fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: EntityMessage) {
-    for &eid in entities {
-        world.entities[eid].messages.push(message);
-    }
 }

@@ -503,10 +503,10 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
         }
     };
 
-    let rest = it.rest();
-    let len = rest.len().min(512);
+    let data = it.rest();
+    let len = data.len().min(512);
     let mut buf = [0u8; 512];
-    buf[..len].copy_from_slice(&rest[..len]);
+    buf[..len].copy_from_slice(&data[..len]);
     sdcard_write_blocking(sector, &buf);
 }
 

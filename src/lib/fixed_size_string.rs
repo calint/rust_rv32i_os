@@ -40,10 +40,7 @@ impl<const N: usize> FixedSizeString<N> {
 
 impl<const N: usize> Default for FixedSizeString<N> {
     fn default() -> Self {
-        Self {
-            data: [0u8; N],
-            len: 0,
-        }
+        Self::new()
     }
 }
 

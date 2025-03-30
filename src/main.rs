@@ -584,8 +584,6 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         }
     };
 
-    // todo check if link is already used
-
     let back_link_name = match it.next() {
         Some(name) => name,
         None => {
@@ -611,11 +609,21 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         return;
     }
 
+    let from_location_id = world.entities[entity_id].location;
+
     let to_link_id = world.find_or_add_link(to_link_name);
 
-    let back_link_id = world.find_or_add_link(back_link_name);
+    // check if link is already used
+    if world.locations[from_location_id]
+        .links
+        .iter()
+        .any(|x| x.link == to_link_id)
+    {
+        uart_send_bytes(b"location has already that link\r\n\r\n");
+        return;
+    }
 
-    let from_location_id = world.entities[entity_id].location;
+    let back_link_id = world.find_or_add_link(back_link_name);
 
     // add location and link it back to from location
     let new_location_id = world.locations.len();

@@ -814,5 +814,6 @@ fn execute_creation(world: &mut World, entity_id: EntityId) {
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     uart_send_bytes(b"PANIC!!!");
+    led_set(0b0000);
     loop {}
 }

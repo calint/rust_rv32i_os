@@ -72,11 +72,11 @@ impl World {
     pub fn send_message_to_location_entities(
         &mut self,
         location_id: LocationId,
-        exclude_entities_id: &[EntityId],
+        exclude_entities: &[EntityId],
         message: EntityMessage,
     ) {
         for &eid in &self.locations[location_id].entities {
-            if !exclude_entities_id.contains(&eid) {
+            if !exclude_entities.contains(&eid) {
                 self.entities[eid].messages.push(message);
             }
         }

@@ -488,7 +488,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
         }
     };
 
-    let mut buf = [0; 512];
+    let mut buf = [0u8; 512];
     sdcard_read_blocking(sector, &mut buf);
     buf.iter().for_each(|&x| uart_send_byte(x));
     uart_send_bytes(b"\r\n\r\n");

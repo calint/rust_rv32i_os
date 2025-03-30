@@ -21,7 +21,7 @@ else
     old_size=$(stat -c%s firmware.img.bak)
     new_size=$(stat -c%s firmware.img)
     size_diff=$((new_size - old_size))
-    echo "changed, size difference: $size_diff bytes"
+    echo "changed, new image size difference: $size_diff bytes"
 fi
 
 rm firmware.img.bak

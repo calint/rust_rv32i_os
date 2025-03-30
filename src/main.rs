@@ -88,25 +88,7 @@ pub extern "C" fn run() -> ! {
 
     global_allocator_init(memory_end() as usize);
 
-    let mut world = World {
-        entities: vec![Entity {
-            name: Name::from(b"me"),
-            location: 0,
-            objects: vec![],
-            messages: vec![],
-        }],
-        locations: vec![Location {
-            name: Name::from(b"roome"),
-            note: Note::default(),
-            links: vec![],
-            objects: vec![],
-            entities: vec![0],
-        }],
-        objects: vec![],
-        links: vec![],
-    };
-
-    execute_creation(&mut world, 0);
+    let mut world = create_world();
 
     uart_send_bytes(ASCII_ART);
     uart_send_bytes(HELLO);
@@ -788,7 +770,25 @@ fn input(command_buffer: &mut CommandBuffer) {
     }
 }
 
-fn execute_creation(world: &mut World, entity_id: EntityId) {
+fn create_world() -> World {
+    let mut world = World {
+        entities: vec![Entity {
+            name: Name::from(b"me"),
+            location: 0,
+            objects: vec![],
+            messages: vec![],
+        }],
+        locations: vec![Location {
+            name: Name::from(b"roome"),
+            note: Note::default(),
+            links: vec![],
+            objects: vec![],
+            entities: vec![0],
+        }],
+        objects: vec![],
+        links: vec![],
+    };
+
     for line in CREATION.split(|&c| c == b'\n').filter(|x| !x.is_empty()) {
         let mut command_buffer = CommandBuffer::new();
         for &byte in line {
@@ -797,11 +797,12 @@ fn execute_creation(world: &mut World, entity_id: EntityId) {
             }
         }
 
-        handle_input(world, entity_id, &command_buffer);
+        handle_input(&mut world, 0, &command_buffer);
 
         // clear messages on all entities in case input generated messages
         world.entities.iter_mut().for_each(|x| x.messages.clear());
     }
+    world
 }
 
 #[panic_handler]

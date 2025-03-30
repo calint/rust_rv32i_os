@@ -1,14 +1,14 @@
+use super::lib::fixed_size_string::FixedSizeString;
 use alloc::vec;
 use alloc::vec::Vec;
-use core::ops::Deref;
 
 pub type LocationId = usize;
 pub type LinkId = usize;
 pub type EntityId = usize;
 pub type ObjectId = usize;
-pub type Name = FixedSizeCStr<32>;
-pub type Note = FixedSizeCStr<64>;
-pub type EntityMessage = FixedSizeCStr<128>;
+pub type Name = FixedSizeString<32>;
+pub type Note = FixedSizeString<64>;
+pub type EntityMessage = FixedSizeString<128>;
 
 pub struct World {
     pub objects: Vec<Object>,
@@ -24,7 +24,7 @@ impl World {
             None => {
                 let id = self.links.len();
                 self.links.push(Link {
-                    name: FixedSizeCStr::from(link_name),
+                    name: FixedSizeString::from(link_name),
                 });
                 id
             }
@@ -34,7 +34,7 @@ impl World {
     pub fn add_object(&mut self, object_name: &[u8]) -> ObjectId {
         let object_id = self.objects.len();
         self.objects.push(Object {
-            name: FixedSizeCStr::from(object_name),
+            name: FixedSizeString::from(object_name),
         });
         object_id
     }
@@ -42,7 +42,7 @@ impl World {
     pub fn add_entity(&mut self, entity_name: &[u8], location_id: LocationId) -> EntityId {
         let entity_id = self.entities.len();
         self.entities.push(Entity {
-            name: FixedSizeCStr::from(entity_name),
+            name: FixedSizeString::from(entity_name),
             location: location_id,
             objects: vec![],
             messages: vec![],
@@ -58,67 +58,6 @@ pub struct Location {
     pub links: Vec<LocationLink>,
     pub objects: Vec<ObjectId>,
     pub entities: Vec<EntityId>,
-}
-
-#[derive(Clone, Copy)]
-pub struct FixedSizeCStr<const N: usize> {
-    data: [u8; N],
-    len: usize,
-}
-
-impl<const N: usize> FixedSizeCStr<N> {
-    pub fn new() -> Self {
-        Self {
-            data: [0u8; N],
-            len: 0,
-        }
-    }
-
-    pub fn from(src: &[u8]) -> Self {
-        FixedSizeCStr::from_parts(&[src])
-    }
-
-    pub fn from_parts(parts: &[&[u8]]) -> Self {
-        let mut s = Self::new();
-        for &part in parts {
-            s.append(part);
-        }
-        s
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.len == 0
-    }
-
-    pub fn append(&mut self, s: &[u8]) -> &Self {
-        let cpy_len = s.len().min(N - self.len);
-        self.data[self.len..self.len + cpy_len].copy_from_slice(&s[..cpy_len]);
-        self.len += cpy_len;
-        self
-    }
-}
-
-impl<const N: usize> Default for FixedSizeCStr<N> {
-    fn default() -> Self {
-        Self {
-            data: [0u8; N],
-            len: 0,
-        }
-    }
-}
-
-impl<const N: usize> Deref for FixedSizeCStr<N> {
-    type Target = [u8];
-
-    fn deref(&self) -> &Self::Target {
-        &self.data[..self.len]
-    }
-}
-
-impl<const N: usize> PartialEq<&[u8]> for FixedSizeCStr<N> {
-    fn eq(&self, other: &&[u8]) -> bool {
-        self.deref() == *other
-    }
 }
 
 pub struct LocationLink {

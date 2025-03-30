@@ -56,6 +56,7 @@ mod lib {
     pub mod api_unsafe;
     pub mod constants;
     pub mod cursor_buffer;
+    pub mod fixed_size_string;
     pub mod global_allocator;
 }
 mod model;
@@ -89,14 +90,14 @@ pub extern "C" fn run() -> ! {
 
     let mut world = World {
         entities: vec![Entity {
-            name: FixedSizeCStr::from(b"me"),
+            name: Name::from(b"me"),
             location: 0,
             objects: vec![],
             messages: vec![],
         }],
         locations: vec![Location {
-            name: FixedSizeCStr::from(b"roome"),
-            note: FixedSizeCStr::default(),
+            name: Name::from(b"roome"),
+            note: Note::default(),
             links: vec![],
             objects: vec![],
             entities: vec![0],
@@ -618,8 +619,8 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
     // add location and link it back to from location
     let new_location_id = world.locations.len();
     world.locations.push(Location {
-        name: FixedSizeCStr::from(new_location_name),
-        note: FixedSizeCStr::default(),
+        name: Name::from(new_location_name),
+        note: Note::default(),
         links: vec![LocationLink {
             link: back_link_id,
             location: from_location_id,
@@ -657,7 +658,7 @@ fn action_set_location_note(
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) {
-    world.locations[world.entities[entity_id].location].note = FixedSizeCStr::from(it.rest());
+    world.locations[world.entities[entity_id].location].note = Note::from(it.rest());
 }
 
 fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {

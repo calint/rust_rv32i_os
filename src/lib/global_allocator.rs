@@ -126,6 +126,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
     }
 }
 
+#[allow(clippy::cast_ptr_alignment)]
 impl GlobalAllocator {
     fn new(memory: *mut u8, total_size: usize) -> Self {
         // Initialize the entire memory as one free block
@@ -156,6 +157,7 @@ pub fn global_allocator_init(heap_size: usize) {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 pub fn global_allocator_debug_block_list() {
     unsafe {
         let mut current = HEAP_ALLOCATOR.free_list;

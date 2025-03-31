@@ -136,78 +136,73 @@ fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &Command
 }
 
 fn action_look(world: &mut World, entity_id: EntityId) {
-    {
-        let entity = &mut world.entities[entity_id];
-        let location = &world.locations[entity.location];
+    let entity = &mut world.entities[entity_id];
+    let location = &world.locations[entity.location];
 
-        let messages = &entity.messages;
-        messages.iter().for_each(|x| {
-            uart_send_bytes(x);
-            uart_send_bytes(b"\r\n");
-        });
+    let messages = &entity.messages;
+    messages.iter().for_each(|x| {
+        uart_send_bytes(x);
+        uart_send_bytes(b"\r\n");
+    });
 
-        // clear messages after displayed
-        entity.messages.clear();
+    // clear messages after displayed
+    entity.messages.clear();
 
-        uart_send_bytes(b"u r in ");
-        uart_send_bytes(&location.name);
+    uart_send_bytes(b"u r in ");
+    uart_send_bytes(&location.name);
 
-        uart_send_bytes(b"\r\nu c: ");
-        let mut i = 0;
-        for &oid in &location.objects {
+    uart_send_bytes(b"\r\nu c: ");
+    let mut i = 0;
+    for &oid in &location.objects {
+        if i != 0 {
+            uart_send_bytes(b", ");
+        }
+        i += 1;
+        uart_send_bytes(&world.objects[oid].name);
+    }
+    if i == 0 {
+        uart_send_bytes(b"nothing");
+    }
+    uart_send_bytes(b"\r\n");
+
+    let mut i = 0;
+    for &eid in &location.entities {
+        if eid != entity_id {
             if i != 0 {
                 uart_send_bytes(b", ");
             }
+            uart_send_bytes(&world.entities[eid].name);
             i += 1;
-            uart_send_bytes(&world.objects[oid].name);
         }
-        if i == 0 {
-            uart_send_bytes(b"nothing");
+    }
+    if i > 0 {
+        uart_send_bytes(b" is here\r\n");
+    }
+
+    uart_send_bytes(b"exits: ");
+    let mut i = 0;
+    for lid in &location.links {
+        if i != 0 {
+            uart_send_bytes(b", ");
         }
+        i += 1;
+        uart_send_bytes(&world.links[lid.link].name);
+    }
+    if i == 0 {
+        uart_send_bytes(b"none");
+    }
+    uart_send_bytes(b"\r\n");
+
+    if !location.note.is_empty() {
+        uart_send_bytes(&location.note);
         uart_send_bytes(b"\r\n");
-
-        let mut i = 0;
-        for &eid in &location.entities {
-            if eid != entity_id {
-                if i != 0 {
-                    uart_send_bytes(b", ");
-                }
-                uart_send_bytes(&world.entities[eid].name);
-                i += 1;
-            }
-        }
-        if i > 0 {
-            uart_send_bytes(b" is here\r\n");
-        }
-
-        uart_send_bytes(b"exits: ");
-        let mut i = 0;
-        for lid in &location.links {
-            if i != 0 {
-                uart_send_bytes(b", ");
-            }
-            i += 1;
-            uart_send_bytes(&world.links[lid.link].name);
-        }
-        if i == 0 {
-            uart_send_bytes(b"none");
-        }
-        uart_send_bytes(b"\r\n");
-
-        if !location.note.is_empty() {
-            uart_send_bytes(&location.note);
-            uart_send_bytes(b"\r\n");
-        }
     }
 }
 
 fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let named_link = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"go where");
-            return;
-        }
+    let Some(named_link) = it.next() else {
+        uart_send_bytes(b"go where");
+        return;
     };
 
     action_go_named_link(world, entity_id, named_link);
@@ -215,12 +210,9 @@ fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferItera
 
 fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) {
     // find link id
-    let link_id = match world.links.iter().position(|x| x.name == link_name) {
-        Some(id) => id,
-        None => {
-            uart_send_bytes(b"no such exit\r\n\r\n");
-            return;
-        }
+    let Some(link_id) = world.links.iter().position(|x| x.name == link_name) else {
+        uart_send_bytes(b"no such exit\r\n\r\n");
+        return;
     };
 
     // move entity
@@ -239,9 +231,11 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         };
 
         // remove entity from old location
-        if let Some(pos) = from_location.entities.iter().position(|&x| x == entity_id) {
-            from_location.entities.remove(pos);
-        }
+        let Some(pos) = from_location.entities.iter().position(|&x| x == entity_id) else {
+            panic!();
+        };
+
+        from_location.entities.remove(pos);
 
         // add entity to new location
         world.locations[to_location_id].entities.push(entity_id);
@@ -261,17 +255,15 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
 
     // find link name that leads from 'to_location_id' to 'from_location_id'
     // note: assumes links are bi-directional thus unwrap
-    let link_id = world.locations[to_location_id]
-        .links
-        .iter()
-        .find_map(|x| {
-            if x.location == from_location_id {
-                Some(x.link)
-            } else {
-                None
-            }
-        })
-        .unwrap();
+    let Some(link_id) = world.locations[to_location_id].links.iter().find_map(|x| {
+        if x.location == from_location_id {
+            Some(x.link)
+        } else {
+            None
+        }
+    }) else {
+        panic!();
+    };
 
     // send message to entities in 'to_location' that entity has arrived
     world.send_message_to_location_entities(
@@ -304,12 +296,9 @@ fn action_inventory(world: &World, entity_id: EntityId) {
 
 fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     // get object name
-    let object_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"take what\r\n\r\n");
-            return;
-        }
+    let Some(object_name) = it.next() else {
+        uart_send_bytes(b"take what\r\n\r\n");
+        return;
     };
 
     {
@@ -350,12 +339,9 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 }
 
 fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let object_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"drop what\r\n\r\n");
-            return;
-        }
+    let Some(object_name) = it.next() else {
+        uart_send_bytes(b"drop what\r\n\r\n");
+        return;
     };
 
     {
@@ -391,45 +377,34 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
 fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     // get object name
-    let object_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"give what\r\n\r\n");
-            return;
-        }
+    let Some(object_name) = it.next() else {
+        uart_send_bytes(b"give what\r\n\r\n");
+        return;
     };
 
     // get entity name
-    let to_entity_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"give to whom\r\n\r\n");
-            return;
-        }
+    let Some(to_entity_name) = it.next() else {
+        uart_send_bytes(b"give to whom\r\n\r\n");
+        return;
     };
 
-    let (object_index, object_id) =
-        match world.find_object_in_entity_inventory(entity_id, object_name) {
-            Some(result) => result,
-            None => {
-                uart_send_bytes(object_name);
-                uart_send_bytes(b" not in inventory\r\n\r\n");
-                return;
-            }
-        };
+    let Some((object_index, object_id)) =
+        world.find_object_in_entity_inventory(entity_id, object_name)
+    else {
+        uart_send_bytes(object_name);
+        uart_send_bytes(b" not in inventory\r\n\r\n");
+        return;
+    };
 
     // find "to" entity
-    let to_entity_id = match world.locations[world.entities[entity_id].location]
+    let Some(&to_entity_id) = world.locations[world.entities[entity_id].location]
         .entities
         .iter()
         .find(|&&x| world.entities[x].name == to_entity_name)
-    {
-        Some(&id) => id,
-        None => {
-            uart_send_bytes(to_entity_name);
-            uart_send_bytes(b" not here\r\n\r\n");
-            return;
-        }
+    else {
+        uart_send_bytes(to_entity_name);
+        uart_send_bytes(b" not here\r\n\r\n");
+        return;
     };
 
     // remove object from entity
@@ -528,12 +503,9 @@ fn action_help() {
 
 fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     // get object name
-    let object_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"what object name\r\n\r\n");
-            return;
-        }
+    let Some(object_name) = it.next() else {
+        uart_send_bytes(b"what object name\r\n\r\n");
+        return;
     };
 
     if world.objects.iter().any(|x| x.name == object_name) {
@@ -547,28 +519,19 @@ fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBuf
 }
 
 fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let to_link_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"what link name\r\n\r\n");
-            return;
-        }
+    let Some(to_link_name) = it.next() else {
+        uart_send_bytes(b"what link name\r\n\r\n");
+        return;
     };
 
-    let back_link_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"what back link name\r\n\r\n");
-            return;
-        }
+    let Some(back_link_name) = it.next() else {
+        uart_send_bytes(b"what back link name\r\n\r\n");
+        return;
     };
 
-    let new_location_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"what new location name\r\n\r\n");
-            return;
-        }
+    let Some(new_location_name) = it.next() else {
+        uart_send_bytes(b"what new location name\r\n\r\n");
+        return;
     };
 
     if world.locations.iter().any(|x| x.name == new_location_name) {
@@ -613,12 +576,9 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
 
 fn action_new_entity(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     // get object name
-    let entity_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"what entity name\r\n\r\n");
-            return;
-        }
+    let Some(entity_name) = it.next() else {
+        uart_send_bytes(b"what entity name\r\n\r\n");
+        return;
     };
 
     if world.entities.iter().any(|x| x.name == entity_name) {
@@ -653,12 +613,9 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
 }
 
 fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    let to_name = match it.next() {
-        Some(name) => name,
-        None => {
-            uart_send_bytes(b"tell to whom\r\n\r\n");
-            return;
-        }
+    let Some(to_name) = it.next() else {
+        uart_send_bytes(b"tell to whom\r\n\r\n");
+        return;
     };
 
     let tell = it.rest();

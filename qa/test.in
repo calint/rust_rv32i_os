@@ -4,7 +4,7 @@ go none
 wait
 t lighter
 go none
-g lighter me
+g me lighter
 i
 t notebook
 d lighter
@@ -37,10 +37,10 @@ sdr 2
 t lighter
 i
 i
-g mirror u
+g u mirror
 i
 i
-g notebook me
+g me notebook
 say hello world
 wait
 wait

@@ -371,15 +371,15 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 }
 
 fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
-    // get object name
-    let Some(object_name) = it.next() else {
-        uart_send_bytes(b"give what\r\n\r\n");
-        return;
-    };
-
     // get entity name
     let Some(to_entity_name) = it.next() else {
         uart_send_bytes(b"give to whom\r\n\r\n");
+        return;
+    };
+
+    // get object name
+    let Some(object_name) = it.next() else {
+        uart_send_bytes(b"give what\r\n\r\n");
         return;
     };
 
@@ -415,9 +415,9 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         EntityMessage::from_parts(&[
             &world.entities[entity_id].name,
             b" gave ",
-            &world.objects[object_id].name,
-            b" to ",
             &world.entities[to_entity_id].name,
+            b" ",
+            &world.objects[object_id].name,
         ]),
     );
 

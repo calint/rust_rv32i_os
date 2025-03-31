@@ -23,6 +23,7 @@ pub fn uart_read_byte() -> u8 {
         loop {
             let input = read_volatile(UART_IN_ADDR as *const i32);
             if input != -1 {
+                #[allow(clippy::cast_possible_truncation)]
                 return input as u8;
             }
         }

@@ -19,6 +19,7 @@ pub struct GlobalAllocator {
     free_list: *mut BlockHeader, // Head of the free list
 }
 
+#[allow(clippy::cast_ptr_alignment)]
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         // Adjust size to include header and ensure alignment
@@ -37,7 +38,8 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                     if (*current).size > aligned_size + MIN_BLOCK_SIZE {
                         // Split the block if it's significantly larger
                         let remaining_size = (*current).size - aligned_size;
-                        let new_block = current.cast::<u8>().add(aligned_size).cast::<BlockHeader>();
+                        let new_block =
+                            current.cast::<u8>().add(aligned_size).cast::<BlockHeader>();
 
                         (*new_block).size = remaining_size;
                         (*new_block).is_free = true;
@@ -60,7 +62,9 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                     // uart_send_hex_u32(request_size as u32, true);
                     // uart_send_bytes(b"\r\n");
 
-                    return current.cast::<u8>().add(core::mem::size_of::<BlockHeader>());
+                    return current
+                        .cast::<u8>()
+                        .add(core::mem::size_of::<BlockHeader>());
                 }
 
                 current = (*current).next;
@@ -79,7 +83,9 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
         unsafe {
             // Get the block header
-            let block = ptr.sub(core::mem::size_of::<BlockHeader>()).cast::<BlockHeader>();
+            let block = ptr
+                .sub(core::mem::size_of::<BlockHeader>())
+                .cast::<BlockHeader>();
 
             // Mark block as free
             (*block).is_free = true;

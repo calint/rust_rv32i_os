@@ -1,10 +1,13 @@
 i
+i
+go none
+wait
 t lighter
 go none
 g lighter me
 i
 t notebook
-d mirror
+d lighter
 w
 e
 e
@@ -31,12 +34,16 @@ sdr 2
 sdw 2 sector 2 again
 sdr 1
 sdr 2
-t mirror
-g lighter u
+t lighter
+i
+i
+g mirror u
+i
+i
 g notebook me
 say hello world
 wait
 wait
-tell me hello from su
+tell u hello from me
 wait
 wait

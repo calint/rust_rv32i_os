@@ -44,9 +44,8 @@ d lighter
 nl west east kitchen
 nl east west bathroom
 no mirror
-ne u
 go back
-wait
+ne me
 ";
 
 mod model;
@@ -157,8 +156,17 @@ fn action_look(world: &mut World, entity_id: EntityId) {
     uart_send_bytes(b"u r in ");
     uart_send_bytes(&location.name);
 
-    uart_send_bytes(b"\r\nu c: ");
+    uart_send_bytes(b"\r\nu c ");
     let mut i = 0;
+    for &eid in &location.entities {
+        if eid != entity_id {
+            if i != 0 {
+                uart_send_bytes(b", ");
+            }
+            uart_send_bytes(&world.entities[eid].name);
+            i += 1;
+        }
+    }
     for &oid in &location.objects {
         if i != 0 {
             uart_send_bytes(b", ");
@@ -170,20 +178,6 @@ fn action_look(world: &mut World, entity_id: EntityId) {
         uart_send_bytes(b"nothing");
     }
     uart_send_bytes(b"\r\n");
-
-    let mut i = 0;
-    for &eid in &location.entities {
-        if eid != entity_id {
-            if i != 0 {
-                uart_send_bytes(b", ");
-            }
-            uart_send_bytes(&world.entities[eid].name);
-            i += 1;
-        }
-    }
-    if i > 0 {
-        uart_send_bytes(b" is here\r\n");
-    }
 
     uart_send_bytes(b"exits: ");
     let mut i = 0;
@@ -727,7 +721,7 @@ fn input(command_buffer: &mut CommandBuffer) {
 fn create_world() -> World {
     let mut world = World {
         entities: vec![Entity {
-            name: Name::from(b"me"),
+            name: Name::from(b"u"),
             location: 0,
             objects: vec![],
             messages: vec![],

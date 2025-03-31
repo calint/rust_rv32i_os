@@ -1,7 +1,7 @@
 use super::api_unsafe::{__heap_start__, uart_send_byte};
 use super::constants::MEMORY_END;
 
-pub fn memory_end() -> u32 {
+pub const fn memory_end() -> u32 {
     MEMORY_END
 }
 

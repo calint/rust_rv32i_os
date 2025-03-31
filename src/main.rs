@@ -623,7 +623,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     world.entities[to_entity_id].messages.push(message);
 }
 
-fn action_wait() {}
+const fn action_wait() {}
 
 fn input(command_buffer: &mut CommandBuffer) {
     enum InputState {

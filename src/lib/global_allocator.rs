@@ -131,7 +131,7 @@ impl GlobalAllocator {
             (*first_block).prev = ptr::null_mut();
         }
 
-        GlobalAllocator {
+        Self {
             free_list: first_block,
         }
     }

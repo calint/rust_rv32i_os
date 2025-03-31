@@ -61,7 +61,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    pub fn move_cursor_left(&mut self) -> bool {
+    pub const fn move_cursor_left(&mut self) -> bool {
         if self.cursor == 0 {
             return false;
         }
@@ -70,7 +70,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    pub fn move_cursor_right(&mut self) -> bool {
+    pub const fn move_cursor_right(&mut self) -> bool {
         if self.cursor == self.end {
             return false;
         }
@@ -79,11 +79,11 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    pub fn reset(&mut self) {
+    pub const fn reset(&mut self) {
         self.end = 0;
     }
 
-    pub fn is_full(&self) -> bool {
+    pub const fn is_full(&self) -> bool {
         self.end == SIZE - 1
     }
 
@@ -96,13 +96,13 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         }
     }
 
-    pub fn elements_after_cursor_count(&self) -> usize {
+    pub const fn elements_after_cursor_count(&self) -> usize {
         self.end - self.cursor
     }
 
     /// Iterate over the buffer returning a slice for each chunk delimited by returning true from delimiter lambda.
     /// Note: Adjacent delimiters are consumed.
-    pub fn iter_words<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
+    pub const fn iter_words<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
     where
         F: Fn(&T) -> bool,
     {

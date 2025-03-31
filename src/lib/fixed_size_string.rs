@@ -7,7 +7,7 @@ pub struct FixedSizeString<const N: usize> {
 }
 
 impl<const N: usize> FixedSizeString<N> {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             data: [0u8; N],
             len: 0,
@@ -15,7 +15,7 @@ impl<const N: usize> FixedSizeString<N> {
     }
 
     pub fn from(src: &[u8]) -> Self {
-        FixedSizeString::from_parts(&[src])
+        Self::from_parts(&[src])
     }
 
     /// Will not write more than the length.
@@ -27,7 +27,7 @@ impl<const N: usize> FixedSizeString<N> {
         s
     }
 
-    pub fn is_empty(&self) -> bool {
+    pub const fn is_empty(&self) -> bool {
         self.len == 0
     }
 
@@ -60,7 +60,7 @@ impl<const N: usize> PartialEq<&[u8]> for FixedSizeString<N> {
     }
 }
 
-impl<const N: usize> PartialEq<FixedSizeString<N>> for FixedSizeString<N> {
+impl<const N: usize> PartialEq<Self> for FixedSizeString<N> {
     fn eq(&self, other: &Self) -> bool {
         **self == **other
     }

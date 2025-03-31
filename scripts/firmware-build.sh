@@ -10,7 +10,7 @@ FIRMWARE=firmware
 cd ..
 
 cargo clean
-cargo clippy --release
+cargo clippy --release -- -W clippy::pedantic -W clippy::nursery -W clippy::unwrap_used -W clippy::expect_used
 cargo build --release
 $OBJCOPY -O binary $ELF $FIRMWARE.img
 #$OBJDUMP --source-comment -Mnumeric,no-aliases -Sr $ELF > firmware.lst

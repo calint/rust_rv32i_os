@@ -449,6 +449,7 @@ fn action_memory_info() {
     uart_send_bytes(b"\r\n");
 }
 
+#[allow(clippy::cast_sign_loss)]
 fn action_sdcard_status() {
     uart_send_bytes(b"SDCARD_STATUS: 0x");
     uart_send_hex_u32(sdcard_status() as u32, true);

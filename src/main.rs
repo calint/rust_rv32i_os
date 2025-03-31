@@ -64,8 +64,14 @@ extern crate alloc;
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{memory_end, memory_heap_start, u8_slice_to_u32, uart_send_bytes, uart_send_hex_u32, uart_send_move_back};
-use lib::api_unsafe::{led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status, sdcard_write_blocking, uart_read_byte, uart_send_byte};
+use lib::api::{
+    memory_end, memory_heap_start, u8_slice_to_u32, uart_send_bytes, uart_send_hex_u32,
+    uart_send_move_back,
+};
+use lib::api_unsafe::{
+    led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status, sdcard_write_blocking,
+    uart_read_byte, uart_send_byte,
+};
 use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use lib::global_allocator::{global_allocator_debug_block_list, global_allocator_init};
 use model::{Entity, EntityId, EntityMessage, Location, LocationLink, Name, Note, World};
@@ -222,10 +228,13 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         let from_location = &mut world.locations[from_location_id];
 
         // find "to" location id
-        let to_location_id = if let Some(lnk) = from_location.links.iter().find(|x| x.link == link_id) { lnk.location } else {
-            uart_send_bytes(b"can't go there\r\n\r\n");
-            return;
-        };
+        let to_location_id =
+            if let Some(lnk) = from_location.links.iter().find(|x| x.link == link_id) {
+                lnk.location
+            } else {
+                uart_send_bytes(b"can't go there\r\n\r\n");
+                return;
+            };
 
         // remove entity from old location
         let Some(pos) = from_location.entities.iter().position(|&x| x == entity_id) else {
@@ -447,7 +456,9 @@ fn action_sdcard_status() {
 }
 
 fn action_sdcard_read(it: &mut CommandBufferIterator) {
-    let sector = if let Some(sector) = it.next() { u8_slice_to_u32(sector) } else {
+    let sector = if let Some(sector) = it.next() {
+        u8_slice_to_u32(sector)
+    } else {
         uart_send_bytes(b"what sector\r\n\r\n");
         return;
     };
@@ -459,7 +470,9 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
 }
 
 fn action_sdcard_write(it: &mut CommandBufferIterator) {
-    let sector = if let Some(sector) = it.next() { u8_slice_to_u32(sector) } else {
+    let sector = if let Some(sector) = it.next() {
+        u8_slice_to_u32(sector)
+    } else {
         uart_send_bytes(b"what sector\r\n\r\n");
         return;
     };
@@ -472,11 +485,14 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
 }
 
 fn action_led_set(it: &mut CommandBufferIterator) {
-    let bits = if let Some(bits) = it.next() { u8_slice_to_u32(bits) } else {
+    let bits = if let Some(bits) = it.next() {
+        u8_slice_to_u32(bits)
+    } else {
         uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n\r\n");
         return;
     };
 
+    #[allow(clippy::cast_possible_truncation)]
     led_set(bits as u8);
 }
 

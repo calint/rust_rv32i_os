@@ -1,4 +1,7 @@
-use super::constants::{LED, SDCARD_BUSY, SDCARD_NEXT_BYTE, SDCARD_READ_SECTOR, SDCARD_STATUS, SDCARD_WRITE_SECTOR, UART_IN_ADDR, UART_OUT_ADDR};
+use super::constants::{
+    LED, SDCARD_BUSY, SDCARD_NEXT_BYTE, SDCARD_READ_SECTOR, SDCARD_STATUS, SDCARD_WRITE_SECTOR,
+    UART_IN_ADDR, UART_OUT_ADDR,
+};
 use core::arch::asm;
 use core::ptr::{read_volatile, write_volatile};
 
@@ -14,6 +17,7 @@ pub fn uart_send_byte(ch: u8) {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
 pub fn uart_read_byte() -> u8 {
     unsafe {
         loop {
@@ -45,7 +49,7 @@ pub fn sdcard_status() -> i32 {
 }
 
 pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
-    assert!((buffer_512_bytes.len() == 512), );
+    assert!((buffer_512_bytes.len() == 512),);
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
@@ -58,7 +62,7 @@ pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
 }
 
 pub fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
-    assert!((buffer_512_bytes.len() == 512), );
+    assert!((buffer_512_bytes.len() == 512),);
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}

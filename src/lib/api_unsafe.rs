@@ -17,13 +17,13 @@ pub fn uart_send_byte(ch: u8) {
     }
 }
 
+#[allow(clippy::cast_possible_truncation)]
+#[allow(clippy::cast_sign_loss)]
 pub fn uart_read_byte() -> u8 {
     unsafe {
         loop {
             let input = read_volatile(UART_IN_ADDR as *const i32);
             if input != -1 {
-                #[allow(clippy::cast_possible_truncation)]
-                #[allow(clippy::cast_sign_loss)]
                 return input as u8;
             }
         }

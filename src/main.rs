@@ -485,6 +485,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     sdcard_write_blocking(sector, &buf);
 }
 
+#[allow(clippy::cast_possible_truncation)]
 fn action_led_set(it: &mut CommandBufferIterator) {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
@@ -493,7 +494,6 @@ fn action_led_set(it: &mut CommandBufferIterator) {
         return;
     };
 
-    #[allow(clippy::cast_possible_truncation)]
     led_set(bits as u8);
 }
 

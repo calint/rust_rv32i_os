@@ -306,18 +306,15 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         let location = &mut world.locations[entity.location];
 
         // find object id and index in list
-        let (object_index, object_id) = match location
+        let Some((object_index, &object_id)) = location
             .objects
             .iter()
             .enumerate()
             .find(|&(_, &oid)| world.objects[oid].name == object_name)
-        {
-            Some((index, &oid)) => (index, oid),
-            None => {
-                uart_send_bytes(object_name);
-                uart_send_bytes(b" is not here\r\n\r\n");
-                return;
-            }
+        else {
+            uart_send_bytes(object_name);
+            uart_send_bytes(b" is not here\r\n\r\n");
+            return;
         };
 
         // remove object from location
@@ -345,15 +342,13 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     };
 
     {
-        let (object_index, object_id) =
-            match world.find_object_in_entity_inventory(entity_id, object_name) {
-                Some(result) => result,
-                None => {
-                    uart_send_bytes(object_name);
-                    uart_send_bytes(b" not in inventory\r\n\r\n");
-                    return;
-                }
-            };
+        let Some((object_index, object_id)) =
+            world.find_object_in_entity_inventory(entity_id, object_name)
+        else {
+            uart_send_bytes(object_name);
+            uart_send_bytes(b" not in inventory\r\n\r\n");
+            return;
+        };
 
         let entity = &mut world.entities[entity_id];
 
@@ -626,17 +621,14 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
     let entity = &world.entities[entity_id];
 
-    let to_entity_id = match world.locations[entity.location]
+    let Some(&to_entity_id) = world.locations[entity.location]
         .entities
         .iter()
         .find(|&&x| world.entities[x].name == to_name)
-    {
-        Some(&id) => id,
-        None => {
-            uart_send_bytes(to_name);
-            uart_send_bytes(b" not here\r\n\r\n");
-            return;
-        }
+    else {
+        uart_send_bytes(to_name);
+        uart_send_bytes(b" not here\r\n\r\n");
+        return;
     };
 
     let message = EntityMessage::from_parts(&[&entity.name, b" tells u ", tell]);

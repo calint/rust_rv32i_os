@@ -37,7 +37,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                     if (*current).size > aligned_size + MIN_BLOCK_SIZE {
                         // Split the block if it's significantly larger
                         let remaining_size = (*current).size - aligned_size;
-                        let new_block = (current as *mut u8).add(aligned_size) as *mut BlockHeader;
+                        let new_block = current.cast::<u8>().add(aligned_size).cast::<BlockHeader>();
 
                         (*new_block).size = remaining_size;
                         (*new_block).is_free = true;
@@ -60,7 +60,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                     // uart_send_hex_u32(request_size as u32, true);
                     // uart_send_bytes(b"\r\n");
 
-                    return (current as *mut u8).add(core::mem::size_of::<BlockHeader>());
+                    return current.cast::<u8>().add(core::mem::size_of::<BlockHeader>());
                 }
 
                 current = (*current).next;
@@ -79,7 +79,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
         unsafe {
             // Get the block header
-            let block = ptr.sub(core::mem::size_of::<BlockHeader>()) as *mut BlockHeader;
+            let block = ptr.sub(core::mem::size_of::<BlockHeader>()).cast::<BlockHeader>();
 
             // Mark block as free
             (*block).is_free = true;
@@ -91,8 +91,8 @@ unsafe impl GlobalAlloc for GlobalAllocator {
             if !(*current).next.is_null()
                 && (*(*current).next).is_free
                 && core::ptr::eq(
-                    (current as *mut u8).add((*current).size),
-                    (*current).next as *mut u8,
+                    current.cast::<u8>().add((*current).size),
+                    (*current).next.cast::<u8>(),
                 )
             {
                 (*current).size += (*(*current).next).size;
@@ -106,8 +106,8 @@ unsafe impl GlobalAlloc for GlobalAllocator {
             if !(*current).prev.is_null()
                 && (*(*current).prev).is_free
                 && core::ptr::eq(
-                    current as *mut u8,
-                    ((*current).prev as *mut u8).add((*(*current).prev).size),
+                    current.cast::<u8>(),
+                    (*current).prev.cast::<u8>().add((*(*current).prev).size),
                 )
             {
                 (*(*current).prev).size += (*current).size;
@@ -123,7 +123,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 impl GlobalAllocator {
     fn new(memory: *mut u8, total_size: usize) -> Self {
         // Initialize the entire memory as one free block
-        let first_block = memory as *mut BlockHeader;
+        let first_block = memory.cast::<BlockHeader>();
         unsafe {
             (*first_block).size = total_size;
             (*first_block).is_free = true;
@@ -146,7 +146,7 @@ static mut HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
 // Example initialization function
 pub fn global_allocator_init(heap_size: usize) {
     unsafe {
-        HEAP_ALLOCATOR = GlobalAllocator::new(&__heap_start__ as *const u8 as *mut u8, heap_size);
+        HEAP_ALLOCATOR = GlobalAllocator::new((&raw const __heap_start__).cast_mut(), heap_size);
     }
 }
 

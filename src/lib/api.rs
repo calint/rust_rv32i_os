@@ -1,5 +1,5 @@
-use super::api_unsafe::*;
-use super::constants::*;
+use super::api_unsafe::{__heap_start__, uart_send_byte};
+use super::constants::MEMORY_END;
 
 pub fn memory_end() -> u32 {
     MEMORY_END
@@ -50,7 +50,7 @@ pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
         if !ch.is_ascii_digit() {
             return num;
         }
-        num = num * 10 + (ch - b'0') as u32;
+        num = num * 10 + u32::from(ch - b'0');
     }
     num
 }

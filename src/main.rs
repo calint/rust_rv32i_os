@@ -34,7 +34,7 @@ static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
 
 static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  say <what>: say to all in location\r\n  tell <whom> <what>: tells entity in location\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
 
-static CREATION: &[u8] = br#"nln todo: find an exit
+static CREATION: &[u8] = br"nln todo: find an exit
 nl none back office
 go none
 no notebook
@@ -47,7 +47,7 @@ no mirror
 ne u
 go back
 wait
-"#;
+";
 
 mod model;
 mod lib {
@@ -64,11 +64,11 @@ extern crate alloc;
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::*;
-use lib::api_unsafe::*;
-use lib::cursor_buffer::*;
-use lib::global_allocator::*;
-use model::*;
+use lib::api::{memory_end, memory_heap_start, u8_slice_to_u32, uart_send_bytes, uart_send_hex_u32, uart_send_move_back};
+use lib::api_unsafe::{led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status, sdcard_write_blocking, uart_read_byte, uart_send_byte};
+use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
+use lib::global_allocator::{global_allocator_debug_block_list, global_allocator_init};
+use model::{Entity, EntityId, EntityMessage, Location, LocationLink, Name, Note, World};
 
 const COMMAND_BUFFER_SIZE: usize = 80;
 
@@ -107,7 +107,7 @@ pub extern "C" fn run() -> ! {
 }
 
 fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &CommandBuffer) {
-    let mut it: CommandBufferIterator = command_buffer.iter_words(|x| x.is_ascii_whitespace());
+    let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     match it.next() {
         Some(b"go") => action_go(world, entity_id, &mut it),
         Some(b"n") => action_go_named_link(world, entity_id, b"north"),
@@ -140,10 +140,10 @@ fn action_look(world: &mut World, entity_id: EntityId) {
     let location = &world.locations[entity.location];
 
     let messages = &entity.messages;
-    messages.iter().for_each(|x| {
+    for x in messages {
         uart_send_bytes(x);
         uart_send_bytes(b"\r\n");
-    });
+    }
 
     // clear messages after displayed
     entity.messages.clear();
@@ -222,12 +222,9 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         let from_location = &mut world.locations[from_location_id];
 
         // find "to" location id
-        let to_location_id = match from_location.links.iter().find(|x| x.link == link_id) {
-            Some(lnk) => lnk.location,
-            None => {
-                uart_send_bytes(b"can't go there\r\n\r\n");
-                return;
-            }
+        let to_location_id = if let Some(lnk) = from_location.links.iter().find(|x| x.link == link_id) { lnk.location } else {
+            uart_send_bytes(b"can't go there\r\n\r\n");
+            return;
         };
 
         // remove entity from old location
@@ -450,12 +447,9 @@ fn action_sdcard_status() {
 }
 
 fn action_sdcard_read(it: &mut CommandBufferIterator) {
-    let sector = match it.next() {
-        Some(sector) => u8_slice_to_u32(sector),
-        None => {
-            uart_send_bytes(b"what sector\r\n\r\n");
-            return;
-        }
+    let sector = if let Some(sector) = it.next() { u8_slice_to_u32(sector) } else {
+        uart_send_bytes(b"what sector\r\n\r\n");
+        return;
     };
 
     let mut buf = [0u8; 512];
@@ -465,12 +459,9 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
 }
 
 fn action_sdcard_write(it: &mut CommandBufferIterator) {
-    let sector = match it.next() {
-        Some(sector) => u8_slice_to_u32(sector),
-        None => {
-            uart_send_bytes(b"what sector\r\n\r\n");
-            return;
-        }
+    let sector = if let Some(sector) = it.next() { u8_slice_to_u32(sector) } else {
+        uart_send_bytes(b"what sector\r\n\r\n");
+        return;
     };
 
     let data = it.rest();
@@ -481,12 +472,9 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
 }
 
 fn action_led_set(it: &mut CommandBufferIterator) {
-    let bits = match it.next() {
-        Some(bits) => u8_slice_to_u32(bits),
-        None => {
-            uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n\r\n");
-            return;
-        }
+    let bits = if let Some(bits) = it.next() { u8_slice_to_u32(bits) } else {
+        uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n\r\n");
+        return;
     };
 
     led_set(bits as u8);
@@ -617,7 +605,7 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     if tell.is_empty() {
         uart_send_bytes(b"tell what\r\n\r\n");
         return;
-    };
+    }
 
     let entity = &world.entities[entity_id];
 

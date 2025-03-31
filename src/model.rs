@@ -57,15 +57,12 @@ impl World {
     }
 
     pub fn find_or_add_link(&mut self, link_name: &[u8]) -> LinkId {
-        match self.links.iter().position(|x| x.name == link_name) {
-            Some(id) => id,
-            None => {
-                let id = self.links.len();
-                self.links.push(Link {
-                    name: Name::from(link_name),
-                });
-                id
-            }
+        if let Some(id) = self.links.iter().position(|x| x.name == link_name) { id } else {
+            let id = self.links.len();
+            self.links.push(Link {
+                name: Name::from(link_name),
+            });
+            id
         }
     }
 

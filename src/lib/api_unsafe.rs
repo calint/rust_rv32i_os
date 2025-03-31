@@ -1,4 +1,4 @@
-use super::constants::*;
+use super::constants::{LED, SDCARD_BUSY, SDCARD_NEXT_BYTE, SDCARD_READ_SECTOR, SDCARD_STATUS, SDCARD_WRITE_SECTOR, UART_IN_ADDR, UART_OUT_ADDR};
 use core::arch::asm;
 use core::ptr::{read_volatile, write_volatile};
 
@@ -45,9 +45,7 @@ pub fn sdcard_status() -> i32 {
 }
 
 pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
-    if buffer_512_bytes.len() != 512 {
-        panic!();
-    }
+    assert!((buffer_512_bytes.len() == 512), );
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
@@ -60,9 +58,7 @@ pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
 }
 
 pub fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
-    if buffer_512_bytes.len() != 512 {
-        panic!();
-    }
+    assert!((buffer_512_bytes.len() == 512), );
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}

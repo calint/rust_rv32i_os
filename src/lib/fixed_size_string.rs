@@ -56,13 +56,13 @@ impl<const N: usize> Deref for FixedSizeString<N> {
 
 impl<const N: usize> PartialEq<&[u8]> for FixedSizeString<N> {
     fn eq(&self, other: &&[u8]) -> bool {
-        self.deref() == *other
+        &**self == *other
     }
 }
 
 impl<const N: usize> PartialEq<FixedSizeString<N>> for FixedSizeString<N> {
     fn eq(&self, other: &Self) -> bool {
-        self.deref() == other.deref()
+        **self == **other
     }
 }
 

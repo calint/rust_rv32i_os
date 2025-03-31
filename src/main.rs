@@ -3,33 +3,33 @@
 
 static HELLO: &[u8] = b"welcome to adventure #5\r\n    type 'help'\r\n\r\n";
 
-static ASCII_ART: &[u8] = b":                                  oOo.o.\r\n\
-:         frameless osca          oOo.oOo\r\n\
-:      __________________________  .oOo.\r\n\
-:     O\\        -_   .. \\    ___ \\   ||\r\n\
-:    O  \\                \\   \\ \\\\ \\ //\\\\\r\n\
-:   o   /\\    risc-v      \\   \\|\\\\ \\\r\n\
-:  .   //\\\\    fpga        \\   ||   \\\r\n\
-:   .  \\\\/\\\\    rust        \\  \\_\\   \\\r\n\
-:    .  \\\\//\\________________\\________\\\r\n\
-:     .  \\/_/, \\\\\\--\\\\..\\\\ - /\\_____  /\r\n\
-:      .  \\ \\ . \\\\\\__\\\\__\\\\./ / \\__/ /\r\n\
-:       .  \\ \\ , \\    \\\\ ///./ ,/./ /\r\n\
-:        .  \\ \\___\\ sticky notes / /\r\n\
-:         .  \\/\\________________/ /\r\n\
-:    ./\\.  . / /                 /\r\n\
-:    /--\\   .\\/_________________/\r\n\
-:         ___.                 .\r\n\
-:        |o o|. . . . . . . . .\r\n\
-:        /| |\\ . .\r\n\
-:    ____       . .\r\n\
-:   |O  O|       . .\r\n\
-:   |_ -_|        . .\r\n\
-:    /||\\\r\n\
-:      ___\r\n\
-:     /- -\\\r\n\
-:    /\\_-_/\\\r\n\
-:      | |\r\n\
+static ASCII_ART: &[u8] = b"\x20                                  oOo.o.\r\n\
+\x20         frameless osca          oOo.oOo\r\n\
+\x20      __________________________  .oOo.\r\n\
+\x20     O\\        -_   .. \\    ___ \\   ||\r\n\
+\x20    O  \\                \\   \\ \\\\ \\ //\\\\\r\n\
+\x20   o   /\\    risc-v      \\   \\|\\\\ \\\r\n\
+\x20  .   //\\\\    fpga        \\   ||   \\\r\n\
+\x20   .  \\\\/\\\\    rust        \\  \\_\\   \\\r\n\
+\x20    .  \\\\//\\________________\\________\\\r\n\
+\x20     .  \\/_/, \\\\\\--\\\\..\\\\ - /\\_____  /\r\n\
+\x20      .  \\ \\ . \\\\\\__\\\\__\\\\./ / \\__/ /\r\n\
+\x20       .  \\ \\ , \\    \\\\ ///./ ,/./ /\r\n\
+\x20        .  \\ \\___\\ sticky notes / /\r\n\
+\x20         .  \\/\\________________/ /\r\n\
+\x20    ./\\.  . / /                 /\r\n\
+\x20    /--\\   .\\/_________________/\r\n\
+\x20         ___.                 .\r\n\
+\x20        |o o|. . . . . . . . .\r\n\
+\x20        /| |\\ . .\r\n\
+\x20    ____       . .\r\n\
+\x20   |O  O|       . .\r\n\
+\x20   |_ -_|        . .\r\n\
+\x20    /||\\\r\n\
+\x20      ___\r\n\
+\x20     /- -\\\r\n\
+\x20    /\\_-_/\\\r\n\
+\x20      | |\r\n\
 \r\n";
 
 static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  say <what>: say to all in location\r\n  tell <whom> <what>: tells entity in location\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";

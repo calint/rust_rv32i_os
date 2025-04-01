@@ -320,7 +320,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
         // add object to entity
         entity.objects.push(object_id);
-    };
+    }
 
     // send message
     {
@@ -355,7 +355,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
         // add object to location
         world.locations[entity.location].objects.push(object_id);
-    };
+    }
 
     // send message
     {

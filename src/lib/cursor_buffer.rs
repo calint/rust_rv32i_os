@@ -132,11 +132,12 @@ where
     }
 }
 
-impl<'a, const SIZE: usize, T, F> Iterator for CursorBufferIterator<'a, SIZE, T, F>
+impl<'buffer_alive, const SIZE: usize, T, F> Iterator
+    for CursorBufferIterator<'buffer_alive, SIZE, T, F>
 where
     F: Fn(&T) -> bool,
 {
-    type Item = &'a [T];
+    type Item = &'buffer_alive [T];
 
     fn next(&mut self) -> Option<Self::Item> {
         // todo this can be done with only 2 loops by skipping the leading delimiters before creation of iterator

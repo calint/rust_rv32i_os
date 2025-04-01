@@ -17,8 +17,8 @@ pub fn uart_send_byte(ch: u8) {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
-#[allow(clippy::cast_sign_loss)]
+#[expect(clippy::cast_possible_truncation, reason = "intended")]
+#[expect(clippy::cast_sign_loss, reason = "intended")]
 pub fn uart_read_byte() -> u8 {
     unsafe {
         loop {
@@ -41,7 +41,7 @@ pub fn memory_stack_pointer() -> u32 {
             "mv {0}, sp",
             out(reg) sp,
         );
-    }
+    };
     sp
 }
 
@@ -50,7 +50,7 @@ pub fn sdcard_status() -> i32 {
 }
 
 pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
-    assert!((buffer_512_bytes.len() == 512),);
+    assert!((buffer_512_bytes.len() == 512));
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
@@ -63,7 +63,7 @@ pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
 }
 
 pub fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
-    assert!((buffer_512_bytes.len() == 512),);
+    assert!((buffer_512_bytes.len() == 512));
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}

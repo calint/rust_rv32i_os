@@ -15,7 +15,7 @@ pub fn uart_send_bytes(s: &[u8]) {
     }
 }
 
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation, reason = "intended")]
 pub fn uart_send_hex_u32(i: u32, separate_half_words: bool) {
     uart_send_hex_byte((i >> 24) as u8);
     uart_send_hex_byte((i >> 16) as u8);

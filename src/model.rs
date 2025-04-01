@@ -48,16 +48,14 @@ impl World {
             .iter()
             .enumerate()
             .find_map(|(index, &oid)| {
-                if self.objects[oid].name == object_name {
-                    Some((index, oid))
-                } else {
-                    None
-                }
+                (self.objects[oid].name == object_name).then_some((index, oid))
             })
     }
 
     pub fn find_or_add_link(&mut self, link_name: &[u8]) -> LinkId {
-        if let Some(id) = self.links.iter().position(|x| x.name == link_name) { id } else {
+        if let Some(id) = self.links.iter().position(|x| x.name == link_name) {
+            id
+        } else {
             let id = self.links.len();
             self.links.push(Link {
                 name: Name::from(link_name),

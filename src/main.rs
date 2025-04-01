@@ -34,7 +34,7 @@ static ASCII_ART: &[u8] = b"\x20                                  oOo.o.\r\n\
 
 static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <object> <entity>: give object to entity\r\n  say <what>: say to all in location\r\n  tell <whom> <what>: tells entity in location\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <decimal for bits (0 is on)>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
 
-static CREATION: &[u8] = br"nln todo: find an exit
+static CREATION: &[u8] = b"nln todo: find an exit
 nl none back office
 go none
 no notebook
@@ -72,7 +72,7 @@ use lib::api_unsafe::{
     uart_read_byte, uart_send_byte,
 };
 use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
-use lib::global_allocator::{global_allocator_debug_block_list, global_allocator_init};
+use lib::global_allocator::GlobalAllocator;
 use model::{Entity, EntityId, EntityMessage, Location, LocationLink, Name, Note, World};
 
 const COMMAND_BUFFER_SIZE: usize = 80;
@@ -91,7 +91,7 @@ global_asm!(include_str!("startup.s"));
 pub extern "C" fn run() -> ! {
     led_set(0b0000); // turn all leds on
 
-    global_allocator_init(memory_end() as usize);
+    GlobalAllocator::init(memory_end() as usize);
 
     let mut world = create_world();
 
@@ -180,7 +180,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
     uart_send_bytes(b"\r\n");
 
     uart_send_bytes(b"exits: ");
-    let mut i = 0;
+    i = 0;
     for lid in &location.links {
         if i != 0 {
             uart_send_bytes(b", ");
@@ -255,13 +255,11 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
 
     // find link name that leads from 'to_location_id' to 'from_location_id'
     // note: assumes links are bi-directional thus panic if not
-    let Some(link_id) = world.locations[to_location_id].links.iter().find_map(|x| {
-        if x.location == from_location_id {
-            Some(x.link)
-        } else {
-            None
-        }
-    }) else {
+    let Some(link_id_from_to_location) = world.locations[to_location_id]
+        .links
+        .iter()
+        .find_map(|x| (x.location == from_location_id).then_some(x.link))
+    else {
         panic!();
     };
 
@@ -272,7 +270,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         EntityMessage::from_parts(&[
             &world.entities[entity_id].name,
             b" arrived from ",
-            &world.links[link_id].name,
+            &world.links[link_id_from_to_location].name,
         ]),
     );
 }
@@ -322,7 +320,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
         // add object to entity
         entity.objects.push(object_id);
-    }
+    };
 
     // send message
     {
@@ -357,7 +355,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
 
         // add object to location
         world.locations[entity.location].objects.push(object_id);
-    }
+    };
 
     // send message
     {
@@ -439,11 +437,11 @@ fn action_memory_info() {
     uart_send_bytes(b"\r\n   memory end: ");
     uart_send_hex_u32(memory_end(), true);
     uart_send_bytes(b"\r\n\r\nheap blocks:\r\n");
-    global_allocator_debug_block_list();
+    GlobalAllocator::debug_block_list();
     uart_send_bytes(b"\r\n");
 }
 
-#[allow(clippy::cast_sign_loss)]
+#[expect(clippy::cast_sign_loss, reason = "intended")]
 fn action_sdcard_status() {
     uart_send_bytes(b"SDCARD_STATUS: 0x");
     uart_send_hex_u32(sdcard_status() as u32, true);
@@ -479,7 +477,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     sdcard_write_blocking(sector, &buf);
 }
 
-#[allow(clippy::cast_possible_truncation)]
+#[expect(clippy::cast_possible_truncation, reason = "intended")]
 fn action_led_set(it: &mut CommandBufferIterator) {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
@@ -669,6 +667,8 @@ fn input(command_buffer: &mut CommandBuffer) {
                     uart_send_byte(ch);
                     command_buffer.for_each_from_cursor(uart_send_byte);
                     uart_send_move_back(command_buffer.elements_after_cursor_count());
+                } else {
+                    return;
                 }
             }
             InputState::Escape => {

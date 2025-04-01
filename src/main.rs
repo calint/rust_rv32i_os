@@ -255,7 +255,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
 
     // find link name that leads from 'to_location_id' to 'from_location_id'
     // note: assumes links are bi-directional thus panic if not
-    let Some(link_id_from_to_location) = world.locations[to_location_id]
+    let Some(back_link_id) = world.locations[to_location_id]
         .links
         .iter()
         .find_map(|x| (x.location == from_location_id).then_some(x.link))
@@ -270,7 +270,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
         EntityMessage::from_parts(&[
             &world.entities[entity_id].name,
             b" arrived from ",
-            &world.links[link_id_from_to_location].name,
+            &world.links[back_link_id].name,
         ]),
     );
 }

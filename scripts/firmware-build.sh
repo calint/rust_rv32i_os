@@ -10,7 +10,7 @@ FIRMWARE=firmware
 cd ..
 
 cargo clean
-cargo clippy --release -- -W clippy::pedantic -W clippy::nursery -W clippy::correctness -W clippy::perf \
+cargo clippy --release -- -W clippy::all -W clippy::pedantic -W clippy::nursery -W clippy::correctness -W clippy::perf \
                           -W clippy::style -W clippy::suspicious \
                           -W clippy::unwrap_used -W clippy::expect_used
 

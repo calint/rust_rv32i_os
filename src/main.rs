@@ -737,7 +737,7 @@ fn create_world() -> World {
         links: vec![],
     };
 
-    for line in CREATION.split(|&c| c == b'\n').filter(|x| !x.is_empty()) {
+    for line in CREATION.split(|&x| x == b'\n').filter(|x| !x.is_empty()) {
         let mut command_buffer = CommandBuffer::new();
         for &byte in line {
             if !command_buffer.insert(byte) {

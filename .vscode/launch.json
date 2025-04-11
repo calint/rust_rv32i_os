@@ -1,6 +1,7 @@
 {
     "version": "0.2.0",
     "configurations": [
+        // note: compile emulator enabled for debugging 'emulator/make.sh -g'
         {
             "name": "osqa: debug",
             "type": "lldb",

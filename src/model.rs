@@ -17,6 +17,34 @@ pub struct World {
     pub links: Vec<Link>,
 }
 
+pub struct Location {
+    pub name: Name,
+    pub note: Note,
+    pub links: Vec<LocationLink>,
+    pub objects: Vec<ObjectId>,
+    pub entities: Vec<EntityId>,
+}
+
+pub struct LocationLink {
+    pub link: LinkId,
+    pub location: LocationId,
+}
+
+pub struct Link {
+    pub name: Name,
+}
+
+pub struct Object {
+    pub name: Name,
+}
+
+pub struct Entity {
+    pub name: Name,
+    pub location: LocationId,
+    pub objects: Vec<ObjectId>,
+    pub messages: Vec<EntityMessage>,
+}
+
 impl World {
     pub fn add_object(&mut self, object_name: &[u8]) -> ObjectId {
         let object_id = self.objects.len();
@@ -82,32 +110,4 @@ impl World {
             self.entities[eid].messages.push(message);
         }
     }
-}
-
-pub struct Location {
-    pub name: Name,
-    pub note: Note,
-    pub links: Vec<LocationLink>,
-    pub objects: Vec<ObjectId>,
-    pub entities: Vec<EntityId>,
-}
-
-pub struct LocationLink {
-    pub link: LinkId,
-    pub location: LocationId,
-}
-
-pub struct Link {
-    pub name: Name,
-}
-
-pub struct Object {
-    pub name: Name,
-}
-
-pub struct Entity {
-    pub name: Name,
-    pub location: LocationId,
-    pub objects: Vec<ObjectId>,
-    pub messages: Vec<EntityMessage>,
 }

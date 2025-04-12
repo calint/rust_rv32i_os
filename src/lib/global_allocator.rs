@@ -6,7 +6,6 @@ use core::ptr;
 
 // minimum block size and alignment
 const MIN_BLOCK_SIZE: usize = 16;
-const ALIGNMENT: usize = 8;
 
 // block metadata structure
 struct BlockHeader {
@@ -26,7 +25,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
         // adjust size to include header and ensure alignment
         let aligned_size = {
             let size = layout.size() + mem::size_of::<BlockHeader>();
-            (size + ALIGNMENT - 1) & !(ALIGNMENT - 1)
+            (size + layout.align() - 1) & !(layout.align() - 1)
         };
 
         // find first suitable free block
@@ -69,7 +68,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                 current = (*current).next;
             }
         }
-        // No suitable block found
+        // no suitable block found
         ptr::null_mut()
     }
 
@@ -165,9 +164,9 @@ impl GlobalAllocator {
 
                 current = (*current).next;
             }
-            uart_send_bytes(b"total: ");
+            uart_send_bytes(b"total allocated: ");
             uart_send_hex_u32(total as u32, true);
-            uart_send_bytes(b"\r\n");
+            uart_send_bytes(b" bytes\r\n");
         }
     }
 }

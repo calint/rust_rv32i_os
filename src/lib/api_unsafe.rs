@@ -5,6 +5,8 @@ use super::constants::{
 use core::arch::asm;
 use core::ptr::{read_volatile, write_volatile};
 
+pub const SDCARD_SECTOR_SIZE_BYTES: usize = 512;
+
 unsafe extern "C" {
     // declared in 'linker.ld
     pub unsafe static __heap_start__: u8;
@@ -50,7 +52,7 @@ pub fn sdcard_status() -> i32 {
 }
 
 pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
-    assert!((buffer_512_bytes.len() == 512));
+    assert!((buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES));
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
@@ -63,7 +65,7 @@ pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
 }
 
 pub fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
-    assert!((buffer_512_bytes.len() == 512));
+    assert!((buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES));
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}

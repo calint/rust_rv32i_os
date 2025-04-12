@@ -68,8 +68,8 @@ use lib::api::{
     uart_send_move_back,
 };
 use lib::api_unsafe::{
-    led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status, sdcard_write_blocking,
-    uart_read_byte, uart_send_byte,
+    SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status,
+    sdcard_write_blocking, uart_read_byte, uart_send_byte,
 };
 use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use lib::global_allocator::GlobalAllocator;
@@ -456,7 +456,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) {
         return;
     };
 
-    let mut buf = [0u8; 512];
+    let mut buf = [0u8; SDCARD_SECTOR_SIZE_BYTES];
     sdcard_read_blocking(sector, &mut buf);
     buf.iter().for_each(|&x| uart_send_byte(x));
     uart_send_bytes(b"\r\n\r\n");
@@ -471,8 +471,8 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     };
 
     let data = it.rest();
-    let len = data.len().min(512);
-    let mut buf = [0u8; 512];
+    let len = data.len().min(SDCARD_SECTOR_SIZE_BYTES);
+    let mut buf = [0u8; SDCARD_SECTOR_SIZE_BYTES];
     buf[..len].copy_from_slice(&data[..len]);
     sdcard_write_blocking(sector, &buf);
 }

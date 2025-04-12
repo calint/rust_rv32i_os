@@ -4,40 +4,40 @@ use core::alloc::{GlobalAlloc, Layout};
 use core::mem;
 use core::ptr;
 
-// Minimum block size and alignment
+// minimum block size and alignment
 const MIN_BLOCK_SIZE: usize = 16;
 const ALIGNMENT: usize = 8;
 
-// Block metadata structure
+// block metadata structure
 struct BlockHeader {
-    size: usize,            // Total size of the block including header
-    is_free: bool,          // Whether the block is available for allocation
-    next: *mut BlockHeader, // Next block in the free list
-    prev: *mut BlockHeader, // Previous block in the free list
+    size: usize,            // total size of the block including header
+    is_free: bool,          // whether the block is available for allocation
+    next: *mut BlockHeader, // next block in the free list
+    prev: *mut BlockHeader, // previous block in the free list
 }
 
 pub struct GlobalAllocator {
-    free_list: *mut BlockHeader, // Head of the free list
+    free_list: *mut BlockHeader, // head of the free list
 }
 
 #[expect(clippy::cast_ptr_alignment, reason = "intended")]
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // Adjust size to include header and ensure alignment
+        // adjust size to include header and ensure alignment
         let aligned_size = {
             let size = layout.size() + mem::size_of::<BlockHeader>();
             (size + ALIGNMENT - 1) & !(ALIGNMENT - 1)
         };
 
-        // Find first suitable free block
+        // find first suitable free block
         let mut current = self.free_list;
 
         unsafe {
             while !current.is_null() {
                 if (*current).is_free && (*current).size >= aligned_size {
-                    // Found a suitable block
+                    // found a suitable block
                     if (*current).size > aligned_size + MIN_BLOCK_SIZE {
-                        // Split the block if it's significantly larger
+                        // split the block if it's significantly larger
                         let remaining_size = (*current).size - aligned_size;
                         let new_block =
                             current.cast::<u8>().add(aligned_size).cast::<BlockHeader>();
@@ -81,16 +81,16 @@ unsafe impl GlobalAlloc for GlobalAllocator {
         // uart_send_bytes(b"\r\n");
 
         unsafe {
-            // Get the block header
+            // get the block header
             let block = ptr.sub(mem::size_of::<BlockHeader>()).cast::<BlockHeader>();
 
-            // Mark block as free
+            // mark block as free
             (*block).is_free = true;
 
-            // Attempt to merge with adjacent free blocks
+            // attempt to merge with adjacent free blocks
             let current = block;
 
-            // Merge with next block if possible
+            // merge with next block if possible
             if !(*current).next.is_null()
                 && (*(*current).next).is_free
                 && ptr::eq(
@@ -105,7 +105,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                 }
             }
 
-            // Merge with previous block if possible
+            // merge with previous block if possible
             if !(*current).prev.is_null()
                 && (*(*current).prev).is_free
                 && ptr::eq(
@@ -126,7 +126,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 #[expect(clippy::cast_ptr_alignment, reason = "intended")]
 impl GlobalAllocator {
     fn new(memory: *mut u8, total_size: usize) -> Self {
-        // Initialize the entire memory as one free block
+        // initialize the entire memory as one free block
         let first_block = memory.cast::<BlockHeader>();
         unsafe {
             (*first_block).size = total_size;
@@ -140,7 +140,6 @@ impl GlobalAllocator {
         }
     }
 
-    // Example initialization function
     pub fn init(heap_size: usize) {
         unsafe {
             HEAP_ALLOCATOR = Self::new((&raw const __heap_start__).cast_mut(), heap_size);
@@ -173,7 +172,6 @@ impl GlobalAllocator {
     }
 }
 
-// Implement a global allocator for no_std usage
 #[global_allocator]
 static mut HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
     free_list: ptr::null_mut(),

@@ -92,7 +92,7 @@ impl World {
         }
     }
 
-    pub fn send_message_to_location_entities(
+    pub fn send_message_to_entities_in_location(
         &mut self,
         location_id: LocationId,
         exclude_entities: &[EntityId],

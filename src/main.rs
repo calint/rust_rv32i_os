@@ -247,7 +247,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     };
 
     // send message to entities in 'from_location' that entity has left
-    world.send_message_to_location_entities(
+    world.send_message_to_entities_in_location(
         from_location_id,
         &[entity_id],
         EntityMessage::from_parts(&[&world.entities[entity_id].name, b" left to ", link_name]),
@@ -264,7 +264,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     };
 
     // send message to entities in 'to_location' that entity has arrived
-    world.send_message_to_location_entities(
+    world.send_message_to_entities_in_location(
         to_location_id,
         &[entity_id],
         EntityMessage::from_parts(&[
@@ -325,7 +325,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // send message
     {
         let entity = &world.entities[entity_id];
-        world.send_message_to_location_entities(
+        world.send_message_to_entities_in_location(
             entity.location,
             &[entity_id],
             EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
@@ -360,7 +360,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     // send message
     {
         let entity = &world.entities[entity_id];
-        world.send_message_to_location_entities(
+        world.send_message_to_entities_in_location(
             entity.location,
             &[entity_id],
             EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
@@ -407,7 +407,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     world.entities[to_entity_id].objects.push(object_id);
 
     // send messages
-    world.send_message_to_location_entities(
+    world.send_message_to_entities_in_location(
         world.entities[entity_id].location,
         &[to_entity_id],
         EntityMessage::from_parts(&[
@@ -597,7 +597,7 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
     }
 
     let entity = &world.entities[entity_id];
-    world.send_message_to_location_entities(
+    world.send_message_to_entities_in_location(
         entity.location,
         &[entity_id],
         EntityMessage::from_parts(&[&entity.name, b" says ", say]),

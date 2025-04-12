@@ -201,7 +201,7 @@ fn action_look(world: &mut World, entity_id: EntityId) {
 
 fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
     let Some(named_link) = it.next() else {
-        uart_send_bytes(b"go where");
+        uart_send_bytes(b"go where\r\n\r\n");
         return;
     };
 

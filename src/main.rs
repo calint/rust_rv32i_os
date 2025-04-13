@@ -84,7 +84,7 @@ const CHAR_ESCAPE: u8 = 0x1b;
 type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 type CommandBufferIterator<'a> = CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
 
-// setup stack and jump to 'run()'
+// setup bss section, stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
 #[unsafe(no_mangle)]

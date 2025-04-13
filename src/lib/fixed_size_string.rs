@@ -9,7 +9,7 @@ pub struct FixedSizeString<const N: usize> {
 impl<const N: usize> FixedSizeString<N> {
     pub const fn new() -> Self {
         Self {
-            data: [0u8; N],
+            data: [0_u8; N],
             len: 0,
         }
     }

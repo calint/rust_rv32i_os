@@ -45,8 +45,7 @@ nl west east kitchen
 nl east west bathroom
 no mirror
 go back
-ne me
-";
+ne me";
 
 mod lib {
     pub mod api;
@@ -866,7 +865,7 @@ fn create_world() -> World {
         links: vec![],
     };
 
-    for line in CREATION.split(|&x| x == b'\n').filter(|x| !x.is_empty()) {
+    for line in CREATION.split(|&x| x == b'\n') {
         let mut command_buffer = CommandBuffer::new();
         for &byte in line {
             if !command_buffer.insert(byte) {

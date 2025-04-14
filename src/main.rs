@@ -169,7 +169,7 @@ enum ActionFailed {
     DropWhat,
     ObjectNotInInventory,
     GiveToWhom,
-    GiveToWhat,
+    GiveWhat,
     EntityNotInLocation,
     WhatSector,
     WhichLeds,
@@ -455,7 +455,7 @@ fn action_give(
     // get object name
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"give what\r\n\r\n");
-        return Err(ActionFailed::GiveToWhat);
+        return Err(ActionFailed::GiveWhat);
     };
 
     let Some((object_index, object_id)) =

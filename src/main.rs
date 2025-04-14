@@ -174,7 +174,7 @@ enum ActionFailed {
     ObjectNotInInventory,
     GiveToWhom,
     GiveWhat,
-    EntityNotInLocation,
+    EntityNotHere,
     WhatSector,
     WhichLeds,
     WhatObjectName,
@@ -184,8 +184,8 @@ enum ActionFailed {
     WhatNewLocationName,
     LocationAlreadyExists,
     LinkFromLocationAlreadyExists,
-    EntityAlreadyExists,
     WhatEntityName,
+    EntityAlreadyExists,
     SayWhat,
     TellToWhom,
     TellWhat,
@@ -478,7 +478,7 @@ fn action_give(
     else {
         uart_send_bytes(to_entity_name);
         uart_send_bytes(b" not here\r\n\r\n");
-        return Err(ActionFailed::EntityNotInLocation);
+        return Err(ActionFailed::EntityNotHere);
     };
 
     // remove object from entity
@@ -766,7 +766,7 @@ fn action_tell(
     else {
         uart_send_bytes(to_name);
         uart_send_bytes(b" not here\r\n");
-        return Err(ActionFailed::EntityNotInLocation);
+        return Err(ActionFailed::EntityNotHere);
     };
 
     let message = EntityMessage::from_parts(&[&entity.name, b" tells u ", tell]);

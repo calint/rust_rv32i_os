@@ -110,7 +110,7 @@ pub extern "C" fn run() -> ! {
                 let mut command_buffer = CommandBuffer::new();
                 input(&mut command_buffer);
                 uart_send_bytes(b"\r\n");
-                if handle_input(&mut world, entity_id, &command_buffer).is_ok() {
+                if handle_input(&mut world, entity_id, &command_buffer, true).is_ok() {
                     break;
                 }
             }
@@ -122,6 +122,7 @@ fn handle_input(
     world: &mut World,
     entity_id: EntityId,
     command_buffer: &CommandBuffer,
+    new_line_after_result: bool,
 ) -> Result<()> {
     let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     match it.next() {
@@ -151,6 +152,10 @@ fn handle_input(
             uart_send_bytes(b"not understood\r\n\r\n");
             return Err(ActionFailed::InvalidCommand);
         }
+    }
+
+    if new_line_after_result {
+        uart_send_bytes(b"\r\n");
     }
 
     Ok(())
@@ -347,7 +352,7 @@ fn action_inventory(world: &World, entity_id: EntityId) -> Result<()> {
     if i == 0 {
         uart_send_bytes(b"nothing");
     }
-    uart_send_bytes(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n");
 
     Ok(())
 }
@@ -533,7 +538,7 @@ fn action_memory_info() -> Result<()> {
 fn action_sdcard_status() -> Result<()> {
     uart_send_bytes(b"SDCARD_STATUS: 0x");
     uart_send_hex_u32(sdcard_status() as u32, true);
-    uart_send_bytes(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n");
 
     Ok(())
 }
@@ -542,14 +547,14 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
-        uart_send_bytes(b"what sector\r\n\r\n");
+        uart_send_bytes(b"what sector\r\n");
         return Err(ActionFailed::WhatSector);
     };
 
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     sdcard_read_blocking(sector, &mut buf);
     buf.iter().for_each(|&x| uart_send_byte(x));
-    uart_send_bytes(b"\r\n\r\n");
+    uart_send_bytes(b"\r\n");
 
     Ok(())
 }
@@ -558,7 +563,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
-        uart_send_bytes(b"what sector\r\n\r\n");
+        uart_send_bytes(b"what sector\r\n");
         return Err(ActionFailed::WhatSector);
     };
 
@@ -576,7 +581,7 @@ fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
     } else {
-        uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n\r\n");
+        uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n");
         return Err(ActionFailed::WhichLeds);
     };
 
@@ -602,12 +607,12 @@ fn action_new_object(
 ) -> Result<()> {
     // get object name
     let Some(object_name) = it.next() else {
-        uart_send_bytes(b"what object name\r\n\r\n");
+        uart_send_bytes(b"what object name\r\n");
         return Err(ActionFailed::WhatObjectName);
     };
 
     if world.objects.iter().any(|x| x.name == object_name) {
-        uart_send_bytes(b"object already exists\r\n\r\n");
+        uart_send_bytes(b"object already exists\r\n");
         return Err(ActionFailed::ObjectAlreadyExists);
     }
 
@@ -624,22 +629,22 @@ fn action_new_location(
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     let Some(to_link_name) = it.next() else {
-        uart_send_bytes(b"what link name\r\n\r\n");
+        uart_send_bytes(b"what link name\r\n");
         return Err(ActionFailed::WhatToLinkName);
     };
 
     let Some(back_link_name) = it.next() else {
-        uart_send_bytes(b"what back link name\r\n\r\n");
+        uart_send_bytes(b"what back link name\r\n");
         return Err(ActionFailed::WhatBackLinkName);
     };
 
     let Some(new_location_name) = it.next() else {
-        uart_send_bytes(b"what new location name\r\n\r\n");
+        uart_send_bytes(b"what new location name\r\n");
         return Err(ActionFailed::WhatNewLocationName);
     };
 
     if world.locations.iter().any(|x| x.name == new_location_name) {
-        uart_send_bytes(b"location already exists\r\n\r\n");
+        uart_send_bytes(b"location already exists\r\n");
         return Err(ActionFailed::LocationAlreadyExists);
     }
 
@@ -653,7 +658,7 @@ fn action_new_location(
         .iter()
         .any(|x| x.link == to_link_id)
     {
-        uart_send_bytes(b"link from this location already exists\r\n\r\n");
+        uart_send_bytes(b"link from this location already exists\r\n");
         return Err(ActionFailed::LinkFromLocationAlreadyExists);
     }
 
@@ -687,12 +692,12 @@ fn action_new_entity(
 ) -> Result<()> {
     // get object name
     let Some(entity_name) = it.next() else {
-        uart_send_bytes(b"what entity name\r\n\r\n");
+        uart_send_bytes(b"what entity name\r\n");
         return Err(ActionFailed::WhatEntityName);
     };
 
     if world.entities.iter().any(|x| x.name == entity_name) {
-        uart_send_bytes(b"entity already exists\r\n\r\n");
+        uart_send_bytes(b"entity already exists\r\n");
         return Err(ActionFailed::EntityAlreadyExists);
     }
 
@@ -742,13 +747,13 @@ fn action_tell(
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     let Some(to_name) = it.next() else {
-        uart_send_bytes(b"tell to whom\r\n\r\n");
+        uart_send_bytes(b"tell to whom\r\n");
         return Err(ActionFailed::TellToWhom);
     };
 
     let tell = it.rest();
     if tell.is_empty() {
-        uart_send_bytes(b"tell what\r\n\r\n");
+        uart_send_bytes(b"tell what\r\n");
         return Err(ActionFailed::TellWhat);
     }
 
@@ -760,7 +765,7 @@ fn action_tell(
         .find(|&&x| world.entities[x].name == to_name)
     else {
         uart_send_bytes(to_name);
-        uart_send_bytes(b" not here\r\n\r\n");
+        uart_send_bytes(b" not here\r\n");
         return Err(ActionFailed::EntityNotInLocation);
     };
 
@@ -874,7 +879,7 @@ fn create_world() -> World {
         }
 
         assert!(
-            handle_input(&mut world, 0, &command_buffer).is_ok(),
+            handle_input(&mut world, 0, &command_buffer, false).is_ok(),
             "error creating world"
         );
 

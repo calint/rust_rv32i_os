@@ -4,11 +4,14 @@ SECTIONS
   .rodata : ALIGN(4) { *(.rodata .rodata.*) }
   .data : ALIGN(4) { *(.data .data.*) }
   .sdata : ALIGN(4) { *(.sdata .sdata.*) }
-  . = ALIGN(4);
-  __bss_start__ = .;
-  .sbss : { *(.sbss .sbss.*) }
-  .bss : { *(.bss .bss.*) }
-  __bss_end__ = .;
+  .sbss : ALIGN(4) { 
+    __bss_start__ = .;
+    *(.sbss .sbss.*) 
+  }
+  .bss : ALIGN(4) {
+    *(.bss .bss.*)
+    __bss_end__ = .;
+  }
   . = ALIGN(16);
   __heap_start__ = .;
 }

@@ -87,6 +87,9 @@ type CommandBufferIterator<'a> = CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u
 // setup bss section, stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));
 
+/// # Panics
+///
+/// Will panic if look fails
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
     led_set(0b0000); // turn all leds on
@@ -100,47 +103,92 @@ pub extern "C" fn run() -> ! {
 
     loop {
         for entity_id in 0..world.entities.len() {
-            action_look(&mut world, entity_id);
-            uart_send_bytes(&world.entities[entity_id].name);
-            uart_send_bytes(b" > ");
-            let mut command_buffer = CommandBuffer::new();
-            input(&mut command_buffer);
-            uart_send_bytes(b"\r\n");
-            handle_input(&mut world, entity_id, &command_buffer);
+            assert!(action_look(&mut world, entity_id).is_ok(), "cannot look");
+            loop {
+                // loop until action succeeded
+                uart_send_bytes(&world.entities[entity_id].name);
+                uart_send_bytes(b" > ");
+                let mut command_buffer = CommandBuffer::new();
+                input(&mut command_buffer);
+                uart_send_bytes(b"\r\n");
+                if handle_input(&mut world, entity_id, &command_buffer).is_ok() {
+                    break;
+                }
+            }
         }
     }
 }
 
-fn handle_input(world: &mut World, entity_id: EntityId, command_buffer: &CommandBuffer) {
+fn handle_input(
+    world: &mut World,
+    entity_id: EntityId,
+    command_buffer: &CommandBuffer,
+) -> Result<()> {
     let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     match it.next() {
-        Some(b"go") => action_go(world, entity_id, &mut it),
-        Some(b"n") => action_go_named_link(world, entity_id, b"north"),
-        Some(b"e") => action_go_named_link(world, entity_id, b"east"),
-        Some(b"s") => action_go_named_link(world, entity_id, b"south"),
-        Some(b"w") => action_go_named_link(world, entity_id, b"west"),
-        Some(b"i") => action_inventory(world, entity_id),
-        Some(b"t") => action_take(world, entity_id, &mut it),
-        Some(b"d") => action_drop(world, entity_id, &mut it),
-        Some(b"g") => action_give(world, entity_id, &mut it),
-        Some(b"sds") => action_sdcard_status(),
-        Some(b"sdr") => action_sdcard_read(&mut it),
-        Some(b"sdw") => action_sdcard_write(&mut it),
-        Some(b"mi") => action_memory_info(),
-        Some(b"led") => action_led_set(&mut it),
-        Some(b"help") => action_help(),
-        Some(b"no") => action_new_object(world, entity_id, &mut it),
-        Some(b"nl") => action_new_location(world, entity_id, &mut it),
-        Some(b"nln") => action_set_location_note(world, entity_id, &mut it),
-        Some(b"ne") => action_new_entity(world, entity_id, &mut it),
-        Some(b"say") => action_say(world, entity_id, &mut it),
-        Some(b"tell") => action_tell(world, entity_id, &mut it),
-        Some(b"wait") => action_wait(),
-        _ => uart_send_bytes(b"not understood\r\n\r\n"),
+        Some(b"go") => action_go(world, entity_id, &mut it)?,
+        Some(b"n") => action_go_named_link(world, entity_id, b"north")?,
+        Some(b"e") => action_go_named_link(world, entity_id, b"east")?,
+        Some(b"s") => action_go_named_link(world, entity_id, b"south")?,
+        Some(b"w") => action_go_named_link(world, entity_id, b"west")?,
+        Some(b"i") => action_inventory(world, entity_id)?,
+        Some(b"t") => action_take(world, entity_id, &mut it)?,
+        Some(b"d") => action_drop(world, entity_id, &mut it)?,
+        Some(b"g") => action_give(world, entity_id, &mut it)?,
+        Some(b"sds") => action_sdcard_status()?,
+        Some(b"sdr") => action_sdcard_read(&mut it)?,
+        Some(b"sdw") => action_sdcard_write(&mut it)?,
+        Some(b"mi") => action_memory_info()?,
+        Some(b"led") => action_led_set(&mut it)?,
+        Some(b"help") => action_help()?,
+        Some(b"no") => action_new_object(world, entity_id, &mut it)?,
+        Some(b"nl") => action_new_location(world, entity_id, &mut it)?,
+        Some(b"nln") => action_set_location_note(world, entity_id, &mut it)?,
+        Some(b"ne") => action_new_entity(world, entity_id, &mut it)?,
+        Some(b"say") => action_say(world, entity_id, &mut it)?,
+        Some(b"tell") => action_tell(world, entity_id, &mut it)?,
+        Some(b"wait") => action_wait()?,
+        _ => {
+            uart_send_bytes(b"not understood\r\n\r\n");
+            return Err(ActionFailed::InvalidCommand);
+        }
     }
+
+    Ok(())
 }
 
-fn action_look(world: &mut World, entity_id: EntityId) {
+type Result<T> = core::result::Result<T, ActionFailed>;
+
+enum ActionFailed {
+    InvalidCommand,
+    GoWhere,
+    NoSuchExit,
+    CannotGoThere,
+    TakeWhat,
+    ObjectNotHere,
+    DropWhat,
+    ObjectNotInInventory,
+    GiveToWhom,
+    GiveToWhat,
+    EntityNotInLocation,
+    WhatSector,
+    WhichLeds,
+    WhatObjectName,
+    ObjectAlreadyExists,
+    WhatToLinkName,
+    WhatBackLinkName,
+    WhatNewLocationName,
+    LocationAlreadyExists,
+    LinkFromLocationAlreadyExists,
+    EntityAlreadyExists,
+    WhatEntityName,
+    SayWhat,
+    TellToWhom,
+    TellWhat,
+}
+
+#[allow(clippy::unnecessary_wraps)]
+fn action_look(world: &mut World, entity_id: EntityId) -> Result<()> {
     let entity = &mut world.entities[entity_id];
     let location = &world.locations[entity.location];
 
@@ -197,22 +245,24 @@ fn action_look(world: &mut World, entity_id: EntityId) {
         uart_send_bytes(&location.note);
         uart_send_bytes(b"\r\n");
     }
+
+    Ok(())
 }
 
-fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) -> Result<()> {
     let Some(named_link) = it.next() else {
         uart_send_bytes(b"go where\r\n\r\n");
-        return;
+        return Err(ActionFailed::GoWhere);
     };
 
-    action_go_named_link(world, entity_id, named_link);
+    action_go_named_link(world, entity_id, named_link)
 }
 
-fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) {
+fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) -> Result<()> {
     // find link id
     let Some(link_id) = world.links.iter().position(|x| x.name == link_name) else {
         uart_send_bytes(b"no such exit\r\n\r\n");
-        return;
+        return Err(ActionFailed::NoSuchExit);
     };
 
     // move entity
@@ -226,8 +276,8 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
             if let Some(lnk) = from_location.links.iter().find(|x| x.link == link_id) {
                 lnk.location
             } else {
-                uart_send_bytes(b"can't go there\r\n\r\n");
-                return;
+                uart_send_bytes(b"cannot go there\r\n\r\n");
+                return Err(ActionFailed::CannotGoThere);
             };
 
         // remove entity from old location
@@ -273,9 +323,12 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
             &world.links[back_link_id].name,
         ]),
     );
+
+    Ok(())
 }
 
-fn action_inventory(world: &World, entity_id: EntityId) {
+#[allow(clippy::unnecessary_wraps)]
+fn action_inventory(world: &World, entity_id: EntityId) -> Result<()> {
     let entity = &world.entities[entity_id];
     uart_send_bytes(b"u have: ");
     let mut i = 0;
@@ -290,13 +343,19 @@ fn action_inventory(world: &World, entity_id: EntityId) {
         uart_send_bytes(b"nothing");
     }
     uart_send_bytes(b"\r\n\r\n");
+
+    Ok(())
 }
 
-fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_take(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     // get object name
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"take what\r\n\r\n");
-        return;
+        return Err(ActionFailed::TakeWhat);
     };
 
     {
@@ -312,7 +371,7 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         else {
             uart_send_bytes(object_name);
             uart_send_bytes(b" is not here\r\n\r\n");
-            return;
+            return Err(ActionFailed::ObjectNotHere);
         };
 
         // remove object from location
@@ -331,12 +390,18 @@ fn action_take(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
         );
     }
+
+    Ok(())
 }
 
-fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_drop(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"drop what\r\n\r\n");
-        return;
+        return Err(ActionFailed::DropWhat);
     };
 
     {
@@ -345,7 +410,7 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
         else {
             uart_send_bytes(object_name);
             uart_send_bytes(b" not in inventory\r\n\r\n");
-            return;
+            return Err(ActionFailed::ObjectNotInInventory);
         };
 
         let entity = &mut world.entities[entity_id];
@@ -366,19 +431,25 @@ fn action_drop(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
         );
     }
+
+    Ok(())
 }
 
-fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_give(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     // get entity name
     let Some(to_entity_name) = it.next() else {
         uart_send_bytes(b"give to whom\r\n\r\n");
-        return;
+        return Err(ActionFailed::GiveToWhom);
     };
 
     // get object name
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"give what\r\n\r\n");
-        return;
+        return Err(ActionFailed::GiveToWhat);
     };
 
     let Some((object_index, object_id)) =
@@ -386,7 +457,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     else {
         uart_send_bytes(object_name);
         uart_send_bytes(b" not in inventory\r\n\r\n");
-        return;
+        return Err(ActionFailed::ObjectNotInInventory);
     };
 
     // find "to" entity
@@ -397,7 +468,7 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     else {
         uart_send_bytes(to_entity_name);
         uart_send_bytes(b" not here\r\n\r\n");
-        return;
+        return Err(ActionFailed::EntityNotInLocation);
     };
 
     // remove object from entity
@@ -427,9 +498,12 @@ fn action_give(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
             &world.objects[object_id].name,
         ]),
     );
+
+    Ok(())
 }
 
-fn action_memory_info() {
+#[allow(clippy::unnecessary_wraps)]
+fn action_memory_info() -> Result<()> {
     uart_send_bytes(b"   heap start: ");
     uart_send_hex_u32(memory_heap_start(), true);
     uart_send_bytes(b"\r\nstack pointer: ");
@@ -439,35 +513,42 @@ fn action_memory_info() {
     uart_send_bytes(b"\r\n\r\nheap blocks:\r\n");
     GlobalAllocator::debug_block_list();
     uart_send_bytes(b"\r\n");
+
+    Ok(())
 }
 
 #[expect(clippy::cast_sign_loss, reason = "intended")]
-fn action_sdcard_status() {
+#[allow(clippy::unnecessary_wraps)]
+fn action_sdcard_status() -> Result<()> {
     uart_send_bytes(b"SDCARD_STATUS: 0x");
     uart_send_hex_u32(sdcard_status() as u32, true);
     uart_send_bytes(b"\r\n\r\n");
+
+    Ok(())
 }
 
-fn action_sdcard_read(it: &mut CommandBufferIterator) {
+fn action_sdcard_read(it: &mut CommandBufferIterator) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
         uart_send_bytes(b"what sector\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhatSector);
     };
 
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     sdcard_read_blocking(sector, &mut buf);
     buf.iter().for_each(|&x| uart_send_byte(x));
     uart_send_bytes(b"\r\n\r\n");
+
+    Ok(())
 }
 
-fn action_sdcard_write(it: &mut CommandBufferIterator) {
+fn action_sdcard_write(it: &mut CommandBufferIterator) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
         uart_send_bytes(b"what sector\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhatSector);
     };
 
     let data = it.rest();
@@ -475,60 +556,77 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) {
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     buf[..len].copy_from_slice(&data[..len]);
     sdcard_write_blocking(sector, &buf);
+
+    Ok(())
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "intended")]
-fn action_led_set(it: &mut CommandBufferIterator) {
+fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
     } else {
         uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhichLeds);
     };
 
     led_set(bits as u8);
+
+    Ok(())
 }
 
-fn action_help() {
+#[allow(clippy::unnecessary_wraps)]
+fn action_help() -> Result<()> {
     uart_send_bytes(HELP);
+
+    Ok(())
 }
 
-fn action_new_object(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_new_object(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     // get object name
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"what object name\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhatObjectName);
     };
 
     if world.objects.iter().any(|x| x.name == object_name) {
         uart_send_bytes(b"object already exists\r\n\r\n");
-        return;
+        return Err(ActionFailed::ObjectAlreadyExists);
     }
 
     let object_id = world.add_object(object_name);
 
     world.entities[entity_id].objects.push(object_id);
+
+    Ok(())
 }
 
-fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_new_location(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     let Some(to_link_name) = it.next() else {
         uart_send_bytes(b"what link name\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhatToLinkName);
     };
 
     let Some(back_link_name) = it.next() else {
         uart_send_bytes(b"what back link name\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhatBackLinkName);
     };
 
     let Some(new_location_name) = it.next() else {
         uart_send_bytes(b"what new location name\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhatNewLocationName);
     };
 
     if world.locations.iter().any(|x| x.name == new_location_name) {
         uart_send_bytes(b"location already exists\r\n\r\n");
-        return;
+        return Err(ActionFailed::LocationAlreadyExists);
     }
 
     let from_location_id = world.entities[entity_id].location;
@@ -542,7 +640,7 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         .any(|x| x.link == to_link_id)
     {
         uart_send_bytes(b"link from this location already exists\r\n\r\n");
-        return;
+        return Err(ActionFailed::LinkFromLocationAlreadyExists);
     }
 
     let back_link_id = world.find_or_add_link(back_link_name);
@@ -564,36 +662,51 @@ fn action_new_location(world: &mut World, entity_id: EntityId, it: &mut CommandB
         link: to_link_id,
         location: new_location_id,
     });
+
+    Ok(())
 }
 
-fn action_new_entity(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_new_entity(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     // get object name
     let Some(entity_name) = it.next() else {
         uart_send_bytes(b"what entity name\r\n\r\n");
-        return;
+        return Err(ActionFailed::WhatEntityName);
     };
 
     if world.entities.iter().any(|x| x.name == entity_name) {
         uart_send_bytes(b"entity already exists\r\n\r\n");
-        return;
+        return Err(ActionFailed::EntityAlreadyExists);
     }
 
     world.add_entity(entity_name, world.entities[entity_id].location);
+
+    Ok(())
 }
 
+#[allow(clippy::unnecessary_wraps)]
 fn action_set_location_note(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) {
+) -> Result<()> {
     world.locations[world.entities[entity_id].location].note = Note::from(it.rest());
+
+    Ok(())
 }
 
-fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_say(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     let say = it.rest();
     if say.is_empty() {
         uart_send_bytes(b"say what");
-        return;
+        return Err(ActionFailed::SayWhat);
     }
 
     let entity = &world.entities[entity_id];
@@ -602,18 +715,24 @@ fn action_say(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIter
         &[entity_id],
         EntityMessage::from_parts(&[&entity.name, b" says ", say]),
     );
+
+    Ok(())
 }
 
-fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) {
+fn action_tell(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     let Some(to_name) = it.next() else {
         uart_send_bytes(b"tell to whom\r\n\r\n");
-        return;
+        return Err(ActionFailed::TellToWhom);
     };
 
     let tell = it.rest();
     if tell.is_empty() {
         uart_send_bytes(b"tell what\r\n\r\n");
-        return;
+        return Err(ActionFailed::TellWhat);
     }
 
     let entity = &world.entities[entity_id];
@@ -625,14 +744,19 @@ fn action_tell(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIte
     else {
         uart_send_bytes(to_name);
         uart_send_bytes(b" not here\r\n\r\n");
-        return;
+        return Err(ActionFailed::EntityNotInLocation);
     };
 
     let message = EntityMessage::from_parts(&[&entity.name, b" tells u ", tell]);
     world.entities[to_entity_id].messages.push(message);
+
+    Ok(())
 }
 
-const fn action_wait() {}
+#[allow(clippy::unnecessary_wraps)]
+const fn action_wait() -> Result<()> {
+    Ok(())
+}
 
 fn input(command_buffer: &mut CommandBuffer) {
     enum InputState {
@@ -745,11 +869,15 @@ fn create_world() -> World {
             }
         }
 
-        handle_input(&mut world, 0, &command_buffer);
+        assert!(
+            handle_input(&mut world, 0, &command_buffer).is_ok(),
+            "error creating world"
+        );
 
         // clear messages on all entities in case input generated messages
         world.entities.iter_mut().for_each(|x| x.messages.clear());
     }
+
     world
 }
 

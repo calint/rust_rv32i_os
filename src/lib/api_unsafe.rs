@@ -19,8 +19,11 @@ pub fn uart_send_byte(ch: u8) {
     }
 }
 
-#[expect(clippy::cast_possible_truncation, reason = "intended")]
-#[expect(clippy::cast_sign_loss, reason = "intended")]
+#[expect(
+    clippy::cast_possible_truncation,
+    reason = "Because it is intended behavior."
+)]
+#[expect(clippy::cast_sign_loss, reason = "Because it is intended behavior.ed")]
 pub fn uart_read_byte() -> u8 {
     unsafe {
         loop {

@@ -18,7 +18,7 @@ impl<const N: usize> FixedSizeString<N> {
         Self::from_parts(&[src])
     }
 
-    /// Will not write more than the length.
+    /// Will not write more than the allocated length. Silently returns self.
     pub fn from_parts(parts: &[&[u8]]) -> Self {
         let mut s = Self::new();
         for &part in parts {
@@ -31,7 +31,7 @@ impl<const N: usize> FixedSizeString<N> {
         self.len == 0
     }
 
-    /// Will not write more than the length. Silently returns self.
+    /// Will not write more than the allocated length. Silently returns self.
     pub fn append(&mut self, s: &[u8]) -> &Self {
         let cpy_len = s.len().min(N - self.len);
         self.data[self.len..self.len + cpy_len].copy_from_slice(&s[..cpy_len]);

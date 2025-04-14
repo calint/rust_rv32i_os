@@ -122,7 +122,7 @@ fn handle_input(
     world: &mut World,
     entity_id: EntityId,
     command_buffer: &CommandBuffer,
-    new_line_after_result: bool,
+    separator_after_success: bool,
 ) -> Result<()> {
     let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     match it.next() {
@@ -154,7 +154,7 @@ fn handle_input(
         }
     }
 
-    if new_line_after_result {
+    if separator_after_success {
         uart_send_bytes(b"\r\n");
     }
 

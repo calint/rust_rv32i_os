@@ -88,7 +88,7 @@ global_asm!(include_str!("startup.s"));
 
 /// # Panics
 ///
-/// Will panic if look fails.
+/// Will panic if `action_look` fails.
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
     led_set(0b0000); // turn all leds on

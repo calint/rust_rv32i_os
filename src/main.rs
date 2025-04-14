@@ -873,9 +873,7 @@ fn create_world() -> World {
     for line in CREATION.split(|&x| x == b'\n') {
         let mut command_buffer = CommandBuffer::new();
         for &byte in line {
-            if !command_buffer.insert(byte) {
-                break;
-            }
+            assert!(command_buffer.insert(byte), "command to large");
         }
 
         assert!(

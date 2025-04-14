@@ -123,7 +123,7 @@ fn handle_input(
     world: &mut World,
     entity_id: EntityId,
     command_buffer: &CommandBuffer,
-) -> Result<()> {
+) -> ActionResult<()> {
     let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     match it.next() {
         Some(b"go") => action_go(world, entity_id, &mut it)?,
@@ -157,7 +157,7 @@ fn handle_input(
     Ok(())
 }
 
-type Result<T> = core::result::Result<T, ActionFailed>;
+type ActionResult<T> = core::result::Result<T, ActionFailed>;
 
 enum ActionFailed {
     InvalidCommand,
@@ -187,8 +187,11 @@ enum ActionFailed {
     TellWhat,
 }
 
-#[allow(clippy::unnecessary_wraps)]
-fn action_look(world: &mut World, entity_id: EntityId) -> Result<()> {
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "for consistency all actions return result"
+)]
+fn action_look(world: &mut World, entity_id: EntityId) -> ActionResult<()> {
     let entity = &mut world.entities[entity_id];
     let location = &world.locations[entity.location];
 
@@ -249,7 +252,11 @@ fn action_look(world: &mut World, entity_id: EntityId) -> Result<()> {
     Ok(())
 }
 
-fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferIterator) -> Result<()> {
+fn action_go(
+    world: &mut World,
+    entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> ActionResult<()> {
     let Some(named_link) = it.next() else {
         uart_send_bytes(b"go where\r\n\r\n");
         return Err(ActionFailed::GoWhere);
@@ -258,7 +265,11 @@ fn action_go(world: &mut World, entity_id: EntityId, it: &mut CommandBufferItera
     action_go_named_link(world, entity_id, named_link)
 }
 
-fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]) -> Result<()> {
+fn action_go_named_link(
+    world: &mut World,
+    entity_id: EntityId,
+    link_name: &[u8],
+) -> ActionResult<()> {
     // find link id
     let Some(link_id) = world.links.iter().position(|x| x.name == link_name) else {
         uart_send_bytes(b"no such exit\r\n\r\n");
@@ -327,8 +338,11 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
     Ok(())
 }
 
-#[allow(clippy::unnecessary_wraps)]
-fn action_inventory(world: &World, entity_id: EntityId) -> Result<()> {
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "for consistency all actions return result"
+)]
+fn action_inventory(world: &World, entity_id: EntityId) -> ActionResult<()> {
     let entity = &world.entities[entity_id];
     uart_send_bytes(b"u have: ");
     let mut i = 0;
@@ -351,7 +365,7 @@ fn action_take(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     // get object name
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"take what\r\n\r\n");
@@ -398,7 +412,7 @@ fn action_drop(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"drop what\r\n\r\n");
         return Err(ActionFailed::DropWhat);
@@ -439,7 +453,7 @@ fn action_give(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     // get entity name
     let Some(to_entity_name) = it.next() else {
         uart_send_bytes(b"give to whom\r\n\r\n");
@@ -502,8 +516,11 @@ fn action_give(
     Ok(())
 }
 
-#[allow(clippy::unnecessary_wraps)]
-fn action_memory_info() -> Result<()> {
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "for consistency all actions return result"
+)]
+fn action_memory_info() -> ActionResult<()> {
     uart_send_bytes(b"   heap start: ");
     uart_send_hex_u32(memory_heap_start(), true);
     uart_send_bytes(b"\r\nstack pointer: ");
@@ -518,8 +535,11 @@ fn action_memory_info() -> Result<()> {
 }
 
 #[expect(clippy::cast_sign_loss, reason = "intended")]
-#[allow(clippy::unnecessary_wraps)]
-fn action_sdcard_status() -> Result<()> {
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "for consistency all actions return result"
+)]
+fn action_sdcard_status() -> ActionResult<()> {
     uart_send_bytes(b"SDCARD_STATUS: 0x");
     uart_send_hex_u32(sdcard_status() as u32, true);
     uart_send_bytes(b"\r\n\r\n");
@@ -527,7 +547,7 @@ fn action_sdcard_status() -> Result<()> {
     Ok(())
 }
 
-fn action_sdcard_read(it: &mut CommandBufferIterator) -> Result<()> {
+fn action_sdcard_read(it: &mut CommandBufferIterator) -> ActionResult<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
@@ -543,7 +563,7 @@ fn action_sdcard_read(it: &mut CommandBufferIterator) -> Result<()> {
     Ok(())
 }
 
-fn action_sdcard_write(it: &mut CommandBufferIterator) -> Result<()> {
+fn action_sdcard_write(it: &mut CommandBufferIterator) -> ActionResult<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
@@ -561,7 +581,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) -> Result<()> {
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "intended")]
-fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
+fn action_led_set(it: &mut CommandBufferIterator) -> ActionResult<()> {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
     } else {
@@ -574,8 +594,11 @@ fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
     Ok(())
 }
 
-#[allow(clippy::unnecessary_wraps)]
-fn action_help() -> Result<()> {
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "for consistency all actions return result"
+)]
+fn action_help() -> ActionResult<()> {
     uart_send_bytes(HELP);
 
     Ok(())
@@ -585,7 +608,7 @@ fn action_new_object(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     // get object name
     let Some(object_name) = it.next() else {
         uart_send_bytes(b"what object name\r\n\r\n");
@@ -608,7 +631,7 @@ fn action_new_location(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     let Some(to_link_name) = it.next() else {
         uart_send_bytes(b"what link name\r\n\r\n");
         return Err(ActionFailed::WhatToLinkName);
@@ -670,7 +693,7 @@ fn action_new_entity(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     // get object name
     let Some(entity_name) = it.next() else {
         uart_send_bytes(b"what entity name\r\n\r\n");
@@ -687,12 +710,15 @@ fn action_new_entity(
     Ok(())
 }
 
-#[allow(clippy::unnecessary_wraps)]
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "for consistency all actions return result"
+)]
 fn action_set_location_note(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     world.locations[world.entities[entity_id].location].note = Note::from(it.rest());
 
     Ok(())
@@ -702,7 +728,7 @@ fn action_say(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     let say = it.rest();
     if say.is_empty() {
         uart_send_bytes(b"say what");
@@ -723,7 +749,7 @@ fn action_tell(
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
-) -> Result<()> {
+) -> ActionResult<()> {
     let Some(to_name) = it.next() else {
         uart_send_bytes(b"tell to whom\r\n\r\n");
         return Err(ActionFailed::TellToWhom);
@@ -753,8 +779,11 @@ fn action_tell(
     Ok(())
 }
 
-#[allow(clippy::unnecessary_wraps)]
-const fn action_wait() -> Result<()> {
+#[allow(
+    clippy::unnecessary_wraps,
+    reason = "for consistency all actions return result"
+)]
+const fn action_wait() -> ActionResult<()> {
     Ok(())
 }
 

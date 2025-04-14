@@ -780,8 +780,6 @@ const fn action_wait() -> Result<()> {
 }
 
 fn input(command_buffer: &mut CommandBuffer) {
-    command_buffer.reset();
-
     loop {
         let ch = uart_read_byte();
         led_set(!ch);
@@ -818,11 +816,12 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer) {
                         uart_send_bytes(b"\x1B[C");
                     }
                 }
-                b'~' if parameter == 3 => {
+                b'~' => {
                     command_buffer.del();
                     command_buffer.for_each_from_cursor(uart_send_byte);
                     uart_send_byte(b' ');
                     uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
+                    // note: +1 because of ' ' that erases the trailing character
                 }
                 _ => {}
             }

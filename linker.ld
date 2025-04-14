@@ -1,14 +1,14 @@
 SECTIONS
 {
-  .text : ALIGN(4) { *(.text .text.*) }
-  .rodata : ALIGN(4) { *(.rodata .rodata.*) }
-  .data : ALIGN(4) { *(.data .data.*) }
-  .sdata : ALIGN(4) { *(.sdata .sdata.*) }
-  .sbss : ALIGN(4) { 
+  .text : { *(.text .text.*) }
+  .rodata : { *(.rodata .rodata.*) }
+  .data : { *(.data .data.*) }
+  .sdata : { *(.sdata .sdata.*) }
+  .sbss : { 
     __bss_start__ = .;
     *(.sbss .sbss.*) 
   }
-  .bss : ALIGN(4) {
+  .bss : {
     *(.bss .bss.*)
     __bss_end__ = .;
   }
@@ -17,3 +17,4 @@ SECTIONS
 }
 
 /* note: .sdata and .sbss sections placed next to each other to optimize 'gp' register offsets */
+/* note: align 4 is the default alignment for .text, .rodata, .data, .sbss, .bss */

@@ -1,14 +1,15 @@
 SECTIONS
 {
-  .text : { *(.text .text.*) }
-  .rodata : { *(.rodata .rodata.*) }
-  .data : { *(.data .data.*) }
-  .sdata : { *(.sdata .sdata.*) }
+  .text : ALIGN(4) { *(.text .text.*) }
+  .rodata : ALIGN(4) { *(.rodata .rodata.*) }
+  .data : ALIGN(4) { *(.data .data.*) }
+  .sdata : ALIGN(4) { *(.sdata .sdata.*) }
+  . = ALIGN(4);
   __bss_start__ = .;
   .sbss : { *(.sbss .sbss.*) }
   .bss : { *(.bss .bss.*) }
   __bss_end__ = .;
-  . = ALIGN(4);
+  . = ALIGN(16);
   __heap_start__ = .;
 }
 

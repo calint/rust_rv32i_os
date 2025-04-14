@@ -193,7 +193,7 @@ enum ActionFailed {
 
 #[allow(
     clippy::unnecessary_wraps,
-    reason = "All actions return Result for consistency."
+    reason = "actions return Result for consistency"
 )]
 fn action_look(world: &mut World, entity_id: EntityId) -> Result<()> {
     let entity = &mut world.entities[entity_id];
@@ -288,9 +288,11 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
             };
 
         // remove entity from old location
-        let Some(pos) = from_location.entities.iter().position(|&x| x == entity_id) else {
-            panic!();
-        };
+        let pos = from_location
+            .entities
+            .iter()
+            .position(|&x| x == entity_id)
+            .expect("entity should be in location");
 
         from_location.entities.remove(pos);
 
@@ -312,13 +314,11 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
 
     // find link name that leads from 'to_location_id' to 'from_location_id'
     // note: assumes links are bi-directional thus panic if not
-    let Some(back_link_id) = world.locations[to_location_id]
+    let back_link_id = world.locations[to_location_id]
         .links
         .iter()
         .find_map(|x| (x.location == from_location_id).then_some(x.link))
-    else {
-        panic!();
-    };
+        .expect("link back to location should exist in target location");
 
     // send message to entities in 'to_location' that entity has arrived
     world.send_message_to_entities_in_location(
@@ -336,7 +336,7 @@ fn action_go_named_link(world: &mut World, entity_id: EntityId, link_name: &[u8]
 
 #[allow(
     clippy::unnecessary_wraps,
-    reason = "All actions return Result for consistency."
+    reason = "actions return Result for consistency"
 )]
 fn action_inventory(world: &World, entity_id: EntityId) -> Result<()> {
     let entity = &world.entities[entity_id];
@@ -514,7 +514,7 @@ fn action_give(
 
 #[allow(
     clippy::unnecessary_wraps,
-    reason = "All actions return Result for consistency."
+    reason = "actions return Result for consistency"
 )]
 fn action_memory_info() -> Result<()> {
     uart_send_bytes(b"   heap start: ");
@@ -530,10 +530,10 @@ fn action_memory_info() -> Result<()> {
     Ok(())
 }
 
-#[expect(clippy::cast_sign_loss, reason = "Intended behavior.")]
+#[expect(clippy::cast_sign_loss, reason = "intended behavior")]
 #[allow(
     clippy::unnecessary_wraps,
-    reason = "All actions return Result for consistency."
+    reason = "actions return Result for consistency"
 )]
 fn action_sdcard_status() -> Result<()> {
     uart_send_bytes(b"SDCARD_STATUS: 0x");
@@ -576,7 +576,7 @@ fn action_sdcard_write(it: &mut CommandBufferIterator) -> Result<()> {
     Ok(())
 }
 
-#[expect(clippy::cast_possible_truncation, reason = "Intended behavior.")]
+#[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
 fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
@@ -592,7 +592,7 @@ fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
 
 #[allow(
     clippy::unnecessary_wraps,
-    reason = "All actions return Result for consistency."
+    reason = "actions return Result for consistency"
 )]
 fn action_help() -> Result<()> {
     uart_send_bytes(HELP);
@@ -708,7 +708,7 @@ fn action_new_entity(
 
 #[allow(
     clippy::unnecessary_wraps,
-    reason = "All actions return Result for consistency."
+    reason = "actions return Result for consistency"
 )]
 fn action_set_location_note(
     world: &mut World,
@@ -777,7 +777,7 @@ fn action_tell(
 
 #[allow(
     clippy::unnecessary_wraps,
-    reason = "All actions return Result for consistency."
+    reason = "actions return Result for consistency"
 )]
 const fn action_wait() -> Result<()> {
     Ok(())

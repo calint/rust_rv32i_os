@@ -19,7 +19,7 @@ pub struct GlobalAllocator {
     free_list: *mut BlockHeader, // head of the free list
 }
 
-#[expect(clippy::cast_ptr_alignment, reason = "Intended behavior.")]
+#[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
         // adjust size to include header and ensure alignment
@@ -122,7 +122,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
     }
 }
 
-#[expect(clippy::cast_ptr_alignment, reason = "Intended behavior.")]
+#[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 impl GlobalAllocator {
     fn new(memory: *mut u8, total_size: usize) -> Self {
         // initialize the entire memory as one free block
@@ -145,7 +145,7 @@ impl GlobalAllocator {
         }
     }
 
-    #[expect(clippy::cast_possible_truncation, reason = "Intended behavior.")]
+    #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
     pub fn debug_block_list() {
         unsafe {
             let mut current = HEAP_ALLOCATOR.free_list;

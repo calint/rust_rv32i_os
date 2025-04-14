@@ -780,86 +780,71 @@ const fn action_wait() -> Result<()> {
 }
 
 fn input(command_buffer: &mut CommandBuffer) {
-    enum InputState {
-        Normal,
-        Escape,
-        EscapeBracket,
-    }
-
-    let mut state = InputState::Normal;
-    let mut escape_sequence_parameter = 0;
-
     command_buffer.reset();
 
     loop {
         let ch = uart_read_byte();
         led_set(!ch);
 
-        match state {
-            InputState::Normal => {
-                if ch == CHAR_ESCAPE {
-                    state = InputState::Escape;
-                } else if ch == CHAR_BACKSPACE {
-                    if command_buffer.backspace() {
-                        uart_send_byte(ch);
-                        command_buffer.for_each_from_cursor(uart_send_byte);
-                        uart_send_byte(b' ');
-                        uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
-                    }
-                } else if ch == CHAR_CARRIAGE_RETURN || command_buffer.is_full() {
-                    return;
-                } else if command_buffer.insert(ch) {
-                    uart_send_byte(ch);
-                    command_buffer.for_each_from_cursor(uart_send_byte);
-                    uart_send_move_back(command_buffer.elements_after_cursor_count());
-                } else {
-                    return;
-                }
-            }
-            InputState::Escape => {
-                if ch == b'[' {
-                    state = InputState::EscapeBracket;
-                } else {
-                    state = InputState::Normal;
-                }
-            }
-            InputState::EscapeBracket => {
-                if ch.is_ascii_digit() {
-                    escape_sequence_parameter = escape_sequence_parameter * 10 + (ch - b'0');
-                } else {
-                    match ch {
-                        b'D' => {
-                            // arrow left
-                            if command_buffer.move_cursor_left() {
-                                uart_send_bytes(b"\x1B[D");
-                            }
-                        }
-                        b'C' => {
-                            // arrow right
-                            if command_buffer.move_cursor_right() {
-                                uart_send_bytes(b"\x1B[C");
-                            }
-                        }
-                        b'~' => {
-                            // delete
-                            if escape_sequence_parameter == 3 {
-                                // delete key
-                                command_buffer.del();
-                                command_buffer.for_each_from_cursor(uart_send_byte);
-                                uart_send_byte(b' ');
-                                uart_send_move_back(
-                                    command_buffer.elements_after_cursor_count() + 1,
-                                    // note: +1 to compensate for the ' ' done to erase last character
-                                );
-                            }
-                        }
-                        _ => {}
-                    }
-                    state = InputState::Normal;
-                    escape_sequence_parameter = 0;
-                }
-            }
+        match ch {
+            CHAR_ESCAPE => input_escape_sequence(command_buffer),
+            CHAR_BACKSPACE => input_backspace(command_buffer),
+            CHAR_CARRIAGE_RETURN => return,
+            _ if command_buffer.is_full() => return,
+            _ => input_normal_char(command_buffer, ch),
         }
+    }
+}
+
+fn input_escape_sequence(command_buffer: &mut CommandBuffer) {
+    if uart_read_byte() != b'[' {
+        return;
+    }
+
+    let mut parameter = 0;
+    loop {
+        let ch = uart_read_byte();
+        if ch.is_ascii_digit() {
+            parameter = parameter * 10 + (ch - b'0');
+        } else {
+            match ch {
+                b'D' => {
+                    if command_buffer.move_cursor_left() {
+                        uart_send_bytes(b"\x1B[D");
+                    }
+                }
+                b'C' => {
+                    if command_buffer.move_cursor_right() {
+                        uart_send_bytes(b"\x1B[C");
+                    }
+                }
+                b'~' if parameter == 3 => {
+                    command_buffer.del();
+                    command_buffer.for_each_from_cursor(uart_send_byte);
+                    uart_send_byte(b' ');
+                    uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
+                }
+                _ => {}
+            }
+            return;
+        }
+    }
+}
+
+fn input_backspace(command_buffer: &mut CommandBuffer) {
+    if command_buffer.backspace() {
+        uart_send_byte(CHAR_BACKSPACE);
+        command_buffer.for_each_from_cursor(uart_send_byte);
+        uart_send_byte(b' ');
+        uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
+    }
+}
+
+fn input_normal_char(command_buffer: &mut CommandBuffer, ch: u8) {
+    if command_buffer.insert(ch) {
+        uart_send_byte(ch);
+        command_buffer.for_each_from_cursor(uart_send_byte);
+        uart_send_move_back(command_buffer.elements_after_cursor_count());
     }
 }
 

@@ -13,7 +13,7 @@ pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;
     for &ch in number_as_str {
         if !ch.is_ascii_digit() {
-            return num;
+            break;
         }
         num = num * 10 + u32::from(ch - b'0');
     }

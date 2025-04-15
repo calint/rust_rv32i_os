@@ -107,7 +107,7 @@ pub extern "C" fn run() -> ! {
     loop {
         for entity_id in 0..world.entities.len() {
             {
-                // note: for consistency
+                // note: for consistency `action_look` requires `ActionContext`
                 let command_buffer = CommandBuffer::new();
                 let mut ctx = ActionContext {
                     printer: &mut printer,
@@ -121,6 +121,7 @@ pub extern "C" fn run() -> ! {
 
             loop {
                 // loop until action succeeded
+
                 printer.p(&world.entities[entity_id].name);
                 printer.p(b" > ");
 
@@ -222,10 +223,10 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUA
                     command_buffer.for_each_from_cursor(|x| printer.pb(x));
                     printer.pb(b' ');
                     let count = command_buffer.elements_after_cursor_count() + 1;
+                    // note: +1 because of ' ' that erases the trailing character
                     for _ in 0..count {
                         printer.pb(8);
                     }
-                    // note: +1 because of ' ' that erases the trailing character
                 }
                 _ => {}
             }

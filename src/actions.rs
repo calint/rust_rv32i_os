@@ -6,7 +6,7 @@ use crate::lib::api_unsafe::{
     sdcard_write_blocking, uart_send_byte,
 };
 use crate::lib::global_allocator::GlobalAllocator;
-use crate::model::{EntityId, World};
+use crate::model::{Entity, EntityId, Link, LinkId, LocationId, Object, ObjectId, World};
 use crate::model::{EntityMessage, Location, LocationLink, Name, Note};
 use crate::{CommandBufferIterator, HELP};
 use alloc::vec;
@@ -164,7 +164,8 @@ pub fn action_go_named_link(
     };
 
     // send message to entities in 'from_location' that entity has left
-    world.send_message_to_entities_in_location(
+    send_message_to_entities_in_location(
+        world,
         from_location_id,
         &[entity_id],
         EntityMessage::from_parts(&[&world.entities[entity_id].name, b" left to ", link_name]),
@@ -179,7 +180,8 @@ pub fn action_go_named_link(
         .expect("link back to location should exist in target location");
 
     // send message to entities in 'to_location' that entity has arrived
-    world.send_message_to_entities_in_location(
+    send_message_to_entities_in_location(
+        world,
         to_location_id,
         &[entity_id],
         EntityMessage::from_parts(&[
@@ -252,7 +254,8 @@ pub fn action_take(
     // send message
     {
         let entity = &world.entities[entity_id];
-        world.send_message_to_entities_in_location(
+        send_message_to_entities_in_location(
+            world,
             entity.location,
             &[entity_id],
             EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
@@ -274,7 +277,7 @@ pub fn action_drop(
 
     {
         let Some((object_index, object_id)) =
-            world.find_object_in_entity_inventory(entity_id, object_name)
+            find_object_in_entity_inventory(world, entity_id, object_name)
         else {
             uart_send_bytes(object_name);
             uart_send_bytes(b" not in inventory\r\n\r\n");
@@ -293,7 +296,8 @@ pub fn action_drop(
     // send message
     {
         let entity = &world.entities[entity_id];
-        world.send_message_to_entities_in_location(
+        send_message_to_entities_in_location(
+            world,
             entity.location,
             &[entity_id],
             EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
@@ -321,7 +325,7 @@ pub fn action_give(
     };
 
     let Some((object_index, object_id)) =
-        world.find_object_in_entity_inventory(entity_id, object_name)
+        find_object_in_entity_inventory(world, entity_id, object_name)
     else {
         uart_send_bytes(object_name);
         uart_send_bytes(b" not in inventory\r\n\r\n");
@@ -346,7 +350,8 @@ pub fn action_give(
     world.entities[to_entity_id].objects.push(object_id);
 
     // send messages
-    world.send_message_to_entities_in_location(
+    send_message_to_entities_in_location(
+        world,
         world.entities[entity_id].location,
         &[to_entity_id],
         EntityMessage::from_parts(&[
@@ -358,7 +363,8 @@ pub fn action_give(
         ]),
     );
 
-    world.send_message_to_entities(
+    send_message_to_entities(
+        world,
         &[to_entity_id],
         EntityMessage::from_parts(&[
             &world.entities[entity_id].name,
@@ -474,7 +480,13 @@ pub fn action_new_object(
         return Err(ActionFailed::ObjectAlreadyExists);
     }
 
-    let object_id = world.add_object(object_name);
+    let object_id = {
+        let object_id = world.objects.len();
+        world.objects.push(Object {
+            name: Name::from(object_name),
+        });
+        object_id
+    };
 
     world.entities[entity_id].objects.push(object_id);
 
@@ -508,7 +520,7 @@ pub fn action_new_location(
 
     let from_location_id = world.entities[entity_id].location;
 
-    let to_link_id = world.find_or_add_link(to_link_name);
+    let to_link_id = find_or_add_link(world, to_link_name);
 
     // check if link is already used
     if world.locations[from_location_id]
@@ -520,7 +532,7 @@ pub fn action_new_location(
         return Err(ActionFailed::LinkFromLocationAlreadyExists);
     }
 
-    let back_link_id = world.find_or_add_link(back_link_name);
+    let back_link_id = find_or_add_link(world, back_link_name);
 
     // add location and link it back to from location
     let new_location_id = world.locations.len();
@@ -559,7 +571,18 @@ pub fn action_new_entity(
         return Err(ActionFailed::EntityAlreadyExists);
     }
 
-    world.add_entity(entity_name, world.entities[entity_id].location);
+    {
+        let location_id = world.entities[entity_id].location;
+        let entity_id = world.entities.len();
+        world.entities.push(Entity {
+            name: Name::from(entity_name),
+            location: location_id,
+            objects: vec![],
+            messages: vec![],
+        });
+        world.locations[location_id].entities.push(entity_id);
+        entity_id
+    };
 
     Ok(())
 }
@@ -590,7 +613,8 @@ pub fn action_say(
     }
 
     let entity = &world.entities[entity_id];
-    world.send_message_to_entities_in_location(
+    send_message_to_entities_in_location(
+        world,
         entity.location,
         &[entity_id],
         EntityMessage::from_parts(&[&entity.name, b" says ", say]),
@@ -639,4 +663,51 @@ pub fn action_tell(
 )]
 pub const fn action_wait() -> Result<()> {
     Ok(())
+}
+
+//
+// utilities
+//
+
+fn find_object_in_entity_inventory(
+    world: &World,
+    entity_id: EntityId,
+    object_name: &[u8],
+) -> Option<(usize, ObjectId)> {
+    world.entities[entity_id]
+        .objects
+        .iter()
+        .enumerate()
+        .find_map(|(index, &oid)| (world.objects[oid].name == object_name).then_some((index, oid)))
+}
+
+fn find_or_add_link(world: &mut World, link_name: &[u8]) -> LinkId {
+    if let Some(id) = world.links.iter().position(|x| x.name == link_name) {
+        id
+    } else {
+        let id = world.links.len();
+        world.links.push(Link {
+            name: Name::from(link_name),
+        });
+        id
+    }
+}
+
+fn send_message_to_entities_in_location(
+    world: &mut World,
+    location_id: LocationId,
+    exclude_entities: &[EntityId],
+    message: EntityMessage,
+) {
+    for &eid in &world.locations[location_id].entities {
+        if !exclude_entities.contains(&eid) {
+            world.entities[eid].messages.push(message);
+        }
+    }
+}
+
+fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: EntityMessage) {
+    for &eid in entities {
+        world.entities[eid].messages.push(message);
+    }
 }

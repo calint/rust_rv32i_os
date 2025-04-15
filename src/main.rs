@@ -154,7 +154,7 @@ fn handle_input(ctx: &mut ActionContext, separator_after_success: bool) -> Resul
         Some(b"sdw") => action_sdcard_write(ctx)?,
         Some(b"mi") => action_memory_info(ctx)?,
         Some(b"led") => action_led_set(ctx)?,
-        Some(b"help") => action_help(ctx)?,
+        Some(b"help") => action_help(ctx, HELP)?,
         Some(b"no") => action_new_object(ctx)?,
         Some(b"nl") => action_new_location(ctx)?,
         Some(b"nln") => action_set_location_note(ctx)?,

@@ -1,4 +1,3 @@
-use crate::HELP;
 use crate::lib::api::{Printer, memory_end, memory_heap_start, u8_slice_to_u32};
 use crate::lib::api_unsafe::{
     SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status,
@@ -457,8 +456,8 @@ pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_help(ctx: &mut ActionContext) -> Result<()> {
-    ctx.printer.p(HELP);
+pub fn action_help(ctx: &mut ActionContext, help: &[u8]) -> Result<()> {
+    ctx.printer.p(help);
 
     Ok(())
 }

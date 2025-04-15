@@ -197,7 +197,12 @@ pub fn action_go_named_link(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_inventory(printer: &Printer, world: &World, entity_id: EntityId) -> Result<()> {
+pub fn action_inventory(
+    printer: &Printer,
+    world: &World,
+    entity_id: EntityId,
+    _it: &mut CommandBufferIterator,
+) -> Result<()> {
     let entity = &world.entities[entity_id];
     printer.p(b"u have: ");
     let mut i = 0;
@@ -400,7 +405,7 @@ pub fn action_memory_info(printer: &Printer, _it: &mut CommandBufferIterator) ->
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_sdcard_status(printer: &Printer) -> Result<()> {
+pub fn action_sdcard_status(printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
     printer.p(b"SDCARD_STATUS: 0x");
     printer.p_hex_u32(sdcard_status() as u32, true);
     printer.p(b"\r\n");

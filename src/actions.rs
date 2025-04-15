@@ -1,6 +1,4 @@
-use crate::lib::api::{
-    memory_end, memory_heap_start, u8_slice_to_u32, uart_send_bytes, uart_send_hex_u32,
-};
+use crate::lib::api::{Printer, memory_end, memory_heap_start, u8_slice_to_u32};
 use crate::lib::api_unsafe::{
     SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status,
     sdcard_write_blocking, uart_send_byte,
@@ -45,62 +43,61 @@ pub enum ActionFailed {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_look(world: &mut World, entity_id: EntityId) -> Result<()> {
+pub fn action_look(world: &mut World, printer: &Printer, entity_id: EntityId) -> Result<()> {
     let entity = &mut world.entities[entity_id];
     let location = &world.locations[entity.location];
 
     let messages = &entity.messages;
     for x in messages {
-        uart_send_bytes(x);
-        uart_send_bytes(b"\r\n");
+        printer.pl(x);
     }
 
     // clear messages after displayed
     entity.messages.clear();
 
-    uart_send_bytes(b"u r in ");
-    uart_send_bytes(&location.name);
+    printer.p(b"u r in ");
+    printer.p(&location.name);
 
-    uart_send_bytes(b"\r\nu c ");
+    printer.p(b"\r\nu c ");
     let mut i = 0;
     for &eid in &location.entities {
         if eid != entity_id {
             if i != 0 {
-                uart_send_bytes(b", ");
+                printer.p(b", ");
             }
-            uart_send_bytes(&world.entities[eid].name);
+            printer.p(&world.entities[eid].name);
             i += 1;
         }
     }
     for &oid in &location.objects {
         if i != 0 {
-            uart_send_bytes(b", ");
+            printer.p(b", ");
         }
         i += 1;
-        uart_send_bytes(&world.objects[oid].name);
+        printer.p(&world.objects[oid].name);
     }
     if i == 0 {
-        uart_send_bytes(b"nothing");
+        printer.p(b"nothing");
     }
-    uart_send_bytes(b"\r\n");
+    printer.p(b"\r\n");
 
-    uart_send_bytes(b"exits: ");
+    printer.p(b"exits: ");
     i = 0;
     for lid in &location.links {
         if i != 0 {
-            uart_send_bytes(b", ");
+            printer.p(b", ");
         }
         i += 1;
-        uart_send_bytes(&world.links[lid.link].name);
+        printer.p(&world.links[lid.link].name);
     }
     if i == 0 {
-        uart_send_bytes(b"none");
+        printer.p(b"none");
     }
-    uart_send_bytes(b"\r\n");
+    printer.p(b"\r\n");
 
     if !location.note.is_empty() {
-        uart_send_bytes(&location.note);
-        uart_send_bytes(b"\r\n");
+        printer.p(&location.note);
+        printer.p(b"\r\n");
     }
 
     Ok(())
@@ -108,25 +105,27 @@ pub fn action_look(world: &mut World, entity_id: EntityId) -> Result<()> {
 
 pub fn action_go(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     let Some(named_link) = it.next() else {
-        uart_send_bytes(b"go where\r\n\r\n");
+        printer.p(b"go where\r\n\r\n");
         return Err(ActionFailed::GoWhere);
     };
 
-    action_go_named_link(world, entity_id, named_link)
+    action_go_named_link(world, printer, entity_id, named_link)
 }
 
 pub fn action_go_named_link(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     link_name: &[u8],
 ) -> Result<()> {
     // find link id
     let Some(link_id) = world.links.iter().position(|x| x.name == link_name) else {
-        uart_send_bytes(b"no such exit\r\n\r\n");
+        printer.p(b"no such exit\r\n\r\n");
         return Err(ActionFailed::NoSuchExit);
     };
 
@@ -141,7 +140,7 @@ pub fn action_go_named_link(
             if let Some(lnk) = from_location.links.iter().find(|x| x.link == link_id) {
                 lnk.location
             } else {
-                uart_send_bytes(b"cannot go there\r\n\r\n");
+                printer.p(b"cannot go there\r\n\r\n");
                 return Err(ActionFailed::CannotGoThere);
             };
 
@@ -198,33 +197,34 @@ pub fn action_go_named_link(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_inventory(world: &World, entity_id: EntityId) -> Result<()> {
+pub fn action_inventory(world: &World, printer: &Printer, entity_id: EntityId) -> Result<()> {
     let entity = &world.entities[entity_id];
-    uart_send_bytes(b"u have: ");
+    printer.p(b"u have: ");
     let mut i = 0;
     for &oid in &entity.objects {
         if i != 0 {
-            uart_send_bytes(b", ");
+            printer.p(b", ");
         }
         i += 1;
-        uart_send_bytes(&world.objects[oid].name);
+        printer.p(&world.objects[oid].name);
     }
     if i == 0 {
-        uart_send_bytes(b"nothing");
+        printer.p(b"nothing");
     }
-    uart_send_bytes(b"\r\n");
+    printer.p(b"\r\n");
 
     Ok(())
 }
 
 pub fn action_take(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     // get object name
     let Some(object_name) = it.next() else {
-        uart_send_bytes(b"take what\r\n\r\n");
+        printer.p(b"take what\r\n\r\n");
         return Err(ActionFailed::TakeWhat);
     };
 
@@ -239,8 +239,8 @@ pub fn action_take(
             .enumerate()
             .find(|&(_, &oid)| world.objects[oid].name == object_name)
         else {
-            uart_send_bytes(object_name);
-            uart_send_bytes(b" is not here\r\n\r\n");
+            printer.p(object_name);
+            printer.p(b" is not here\r\n\r\n");
             return Err(ActionFailed::ObjectNotHere);
         };
 
@@ -267,11 +267,12 @@ pub fn action_take(
 
 pub fn action_drop(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     let Some(object_name) = it.next() else {
-        uart_send_bytes(b"drop what\r\n\r\n");
+        printer.p(b"drop what\r\n\r\n");
         return Err(ActionFailed::DropWhat);
     };
 
@@ -279,8 +280,8 @@ pub fn action_drop(
         let Some((object_index, object_id)) =
             find_object_in_entity_inventory(world, entity_id, object_name)
         else {
-            uart_send_bytes(object_name);
-            uart_send_bytes(b" not in inventory\r\n\r\n");
+            printer.p(object_name);
+            printer.p(b" not in inventory\r\n\r\n");
             return Err(ActionFailed::ObjectNotInInventory);
         };
 
@@ -309,26 +310,27 @@ pub fn action_drop(
 
 pub fn action_give(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     // get entity name
     let Some(to_entity_name) = it.next() else {
-        uart_send_bytes(b"give to whom\r\n\r\n");
+        printer.p(b"give to whom\r\n\r\n");
         return Err(ActionFailed::GiveToWhom);
     };
 
     // get object name
     let Some(object_name) = it.next() else {
-        uart_send_bytes(b"give what\r\n\r\n");
+        printer.p(b"give what\r\n\r\n");
         return Err(ActionFailed::GiveWhat);
     };
 
     let Some((object_index, object_id)) =
         find_object_in_entity_inventory(world, entity_id, object_name)
     else {
-        uart_send_bytes(object_name);
-        uart_send_bytes(b" not in inventory\r\n\r\n");
+        printer.p(object_name);
+        printer.p(b" not in inventory\r\n\r\n");
         return Err(ActionFailed::ObjectNotInInventory);
     };
 
@@ -338,8 +340,8 @@ pub fn action_give(
         .iter()
         .find(|&&x| world.entities[x].name == to_entity_name)
     else {
-        uart_send_bytes(to_entity_name);
-        uart_send_bytes(b" not here\r\n\r\n");
+        printer.p(to_entity_name);
+        printer.p(b" not here\r\n\r\n");
         return Err(ActionFailed::EntityNotHere);
     };
 
@@ -380,16 +382,16 @@ pub fn action_give(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_memory_info() -> Result<()> {
-    uart_send_bytes(b"   heap start: ");
-    uart_send_hex_u32(memory_heap_start(), true);
-    uart_send_bytes(b"\r\nstack pointer: ");
-    uart_send_hex_u32(memory_stack_pointer(), true);
-    uart_send_bytes(b"\r\n   memory end: ");
-    uart_send_hex_u32(memory_end(), true);
-    uart_send_bytes(b"\r\n\r\nheap blocks:\r\n");
+pub fn action_memory_info(printer: &Printer) -> Result<()> {
+    printer.p(b"   heap start: ");
+    printer.p_hex_u32(memory_heap_start(), true);
+    printer.p(b"\r\nstack pointer: ");
+    printer.p_hex_u32(memory_stack_pointer(), true);
+    printer.p(b"\r\n   memory end: ");
+    printer.p_hex_u32(memory_end(), true);
+    printer.p(b"\r\n\r\nheap blocks:\r\n");
     GlobalAllocator::debug_block_list();
-    uart_send_bytes(b"\r\n");
+    printer.p(b"\r\n");
 
     Ok(())
 }
@@ -399,35 +401,35 @@ pub fn action_memory_info() -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_sdcard_status() -> Result<()> {
-    uart_send_bytes(b"SDCARD_STATUS: 0x");
-    uart_send_hex_u32(sdcard_status() as u32, true);
-    uart_send_bytes(b"\r\n");
+pub fn action_sdcard_status(printer: &Printer) -> Result<()> {
+    printer.p(b"SDCARD_STATUS: 0x");
+    printer.p_hex_u32(sdcard_status() as u32, true);
+    printer.p(b"\r\n");
 
     Ok(())
 }
 
-pub fn action_sdcard_read(it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_sdcard_read(printer: &Printer, it: &mut CommandBufferIterator) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
-        uart_send_bytes(b"what sector\r\n");
+        printer.p(b"what sector\r\n");
         return Err(ActionFailed::WhatSector);
     };
 
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     sdcard_read_blocking(sector, &mut buf);
     buf.iter().for_each(|&x| uart_send_byte(x));
-    uart_send_bytes(b"\r\n");
+    printer.p(b"\r\n");
 
     Ok(())
 }
 
-pub fn action_sdcard_write(it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_sdcard_write(printer: &Printer, it: &mut CommandBufferIterator) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
-        uart_send_bytes(b"what sector\r\n");
+        printer.p(b"what sector\r\n");
         return Err(ActionFailed::WhatSector);
     };
 
@@ -441,11 +443,11 @@ pub fn action_sdcard_write(it: &mut CommandBufferIterator) -> Result<()> {
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-pub fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_led_set(printer: &Printer, it: &mut CommandBufferIterator) -> Result<()> {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
     } else {
-        uart_send_bytes(b"which leds (in bits as decimal with 0 being on)\r\n");
+        printer.p(b"which leds (in bits as decimal with 0 being on)\r\n");
         return Err(ActionFailed::WhichLeds);
     };
 
@@ -458,25 +460,26 @@ pub fn action_led_set(it: &mut CommandBufferIterator) -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_help() -> Result<()> {
-    uart_send_bytes(HELP);
+pub fn action_help(printer: &Printer) -> Result<()> {
+    printer.p(HELP);
 
     Ok(())
 }
 
 pub fn action_new_object(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     // get object name
     let Some(object_name) = it.next() else {
-        uart_send_bytes(b"what object name\r\n");
+        printer.p(b"what object name\r\n");
         return Err(ActionFailed::WhatObjectName);
     };
 
     if world.objects.iter().any(|x| x.name == object_name) {
-        uart_send_bytes(b"object already exists\r\n");
+        printer.p(b"object already exists\r\n");
         return Err(ActionFailed::ObjectAlreadyExists);
     }
 
@@ -495,26 +498,27 @@ pub fn action_new_object(
 
 pub fn action_new_location(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     let Some(to_link_name) = it.next() else {
-        uart_send_bytes(b"what link name\r\n");
+        printer.p(b"what link name\r\n");
         return Err(ActionFailed::WhatToLinkName);
     };
 
     let Some(back_link_name) = it.next() else {
-        uart_send_bytes(b"what back link name\r\n");
+        printer.p(b"what back link name\r\n");
         return Err(ActionFailed::WhatBackLinkName);
     };
 
     let Some(new_location_name) = it.next() else {
-        uart_send_bytes(b"what new location name\r\n");
+        printer.p(b"what new location name\r\n");
         return Err(ActionFailed::WhatNewLocationName);
     };
 
     if world.locations.iter().any(|x| x.name == new_location_name) {
-        uart_send_bytes(b"location already exists\r\n");
+        printer.p(b"location already exists\r\n");
         return Err(ActionFailed::LocationAlreadyExists);
     }
 
@@ -528,7 +532,7 @@ pub fn action_new_location(
         .iter()
         .any(|x| x.link == to_link_id)
     {
-        uart_send_bytes(b"link from this location already exists\r\n");
+        printer.p(b"link from this location already exists\r\n");
         return Err(ActionFailed::LinkFromLocationAlreadyExists);
     }
 
@@ -557,17 +561,18 @@ pub fn action_new_location(
 
 pub fn action_new_entity(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     // get object name
     let Some(entity_name) = it.next() else {
-        uart_send_bytes(b"what entity name\r\n");
+        printer.p(b"what entity name\r\n");
         return Err(ActionFailed::WhatEntityName);
     };
 
     if world.entities.iter().any(|x| x.name == entity_name) {
-        uart_send_bytes(b"entity already exists\r\n");
+        printer.p(b"entity already exists\r\n");
         return Err(ActionFailed::EntityAlreadyExists);
     }
 
@@ -603,12 +608,13 @@ pub fn action_set_location_note(
 
 pub fn action_say(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     let say = it.rest();
     if say.is_empty() {
-        uart_send_bytes(b"say what");
+        printer.p(b"say what");
         return Err(ActionFailed::SayWhat);
     }
 
@@ -625,17 +631,18 @@ pub fn action_say(
 
 pub fn action_tell(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
     let Some(to_name) = it.next() else {
-        uart_send_bytes(b"tell to whom\r\n");
+        printer.p(b"tell to whom\r\n");
         return Err(ActionFailed::TellToWhom);
     };
 
     let tell = it.rest();
     if tell.is_empty() {
-        uart_send_bytes(b"tell what\r\n");
+        printer.p(b"tell what\r\n");
         return Err(ActionFailed::TellWhat);
     }
 
@@ -646,8 +653,8 @@ pub fn action_tell(
         .iter()
         .find(|&&x| world.entities[x].name == to_name)
     else {
-        uart_send_bytes(to_name);
-        uart_send_bytes(b" not here\r\n");
+        printer.p(to_name);
+        printer.p(b" not here\r\n");
         return Err(ActionFailed::EntityNotHere);
     };
 

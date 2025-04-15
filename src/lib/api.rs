@@ -55,3 +55,37 @@ pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     }
     num
 }
+
+pub struct Printer;
+
+impl Printer {
+    pub const fn new() -> Self {
+        Self {}
+    }
+
+    #[allow(clippy::unused_self, reason = "future use")]
+    pub fn pb(&self, byte: u8) {
+        uart_send_byte(byte);
+    }
+
+    #[allow(clippy::unused_self, reason = "future use")]
+    pub fn p(&self, bytes: &[u8]) {
+        uart_send_bytes(bytes);
+    }
+
+    #[allow(clippy::unused_self, reason = "future use")]
+    pub fn pl(&self, bytes: &[u8]) {
+        uart_send_bytes(bytes);
+        uart_send_bytes(b"\r\n");
+    }
+
+    #[allow(clippy::unused_self, reason = "future use")]
+    pub fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
+        uart_send_hex_u32(i, separate_half_words);
+    }
+
+    #[allow(clippy::unused_self, reason = "future use")]
+    pub fn move_back(&self, count: usize) {
+        uart_send_move_back(count);
+    }
+}

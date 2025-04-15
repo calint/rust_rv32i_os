@@ -69,8 +69,8 @@ use actions::{
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{memory_end, uart_send_bytes, uart_send_move_back};
-use lib::api_unsafe::{led_set, uart_read_byte, uart_send_byte};
+use lib::api::{Printer, memory_end, uart_send_bytes};
+use lib::api_unsafe::{led_set, uart_read_byte};
 use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use lib::global_allocator::GlobalAllocator;
 use model::{Entity, EntityId, Location, Name, Note, World};
@@ -96,22 +96,27 @@ pub extern "C" fn run() -> ! {
 
     GlobalAllocator::init(memory_end() as usize);
 
-    let mut world = create_world();
+    let printer = Printer::new();
 
-    uart_send_bytes(ASCII_ART);
-    uart_send_bytes(HELLO);
+    let mut world = create_world(&printer);
+
+    printer.p(ASCII_ART);
+    printer.p(HELLO);
 
     loop {
         for entity_id in 0..world.entities.len() {
-            assert!(action_look(&mut world, entity_id).is_ok(), "cannot look");
+            assert!(
+                action_look(&mut world, &printer, entity_id).is_ok(),
+                "cannot look"
+            );
             loop {
                 // loop until action succeeded
-                uart_send_bytes(&world.entities[entity_id].name);
-                uart_send_bytes(b" > ");
+                printer.p(&world.entities[entity_id].name);
+                printer.p(b" > ");
                 let mut command_buffer = CommandBuffer::new();
-                input(&mut command_buffer);
-                uart_send_bytes(b"\r\n");
-                if handle_input(&mut world, entity_id, &command_buffer, true).is_ok() {
+                input(&mut command_buffer, &printer);
+                printer.p(b"\r\n");
+                if handle_input(&mut world, &printer, entity_id, &command_buffer, true).is_ok() {
                     break;
                 }
             }
@@ -121,63 +126,64 @@ pub extern "C" fn run() -> ! {
 
 fn handle_input(
     world: &mut World,
+    printer: &Printer,
     entity_id: EntityId,
     command_buffer: &CommandBuffer,
     separator_after_success: bool,
 ) -> Result<()> {
     let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     match it.next() {
-        Some(b"go") => action_go(world, entity_id, &mut it)?,
-        Some(b"n") => action_go_named_link(world, entity_id, b"north")?,
-        Some(b"e") => action_go_named_link(world, entity_id, b"east")?,
-        Some(b"s") => action_go_named_link(world, entity_id, b"south")?,
-        Some(b"w") => action_go_named_link(world, entity_id, b"west")?,
-        Some(b"i") => action_inventory(world, entity_id)?,
-        Some(b"t") => action_take(world, entity_id, &mut it)?,
-        Some(b"d") => action_drop(world, entity_id, &mut it)?,
-        Some(b"g") => action_give(world, entity_id, &mut it)?,
-        Some(b"sds") => action_sdcard_status()?,
-        Some(b"sdr") => action_sdcard_read(&mut it)?,
-        Some(b"sdw") => action_sdcard_write(&mut it)?,
-        Some(b"mi") => action_memory_info()?,
-        Some(b"led") => action_led_set(&mut it)?,
-        Some(b"help") => action_help()?,
-        Some(b"no") => action_new_object(world, entity_id, &mut it)?,
-        Some(b"nl") => action_new_location(world, entity_id, &mut it)?,
+        Some(b"go") => action_go(world, printer, entity_id, &mut it)?,
+        Some(b"n") => action_go_named_link(world, printer, entity_id, b"north")?,
+        Some(b"e") => action_go_named_link(world, printer, entity_id, b"east")?,
+        Some(b"s") => action_go_named_link(world, printer, entity_id, b"south")?,
+        Some(b"w") => action_go_named_link(world, printer, entity_id, b"west")?,
+        Some(b"i") => action_inventory(world, printer, entity_id)?,
+        Some(b"t") => action_take(world, printer, entity_id, &mut it)?,
+        Some(b"d") => action_drop(world, printer, entity_id, &mut it)?,
+        Some(b"g") => action_give(world, printer, entity_id, &mut it)?,
+        Some(b"sds") => action_sdcard_status(printer)?,
+        Some(b"sdr") => action_sdcard_read(printer, &mut it)?,
+        Some(b"sdw") => action_sdcard_write(printer, &mut it)?,
+        Some(b"mi") => action_memory_info(printer)?,
+        Some(b"led") => action_led_set(printer, &mut it)?,
+        Some(b"help") => action_help(printer)?,
+        Some(b"no") => action_new_object(world, printer, entity_id, &mut it)?,
+        Some(b"nl") => action_new_location(world, printer, entity_id, &mut it)?,
         Some(b"nln") => action_set_location_note(world, entity_id, &mut it)?,
-        Some(b"ne") => action_new_entity(world, entity_id, &mut it)?,
-        Some(b"say") => action_say(world, entity_id, &mut it)?,
-        Some(b"tell") => action_tell(world, entity_id, &mut it)?,
+        Some(b"ne") => action_new_entity(world, printer, entity_id, &mut it)?,
+        Some(b"say") => action_say(world, printer, entity_id, &mut it)?,
+        Some(b"tell") => action_tell(world, printer, entity_id, &mut it)?,
         Some(b"wait") => action_wait()?,
         _ => {
-            uart_send_bytes(b"not understood\r\n\r\n");
+            printer.p(b"not understood\r\n\r\n");
             return Err(ActionFailed::InvalidCommand);
         }
     }
 
     if separator_after_success {
-        uart_send_bytes(b"\r\n");
+        printer.p(b"\r\n");
     }
 
     Ok(())
 }
 
-fn input(command_buffer: &mut CommandBuffer) {
+fn input(command_buffer: &mut CommandBuffer, printer: &Printer) {
     loop {
         let ch = uart_read_byte();
         led_set(!ch);
 
         match ch {
-            CHAR_ESCAPE => input_escape_sequence(command_buffer),
-            CHAR_BACKSPACE => input_backspace(command_buffer),
+            CHAR_ESCAPE => input_escape_sequence(command_buffer, printer),
+            CHAR_BACKSPACE => input_backspace(command_buffer, printer),
             CHAR_CARRIAGE_RETURN => return,
             _ if command_buffer.is_full() => return,
-            _ => input_normal_char(command_buffer, ch),
+            _ => input_normal_char(command_buffer, printer, ch),
         }
     }
 }
 
-fn input_escape_sequence(command_buffer: &mut CommandBuffer) {
+fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &Printer) {
     if uart_read_byte() != b'[' {
         return;
     }
@@ -191,19 +197,19 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer) {
             match ch {
                 b'D' => {
                     if command_buffer.move_cursor_left() {
-                        uart_send_bytes(b"\x1B[D");
+                        printer.p(b"\x1B[D");
                     }
                 }
                 b'C' => {
                     if command_buffer.move_cursor_right() {
-                        uart_send_bytes(b"\x1B[C");
+                        printer.p(b"\x1B[C");
                     }
                 }
                 b'~' => {
                     command_buffer.del();
-                    command_buffer.for_each_from_cursor(uart_send_byte);
-                    uart_send_byte(b' ');
-                    uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
+                    command_buffer.for_each_from_cursor(|x| printer.pb(x));
+                    printer.pb(b' ');
+                    printer.move_back(command_buffer.elements_after_cursor_count() + 1);
                     // note: +1 because of ' ' that erases the trailing character
                 }
                 _ => {}
@@ -213,24 +219,24 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer) {
     }
 }
 
-fn input_backspace(command_buffer: &mut CommandBuffer) {
+fn input_backspace(command_buffer: &mut CommandBuffer, printer: &Printer) {
     if command_buffer.backspace() {
-        uart_send_byte(CHAR_BACKSPACE);
-        command_buffer.for_each_from_cursor(uart_send_byte);
-        uart_send_byte(b' ');
-        uart_send_move_back(command_buffer.elements_after_cursor_count() + 1);
+        printer.pb(CHAR_BACKSPACE);
+        command_buffer.for_each_from_cursor(|x| printer.pb(x));
+        printer.pb(b' ');
+        printer.move_back(command_buffer.elements_after_cursor_count() + 1);
     }
 }
 
-fn input_normal_char(command_buffer: &mut CommandBuffer, ch: u8) {
+fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &Printer, ch: u8) {
     if command_buffer.insert(ch) {
-        uart_send_byte(ch);
-        command_buffer.for_each_from_cursor(uart_send_byte);
-        uart_send_move_back(command_buffer.elements_after_cursor_count());
+        printer.pb(ch);
+        command_buffer.for_each_from_cursor(|x| printer.pb(x));
+        printer.move_back(command_buffer.elements_after_cursor_count());
     }
 }
 
-fn create_world() -> World {
+fn create_world(printer: &Printer) -> World {
     let mut world = World {
         entities: vec![Entity {
             name: Name::from(b"u"),
@@ -256,7 +262,7 @@ fn create_world() -> World {
         }
 
         assert!(
-            handle_input(&mut world, 0, &command_buffer, false).is_ok(),
+            handle_input(&mut world, printer, 0, &command_buffer, false).is_ok(),
             "error creating world"
         );
 

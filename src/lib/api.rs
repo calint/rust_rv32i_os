@@ -27,7 +27,7 @@ pub trait Printer {
     /// Prints a slice of bytes.
     fn p(&self, bytes: &[u8]);
 
-    /// Prints a slice of bytes followed by a implementation specific new line.
+    /// Prints a slice of bytes followed by implementation specific new line.
     fn pl(&self, bytes: &[u8]);
 
     /// Prints a 4-bit unsigned integer as hexadecimal.
@@ -43,7 +43,6 @@ pub trait Printer {
 pub struct PrinterUART;
 
 impl PrinterUART {
-    /// Creates a new `Printer` instance.
     pub const fn new() -> Self {
         Self {}
     }
@@ -93,7 +92,6 @@ impl Printer for PrinterUART {
 pub struct PrinterVoid;
 
 impl PrinterVoid {
-    /// Creates a new `Printer` instance.
     pub const fn new() -> Self {
         Self {}
     }

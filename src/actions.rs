@@ -39,6 +39,13 @@ pub enum ActionFailed {
     TellWhat,
 }
 
+pub struct ActionContext<'a> {
+    pub printer: &'a Printer,
+    pub world: &'a mut World,
+    pub entity_id: EntityId,
+    pub it: &'a mut CommandBufferIterator<'a>,
+}
+
 #[allow(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
@@ -103,44 +110,34 @@ pub fn action_look(printer: &Printer, world: &mut World, entity_id: EntityId) ->
     Ok(())
 }
 
-pub fn action_go(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let Some(named_link) = it.next() else {
-        printer.p(b"go where\r\n\r\n");
+pub fn action_go(ctx: &mut ActionContext) -> Result<()> {
+    let Some(named_link) = ctx.it.next() else {
+        ctx.printer.p(b"go where\r\n\r\n");
         return Err(ActionFailed::GoWhere);
     };
 
-    action_go_named_link(printer, world, entity_id, named_link)
+    action_go_named_link(ctx, named_link)
 }
 
-pub fn action_go_named_link(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    link_name: &[u8],
-) -> Result<()> {
+pub fn action_go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     // find link id
-    let Some(link_id) = world.links.iter().position(|x| x.name == link_name) else {
-        printer.p(b"no such exit\r\n\r\n");
+    let Some(link_id) = ctx.world.links.iter().position(|x| x.name == link_name) else {
+        ctx.printer.p(b"no such exit\r\n\r\n");
         return Err(ActionFailed::NoSuchExit);
     };
 
     // move entity
     let (from_location_id, to_location_id) = {
-        let entity = &mut world.entities[entity_id];
+        let entity = &mut ctx.world.entities[ctx.entity_id];
         let from_location_id = entity.location;
-        let from_location = &mut world.locations[from_location_id];
+        let from_location = &mut ctx.world.locations[from_location_id];
 
         // find "to" location id
         let to_location_id =
             if let Some(lnk) = from_location.links.iter().find(|x| x.link == link_id) {
                 lnk.location
             } else {
-                printer.p(b"cannot go there\r\n\r\n");
+                ctx.printer.p(b"cannot go there\r\n\r\n");
                 return Err(ActionFailed::CannotGoThere);
             };
 
@@ -148,13 +145,15 @@ pub fn action_go_named_link(
         let pos = from_location
             .entities
             .iter()
-            .position(|&x| x == entity_id)
+            .position(|&x| x == ctx.entity_id)
             .expect("entity should be in location");
 
         from_location.entities.remove(pos);
 
         // add entity to new location
-        world.locations[to_location_id].entities.push(entity_id);
+        ctx.world.locations[to_location_id]
+            .entities
+            .push(ctx.entity_id);
 
         // update entity location
         entity.location = to_location_id;
@@ -164,15 +163,19 @@ pub fn action_go_named_link(
 
     // send message to entities in 'from_location' that entity has left
     send_message_to_entities_in_location(
-        world,
+        ctx.world,
         from_location_id,
-        &[entity_id],
-        EntityMessage::from_parts(&[&world.entities[entity_id].name, b" left to ", link_name]),
+        &[ctx.entity_id],
+        EntityMessage::from_parts(&[
+            &ctx.world.entities[ctx.entity_id].name,
+            b" left to ",
+            link_name,
+        ]),
     );
 
     // find link name that leads from 'to_location_id' to 'from_location_id'
     // note: assumes links are bi-directional thus panic if not
-    let back_link_id = world.locations[to_location_id]
+    let back_link_id = ctx.world.locations[to_location_id]
         .links
         .iter()
         .find_map(|x| (x.location == from_location_id).then_some(x.link))
@@ -180,13 +183,13 @@ pub fn action_go_named_link(
 
     // send message to entities in 'to_location' that entity has arrived
     send_message_to_entities_in_location(
-        world,
+        ctx.world,
         to_location_id,
-        &[entity_id],
+        &[ctx.entity_id],
         EntityMessage::from_parts(&[
-            &world.entities[entity_id].name,
+            &ctx.world.entities[ctx.entity_id].name,
             b" arrived from ",
-            &world.links[back_link_id].name,
+            &ctx.world.links[back_link_id].name,
         ]),
     );
 
@@ -197,55 +200,45 @@ pub fn action_go_named_link(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_inventory(
-    printer: &Printer,
-    world: &World,
-    entity_id: EntityId,
-    _it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let entity = &world.entities[entity_id];
-    printer.p(b"u have: ");
+pub fn action_inventory(ctx: &mut ActionContext) -> Result<()> {
+    let entity = &ctx.world.entities[ctx.entity_id];
+    ctx.printer.p(b"u have: ");
     let mut i = 0;
     for &oid in &entity.objects {
         if i != 0 {
-            printer.p(b", ");
+            ctx.printer.p(b", ");
         }
         i += 1;
-        printer.p(&world.objects[oid].name);
+        ctx.printer.p(&ctx.world.objects[oid].name);
     }
     if i == 0 {
-        printer.p(b"nothing");
+        ctx.printer.p(b"nothing");
     }
-    printer.p(b"\r\n");
+    ctx.printer.p(b"\r\n");
 
     Ok(())
 }
 
-pub fn action_take(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
+pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
     // get object name
-    let Some(object_name) = it.next() else {
-        printer.p(b"take what\r\n\r\n");
+    let Some(object_name) = ctx.it.next() else {
+        ctx.printer.p(b"take what\r\n\r\n");
         return Err(ActionFailed::TakeWhat);
     };
 
     {
-        let entity = &mut world.entities[entity_id];
-        let location = &mut world.locations[entity.location];
+        let entity = &mut ctx.world.entities[ctx.entity_id];
+        let location = &mut ctx.world.locations[entity.location];
 
         // find object id and index in list
         let Some((object_index, &object_id)) = location
             .objects
             .iter()
             .enumerate()
-            .find(|&(_, &oid)| world.objects[oid].name == object_name)
+            .find(|&(_, &oid)| ctx.world.objects[oid].name == object_name)
         else {
-            printer.p(object_name);
-            printer.p(b" is not here\r\n\r\n");
+            ctx.printer.p(object_name);
+            ctx.printer.p(b" is not here\r\n\r\n");
             return Err(ActionFailed::ObjectNotHere);
         };
 
@@ -258,11 +251,11 @@ pub fn action_take(
 
     // send message
     {
-        let entity = &world.entities[entity_id];
+        let entity = &ctx.world.entities[ctx.entity_id];
         send_message_to_entities_in_location(
-            world,
+            ctx.world,
             entity.location,
-            &[entity_id],
+            &[ctx.entity_id],
             EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
         );
     }
@@ -270,42 +263,37 @@ pub fn action_take(
     Ok(())
 }
 
-pub fn action_drop(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let Some(object_name) = it.next() else {
-        printer.p(b"drop what\r\n\r\n");
+pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
+    let Some(object_name) = ctx.it.next() else {
+        ctx.printer.p(b"drop what\r\n\r\n");
         return Err(ActionFailed::DropWhat);
     };
 
     {
         let Some((object_index, object_id)) =
-            find_object_in_entity_inventory(world, entity_id, object_name)
+            find_object_in_entity_inventory(ctx.world, ctx.entity_id, object_name)
         else {
-            printer.p(object_name);
-            printer.p(b" not in inventory\r\n\r\n");
+            ctx.printer.p(object_name);
+            ctx.printer.p(b" not in inventory\r\n\r\n");
             return Err(ActionFailed::ObjectNotInInventory);
         };
 
-        let entity = &mut world.entities[entity_id];
+        let entity = &mut ctx.world.entities[ctx.entity_id];
 
         // remove object from entity
         entity.objects.remove(object_index);
 
         // add object to location
-        world.locations[entity.location].objects.push(object_id);
+        ctx.world.locations[entity.location].objects.push(object_id);
     }
 
     // send message
     {
-        let entity = &world.entities[entity_id];
+        let entity = &ctx.world.entities[ctx.entity_id];
         send_message_to_entities_in_location(
-            world,
+            ctx.world,
             entity.location,
-            &[entity_id],
+            &[ctx.entity_id],
             EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
         );
     }
@@ -313,70 +301,67 @@ pub fn action_drop(
     Ok(())
 }
 
-pub fn action_give(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
+pub fn action_give(ctx: &mut ActionContext) -> Result<()> {
     // get entity name
-    let Some(to_entity_name) = it.next() else {
-        printer.p(b"give to whom\r\n\r\n");
+    let Some(to_entity_name) = ctx.it.next() else {
+        ctx.printer.p(b"give to whom\r\n\r\n");
         return Err(ActionFailed::GiveToWhom);
     };
 
     // get object name
-    let Some(object_name) = it.next() else {
-        printer.p(b"give what\r\n\r\n");
+    let Some(object_name) = ctx.it.next() else {
+        ctx.printer.p(b"give what\r\n\r\n");
         return Err(ActionFailed::GiveWhat);
     };
 
     let Some((object_index, object_id)) =
-        find_object_in_entity_inventory(world, entity_id, object_name)
+        find_object_in_entity_inventory(ctx.world, ctx.entity_id, object_name)
     else {
-        printer.p(object_name);
-        printer.p(b" not in inventory\r\n\r\n");
+        ctx.printer.p(object_name);
+        ctx.printer.p(b" not in inventory\r\n\r\n");
         return Err(ActionFailed::ObjectNotInInventory);
     };
 
     // find "to" entity
-    let Some(&to_entity_id) = world.locations[world.entities[entity_id].location]
+    let Some(&to_entity_id) = ctx.world.locations[ctx.world.entities[ctx.entity_id].location]
         .entities
         .iter()
-        .find(|&&x| world.entities[x].name == to_entity_name)
+        .find(|&&x| ctx.world.entities[x].name == to_entity_name)
     else {
-        printer.p(to_entity_name);
-        printer.p(b" not here\r\n\r\n");
+        ctx.printer.p(to_entity_name);
+        ctx.printer.p(b" not here\r\n\r\n");
         return Err(ActionFailed::EntityNotHere);
     };
 
     // remove object from entity
-    world.entities[entity_id].objects.remove(object_index);
+    ctx.world.entities[ctx.entity_id]
+        .objects
+        .remove(object_index);
 
     // add object to "to" entity
-    world.entities[to_entity_id].objects.push(object_id);
+    ctx.world.entities[to_entity_id].objects.push(object_id);
 
     // send messages
     send_message_to_entities_in_location(
-        world,
-        world.entities[entity_id].location,
+        ctx.world,
+        ctx.world.entities[ctx.entity_id].location,
         &[to_entity_id],
         EntityMessage::from_parts(&[
-            &world.entities[entity_id].name,
+            &ctx.world.entities[ctx.entity_id].name,
             b" gave ",
-            &world.entities[to_entity_id].name,
+            &ctx.world.entities[to_entity_id].name,
             b" ",
-            &world.objects[object_id].name,
+            &ctx.world.objects[object_id].name,
         ]),
     );
 
     send_message_to_entities(
-        world,
+        ctx.world,
         &[to_entity_id],
         EntityMessage::from_parts(&[
-            &world.entities[entity_id].name,
+            &ctx.world.entities[ctx.entity_id].name,
             b" gave u ",
-            &world.objects[object_id].name,
+            &ctx.world.objects[object_id].name,
         ]),
     );
 
@@ -387,20 +372,15 @@ pub fn action_give(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_memory_info(
-    printer: &Printer,
-    _world: &mut World,
-    _entity_id: EntityId,
-    _it: &mut CommandBufferIterator,
-) -> Result<()> {
-    printer.p(b"   heap start: ");
-    printer.p_hex_u32(memory_heap_start(), true);
-    printer.p(b"\r\nstack pointer: ");
-    printer.p_hex_u32(memory_stack_pointer(), true);
-    printer.p(b"\r\n   memory end: ");
-    printer.p_hex_u32(memory_end(), true);
-    printer.p(b"\r\n\r\nheap blocks:\r\n");
-    GlobalAllocator::debug_block_list(printer);
+pub fn action_memory_info(ctx: &mut ActionContext) -> Result<()> {
+    ctx.printer.p(b"   heap start: ");
+    ctx.printer.p_hex_u32(memory_heap_start(), true);
+    ctx.printer.p(b"\r\nstack pointer: ");
+    ctx.printer.p_hex_u32(memory_stack_pointer(), true);
+    ctx.printer.p(b"\r\n   memory end: ");
+    ctx.printer.p_hex_u32(memory_end(), true);
+    ctx.printer.p(b"\r\n\r\nheap blocks:\r\n");
+    GlobalAllocator::debug_block_list(ctx.printer);
 
     Ok(())
 }
@@ -410,54 +390,39 @@ pub fn action_memory_info(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_sdcard_status(
-    printer: &Printer,
-    _world: &mut World,
-    _entity_id: EntityId,
-    _it: &mut CommandBufferIterator,
-) -> Result<()> {
-    printer.p(b"SDCARD_STATUS: 0x");
-    printer.p_hex_u32(sdcard_status() as u32, true);
-    printer.p(b"\r\n");
+pub fn action_sdcard_status(ctx: &mut ActionContext) -> Result<()> {
+    ctx.printer.p(b"SDCARD_STATUS: 0x");
+    ctx.printer.p_hex_u32(sdcard_status() as u32, true);
+    ctx.printer.p(b"\r\n");
 
     Ok(())
 }
 
-pub fn action_sdcard_read(
-    printer: &Printer,
-    _world: &mut World,
-    _entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let sector = if let Some(sector) = it.next() {
+pub fn action_sdcard_read(ctx: &mut ActionContext) -> Result<()> {
+    let sector = if let Some(sector) = ctx.it.next() {
         u8_slice_to_u32(sector)
     } else {
-        printer.p(b"what sector\r\n");
+        ctx.printer.p(b"what sector\r\n");
         return Err(ActionFailed::WhatSector);
     };
 
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     sdcard_read_blocking(sector, &mut buf);
-    buf.iter().for_each(|&x| printer.pb(x));
-    printer.p(b"\r\n");
+    buf.iter().for_each(|&x| ctx.printer.pb(x));
+    ctx.printer.p(b"\r\n");
 
     Ok(())
 }
 
-pub fn action_sdcard_write(
-    printer: &Printer,
-    _world: &mut World,
-    _entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let sector = if let Some(sector) = it.next() {
+pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
+    let sector = if let Some(sector) = ctx.it.next() {
         u8_slice_to_u32(sector)
     } else {
-        printer.p(b"what sector\r\n");
+        ctx.printer.p(b"what sector\r\n");
         return Err(ActionFailed::WhatSector);
     };
 
-    let data = it.rest();
+    let data = ctx.it.rest();
     let len = data.len().min(SDCARD_SECTOR_SIZE_BYTES);
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     buf[..len].copy_from_slice(&data[..len]);
@@ -467,16 +432,12 @@ pub fn action_sdcard_write(
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-pub fn action_led_set(
-    printer: &Printer,
-    _world: &mut World,
-    _entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let bits = if let Some(bits) = it.next() {
+pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
+    let bits = if let Some(bits) = ctx.it.next() {
         u8_slice_to_u32(bits)
     } else {
-        printer.p(b"which leds (in bits as decimal with 0 being on)\r\n");
+        ctx.printer
+            .p(b"which leds (in bits as decimal with 0 being on)\r\n");
         return Err(ActionFailed::WhichLeds);
     };
 
@@ -489,92 +450,82 @@ pub fn action_led_set(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_help(
-    printer: &Printer,
-    _world: &mut World,
-    _entity_id: EntityId,
-    _it: &mut CommandBufferIterator,
-) -> Result<()> {
-    printer.p(HELP);
+pub fn action_help(ctx: &mut ActionContext) -> Result<()> {
+    ctx.printer.p(HELP);
 
     Ok(())
 }
 
-pub fn action_new_object(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
+pub fn action_new_object(ctx: &mut ActionContext) -> Result<()> {
     // get object name
-    let Some(object_name) = it.next() else {
-        printer.p(b"what object name\r\n");
+    let Some(object_name) = ctx.it.next() else {
+        ctx.printer.p(b"what object name\r\n");
         return Err(ActionFailed::WhatObjectName);
     };
 
-    if world.objects.iter().any(|x| x.name == object_name) {
-        printer.p(b"object already exists\r\n");
+    if ctx.world.objects.iter().any(|x| x.name == object_name) {
+        ctx.printer.p(b"object already exists\r\n");
         return Err(ActionFailed::ObjectAlreadyExists);
     }
 
     let object_id = {
-        let object_id = world.objects.len();
-        world.objects.push(Object {
+        let object_id = ctx.world.objects.len();
+        ctx.world.objects.push(Object {
             name: Name::from(object_name),
         });
         object_id
     };
 
-    world.entities[entity_id].objects.push(object_id);
+    ctx.world.entities[ctx.entity_id].objects.push(object_id);
 
     Ok(())
 }
 
-pub fn action_new_location(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let Some(to_link_name) = it.next() else {
-        printer.p(b"what link name\r\n");
+pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
+    let Some(to_link_name) = ctx.it.next() else {
+        ctx.printer.p(b"what link name\r\n");
         return Err(ActionFailed::WhatToLinkName);
     };
 
-    let Some(back_link_name) = it.next() else {
-        printer.p(b"what back link name\r\n");
+    let Some(back_link_name) = ctx.it.next() else {
+        ctx.printer.p(b"what back link name\r\n");
         return Err(ActionFailed::WhatBackLinkName);
     };
 
-    let Some(new_location_name) = it.next() else {
-        printer.p(b"what new location name\r\n");
+    let Some(new_location_name) = ctx.it.next() else {
+        ctx.printer.p(b"what new location name\r\n");
         return Err(ActionFailed::WhatNewLocationName);
     };
 
-    if world.locations.iter().any(|x| x.name == new_location_name) {
-        printer.p(b"location already exists\r\n");
+    if ctx
+        .world
+        .locations
+        .iter()
+        .any(|x| x.name == new_location_name)
+    {
+        ctx.printer.p(b"location already exists\r\n");
         return Err(ActionFailed::LocationAlreadyExists);
     }
 
-    let from_location_id = world.entities[entity_id].location;
+    let from_location_id = ctx.world.entities[ctx.entity_id].location;
 
-    let to_link_id = find_or_add_link(world, to_link_name);
+    let to_link_id = find_or_add_link(ctx.world, to_link_name);
 
     // check if link is already used
-    if world.locations[from_location_id]
+    if ctx.world.locations[from_location_id]
         .links
         .iter()
         .any(|x| x.link == to_link_id)
     {
-        printer.p(b"link from this location already exists\r\n");
+        ctx.printer.p(b"link from this location already exists\r\n");
         return Err(ActionFailed::LinkFromLocationAlreadyExists);
     }
 
-    let back_link_id = find_or_add_link(world, back_link_name);
+    let back_link_id = find_or_add_link(ctx.world, back_link_name);
 
     // add location and link it back to from location
-    let new_location_id = world.locations.len();
-    world.locations.push(Location {
+    let new_location_id = ctx.world.locations.len();
+    ctx.world.locations.push(Location {
         name: Name::from(new_location_name),
         note: Note::default(),
         links: vec![LocationLink {
@@ -585,41 +536,38 @@ pub fn action_new_location(
         entities: vec![],
     });
 
-    world.locations[from_location_id].links.push(LocationLink {
-        link: to_link_id,
-        location: new_location_id,
-    });
+    ctx.world.locations[from_location_id]
+        .links
+        .push(LocationLink {
+            link: to_link_id,
+            location: new_location_id,
+        });
 
     Ok(())
 }
 
-pub fn action_new_entity(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
+pub fn action_new_entity(ctx: &mut ActionContext) -> Result<()> {
     // get object name
-    let Some(entity_name) = it.next() else {
-        printer.p(b"what entity name\r\n");
+    let Some(entity_name) = ctx.it.next() else {
+        ctx.printer.p(b"what entity name\r\n");
         return Err(ActionFailed::WhatEntityName);
     };
 
-    if world.entities.iter().any(|x| x.name == entity_name) {
-        printer.p(b"entity already exists\r\n");
+    if ctx.world.entities.iter().any(|x| x.name == entity_name) {
+        ctx.printer.p(b"entity already exists\r\n");
         return Err(ActionFailed::EntityAlreadyExists);
     }
 
     {
-        let location_id = world.entities[entity_id].location;
-        let entity_id = world.entities.len();
-        world.entities.push(Entity {
+        let location_id = ctx.world.entities[ctx.entity_id].location;
+        let entity_id = ctx.world.entities.len();
+        ctx.world.entities.push(Entity {
             name: Name::from(entity_name),
             location: location_id,
             objects: vec![],
             messages: vec![],
         });
-        world.locations[location_id].entities.push(entity_id);
+        ctx.world.locations[location_id].entities.push(entity_id);
         entity_id
     };
 
@@ -630,71 +578,57 @@ pub fn action_new_entity(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_set_location_note(
-    _printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    world.locations[world.entities[entity_id].location].note = Note::from(it.rest());
+pub fn action_set_location_note(ctx: &mut ActionContext) -> Result<()> {
+    ctx.world.locations[ctx.world.entities[ctx.entity_id].location].note =
+        Note::from(ctx.it.rest());
 
     Ok(())
 }
 
-pub fn action_say(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let say = it.rest();
+pub fn action_say(ctx: &mut ActionContext) -> Result<()> {
+    let say = ctx.it.rest();
     if say.is_empty() {
-        printer.p(b"say what");
+        ctx.printer.p(b"say what");
         return Err(ActionFailed::SayWhat);
     }
 
-    let entity = &world.entities[entity_id];
+    let entity = &ctx.world.entities[ctx.entity_id];
     send_message_to_entities_in_location(
-        world,
+        ctx.world,
         entity.location,
-        &[entity_id],
+        &[ctx.entity_id],
         EntityMessage::from_parts(&[&entity.name, b" says ", say]),
     );
 
     Ok(())
 }
 
-pub fn action_tell(
-    printer: &Printer,
-    world: &mut World,
-    entity_id: EntityId,
-    it: &mut CommandBufferIterator,
-) -> Result<()> {
-    let Some(to_name) = it.next() else {
-        printer.p(b"tell to whom\r\n");
+pub fn action_tell(ctx: &mut ActionContext) -> Result<()> {
+    let Some(to_name) = ctx.it.next() else {
+        ctx.printer.p(b"tell to whom\r\n");
         return Err(ActionFailed::TellToWhom);
     };
 
-    let tell = it.rest();
+    let tell = ctx.it.rest();
     if tell.is_empty() {
-        printer.p(b"tell what\r\n");
+        ctx.printer.p(b"tell what\r\n");
         return Err(ActionFailed::TellWhat);
     }
 
-    let entity = &world.entities[entity_id];
+    let entity = &ctx.world.entities[ctx.entity_id];
 
-    let Some(&to_entity_id) = world.locations[entity.location]
+    let Some(&to_entity_id) = ctx.world.locations[entity.location]
         .entities
         .iter()
-        .find(|&&x| world.entities[x].name == to_name)
+        .find(|&&x| ctx.world.entities[x].name == to_name)
     else {
-        printer.p(to_name);
-        printer.p(b" not here\r\n");
+        ctx.printer.p(to_name);
+        ctx.printer.p(b" not here\r\n");
         return Err(ActionFailed::EntityNotHere);
     };
 
     let message = EntityMessage::from_parts(&[&entity.name, b" tells u ", tell]);
-    world.entities[to_entity_id].messages.push(message);
+    ctx.world.entities[to_entity_id].messages.push(message);
 
     Ok(())
 }
@@ -703,12 +637,7 @@ pub fn action_tell(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub const fn action_wait(
-    _printer: &Printer,
-    _world: &mut World,
-    _entity_id: EntityId,
-    _it: &mut CommandBufferIterator,
-) -> Result<()> {
+pub const fn action_wait(_ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 

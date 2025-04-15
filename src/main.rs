@@ -61,10 +61,11 @@ mod model;
 extern crate alloc;
 
 use actions::{
-    ActionFailed, Result, action_drop, action_give, action_go, action_go_named_link, action_help,
-    action_inventory, action_led_set, action_look, action_memory_info, action_new_entity,
-    action_new_location, action_new_object, action_say, action_sdcard_read, action_sdcard_status,
-    action_sdcard_write, action_set_location_note, action_take, action_tell, action_wait,
+    ActionContext, ActionFailed, Result, action_drop, action_give, action_go, action_go_named_link,
+    action_help, action_inventory, action_led_set, action_look, action_memory_info,
+    action_new_entity, action_new_location, action_new_object, action_say, action_sdcard_read,
+    action_sdcard_status, action_sdcard_write, action_set_location_note, action_take, action_tell,
+    action_wait,
 };
 use alloc::vec;
 use core::arch::global_asm;
@@ -132,29 +133,35 @@ fn handle_input(
     separator_after_success: bool,
 ) -> Result<()> {
     let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
-    match it.next() {
-        Some(b"go") => action_go(printer, world, entity_id, &mut it)?,
-        Some(b"n") => action_go_named_link(printer, world, entity_id, b"north")?,
-        Some(b"e") => action_go_named_link(printer, world, entity_id, b"east")?,
-        Some(b"s") => action_go_named_link(printer, world, entity_id, b"south")?,
-        Some(b"w") => action_go_named_link(printer, world, entity_id, b"west")?,
-        Some(b"i") => action_inventory(printer, world, entity_id, &mut it)?,
-        Some(b"t") => action_take(printer, world, entity_id, &mut it)?,
-        Some(b"d") => action_drop(printer, world, entity_id, &mut it)?,
-        Some(b"g") => action_give(printer, world, entity_id, &mut it)?,
-        Some(b"sds") => action_sdcard_status(printer, world, entity_id, &mut it)?,
-        Some(b"sdr") => action_sdcard_read(printer, world, entity_id, &mut it)?,
-        Some(b"sdw") => action_sdcard_write(printer, world, entity_id, &mut it)?,
-        Some(b"mi") => action_memory_info(printer, world, entity_id, &mut it)?,
-        Some(b"led") => action_led_set(printer, world, entity_id, &mut it)?,
-        Some(b"help") => action_help(printer, world, entity_id, &mut it)?,
-        Some(b"no") => action_new_object(printer, world, entity_id, &mut it)?,
-        Some(b"nl") => action_new_location(printer, world, entity_id, &mut it)?,
-        Some(b"nln") => action_set_location_note(printer, world, entity_id, &mut it)?,
-        Some(b"ne") => action_new_entity(printer, world, entity_id, &mut it)?,
-        Some(b"say") => action_say(printer, world, entity_id, &mut it)?,
-        Some(b"tell") => action_tell(printer, world, entity_id, &mut it)?,
-        Some(b"wait") => action_wait(printer, world, entity_id, &mut it)?,
+    let mut ctx = ActionContext {
+        printer,
+        world,
+        entity_id,
+        it: &mut it,
+    };
+    match ctx.it.next() {
+        Some(b"go") => action_go(&mut ctx)?,
+        Some(b"n") => action_go_named_link(&mut ctx, b"north")?,
+        Some(b"e") => action_go_named_link(&mut ctx, b"east")?,
+        Some(b"s") => action_go_named_link(&mut ctx, b"south")?,
+        Some(b"w") => action_go_named_link(&mut ctx, b"west")?,
+        Some(b"i") => action_inventory(&mut ctx)?,
+        Some(b"t") => action_take(&mut ctx)?,
+        Some(b"d") => action_drop(&mut ctx)?,
+        Some(b"g") => action_give(&mut ctx)?,
+        Some(b"sds") => action_sdcard_status(&mut ctx)?,
+        Some(b"sdr") => action_sdcard_read(&mut ctx)?,
+        Some(b"sdw") => action_sdcard_write(&mut ctx)?,
+        Some(b"mi") => action_memory_info(&mut ctx)?,
+        Some(b"led") => action_led_set(&mut ctx)?,
+        Some(b"help") => action_help(&mut ctx)?,
+        Some(b"no") => action_new_object(&mut ctx)?,
+        Some(b"nl") => action_new_location(&mut ctx)?,
+        Some(b"nln") => action_set_location_note(&mut ctx)?,
+        Some(b"ne") => action_new_entity(&mut ctx)?,
+        Some(b"say") => action_say(&mut ctx)?,
+        Some(b"tell") => action_tell(&mut ctx)?,
+        Some(b"wait") => action_wait(&mut ctx)?,
         _ => {
             printer.p(b"not understood\r\n\r\n");
             return Err(ActionFailed::InvalidCommand);

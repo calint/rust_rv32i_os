@@ -59,31 +59,37 @@ pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
 pub struct Printer;
 
 impl Printer {
+    /// Creates a new `Printer` instance.
     pub const fn new() -> Self {
         Self {}
     }
 
+    /// Prints a byte.
     #[allow(clippy::unused_self, reason = "future use")]
     pub fn pb(&self, byte: u8) {
         uart_send_byte(byte);
     }
 
+    /// Prints a slice of bytes.
     #[allow(clippy::unused_self, reason = "future use")]
     pub fn p(&self, bytes: &[u8]) {
         uart_send_bytes(bytes);
     }
 
+    /// Prints a slice of bytes followed by a carriage return and line feed.
     #[allow(clippy::unused_self, reason = "future use")]
     pub fn pl(&self, bytes: &[u8]) {
         uart_send_bytes(bytes);
         uart_send_bytes(b"\r\n");
     }
 
+    /// Prints a 32-bit unsigned integer as hexadecimal.
     #[allow(clippy::unused_self, reason = "future use")]
     pub fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
         uart_send_hex_u32(i, separate_half_words);
     }
 
+    /// Moves the cursor back by the specified number of characters.
     #[allow(clippy::unused_self, reason = "future use")]
     pub fn move_back(&self, count: usize) {
         uart_send_move_back(count);

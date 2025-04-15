@@ -73,7 +73,7 @@ impl Printer for PrinterUART {
 
     fn p(&self, bytes: &[u8]) {
         for &byte in bytes {
-            uart_send_byte(byte);
+            self.pb(byte);
         }
     }
 

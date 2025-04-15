@@ -1,4 +1,4 @@
-use super::lib::fixed_size_string::FixedSizeString;
+use crate::lib::fixed_size_string::FixedSizeString;
 use alloc::vec::Vec;
 
 pub type LocationId = usize;

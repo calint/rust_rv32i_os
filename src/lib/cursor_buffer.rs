@@ -79,10 +79,10 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    pub const fn reset(&mut self) {
-        self.cursor = 0;
-        self.end = 0;
-    }
+    // pub const fn reset(&mut self) {
+    //     self.cursor = 0;
+    //     self.end = 0;
+    // }
 
     pub const fn is_full(&self) -> bool {
         self.end == SIZE - 1

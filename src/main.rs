@@ -104,12 +104,11 @@ pub extern "C" fn run() -> ! {
     printer.p(ASCII_ART);
     printer.p(HELLO);
 
-    let mut command_buffer = CommandBuffer::new();
-
     loop {
         for entity_id in 0..world.entities.len() {
             {
-                command_buffer.reset();
+                // note: for consistency
+                let command_buffer = CommandBuffer::new();
                 let mut ctx = ActionContext {
                     printer: &printer,
                     world: &mut world,
@@ -125,7 +124,7 @@ pub extern "C" fn run() -> ! {
                 printer.p(&world.entities[entity_id].name);
                 printer.p(b" > ");
 
-                command_buffer.reset();
+                let mut command_buffer = CommandBuffer::new();
                 input(&mut command_buffer, &printer);
                 printer.p(b"\r\n");
 
@@ -278,9 +277,8 @@ fn create_world() -> World {
         links: vec![],
     };
 
-    let mut command_buffer = CommandBuffer::new();
     for line in CREATION.split(|&x| x == b'\n') {
-        command_buffer.reset();
+        let mut command_buffer = CommandBuffer::new();
         for &byte in line {
             assert!(command_buffer.insert(byte), "command to large");
         }

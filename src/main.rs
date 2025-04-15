@@ -106,7 +106,7 @@ pub extern "C" fn run() -> ! {
     loop {
         for entity_id in 0..world.entities.len() {
             assert!(
-                action_look(&mut world, &printer, entity_id).is_ok(),
+                action_look(&printer, &mut world, entity_id).is_ok(),
                 "cannot look"
             );
             loop {
@@ -133,28 +133,28 @@ fn handle_input(
 ) -> Result<()> {
     let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     match it.next() {
-        Some(b"go") => action_go(world, printer, entity_id, &mut it)?,
-        Some(b"n") => action_go_named_link(world, printer, entity_id, b"north")?,
-        Some(b"e") => action_go_named_link(world, printer, entity_id, b"east")?,
-        Some(b"s") => action_go_named_link(world, printer, entity_id, b"south")?,
-        Some(b"w") => action_go_named_link(world, printer, entity_id, b"west")?,
-        Some(b"i") => action_inventory(world, printer, entity_id)?,
-        Some(b"t") => action_take(world, printer, entity_id, &mut it)?,
-        Some(b"d") => action_drop(world, printer, entity_id, &mut it)?,
-        Some(b"g") => action_give(world, printer, entity_id, &mut it)?,
+        Some(b"go") => action_go(printer, world, entity_id, &mut it)?,
+        Some(b"n") => action_go_named_link(printer, world, entity_id, b"north")?,
+        Some(b"e") => action_go_named_link(printer, world, entity_id, b"east")?,
+        Some(b"s") => action_go_named_link(printer, world, entity_id, b"south")?,
+        Some(b"w") => action_go_named_link(printer, world, entity_id, b"west")?,
+        Some(b"i") => action_inventory(printer, world, entity_id)?,
+        Some(b"t") => action_take(printer, world, entity_id, &mut it)?,
+        Some(b"d") => action_drop(printer, world, entity_id, &mut it)?,
+        Some(b"g") => action_give(printer, world, entity_id, &mut it)?,
         Some(b"sds") => action_sdcard_status(printer)?,
         Some(b"sdr") => action_sdcard_read(printer, &mut it)?,
         Some(b"sdw") => action_sdcard_write(printer, &mut it)?,
         Some(b"mi") => action_memory_info(printer)?,
         Some(b"led") => action_led_set(printer, &mut it)?,
         Some(b"help") => action_help(printer)?,
-        Some(b"no") => action_new_object(world, printer, entity_id, &mut it)?,
-        Some(b"nl") => action_new_location(world, printer, entity_id, &mut it)?,
-        Some(b"nln") => action_set_location_note(world, entity_id, &mut it)?,
-        Some(b"ne") => action_new_entity(world, printer, entity_id, &mut it)?,
-        Some(b"say") => action_say(world, printer, entity_id, &mut it)?,
-        Some(b"tell") => action_tell(world, printer, entity_id, &mut it)?,
-        Some(b"wait") => action_wait()?,
+        Some(b"no") => action_new_object(printer, world, entity_id, &mut it)?,
+        Some(b"nl") => action_new_location(printer, world, entity_id, &mut it)?,
+        Some(b"nln") => action_set_location_note(printer, world, entity_id, &mut it)?,
+        Some(b"ne") => action_new_entity(printer, world, entity_id, &mut it)?,
+        Some(b"say") => action_say(printer, world, entity_id, &mut it)?,
+        Some(b"tell") => action_tell(printer, world, entity_id, &mut it)?,
+        Some(b"wait") => action_wait(printer)?,
         _ => {
             printer.p(b"not understood\r\n\r\n");
             return Err(ActionFailed::InvalidCommand);

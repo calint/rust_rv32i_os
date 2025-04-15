@@ -43,7 +43,7 @@ pub enum ActionFailed {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_look(world: &mut World, printer: &Printer, entity_id: EntityId) -> Result<()> {
+pub fn action_look(printer: &Printer, world: &mut World, entity_id: EntityId) -> Result<()> {
     let entity = &mut world.entities[entity_id];
     let location = &world.locations[entity.location];
 
@@ -104,8 +104,8 @@ pub fn action_look(world: &mut World, printer: &Printer, entity_id: EntityId) ->
 }
 
 pub fn action_go(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -114,12 +114,12 @@ pub fn action_go(
         return Err(ActionFailed::GoWhere);
     };
 
-    action_go_named_link(world, printer, entity_id, named_link)
+    action_go_named_link(printer, world, entity_id, named_link)
 }
 
 pub fn action_go_named_link(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     link_name: &[u8],
 ) -> Result<()> {
@@ -197,7 +197,7 @@ pub fn action_go_named_link(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_inventory(world: &World, printer: &Printer, entity_id: EntityId) -> Result<()> {
+pub fn action_inventory(printer: &Printer, world: &World, entity_id: EntityId) -> Result<()> {
     let entity = &world.entities[entity_id];
     printer.p(b"u have: ");
     let mut i = 0;
@@ -217,8 +217,8 @@ pub fn action_inventory(world: &World, printer: &Printer, entity_id: EntityId) -
 }
 
 pub fn action_take(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -266,8 +266,8 @@ pub fn action_take(
 }
 
 pub fn action_drop(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -309,8 +309,8 @@ pub fn action_drop(
 }
 
 pub fn action_give(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -466,8 +466,8 @@ pub fn action_help(printer: &Printer) -> Result<()> {
 }
 
 pub fn action_new_object(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -496,8 +496,8 @@ pub fn action_new_object(
 }
 
 pub fn action_new_location(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -559,8 +559,8 @@ pub fn action_new_location(
 }
 
 pub fn action_new_entity(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -596,6 +596,7 @@ pub fn action_new_entity(
     reason = "actions return Result for consistency"
 )]
 pub fn action_set_location_note(
+    _printer: &Printer,
     world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
@@ -606,8 +607,8 @@ pub fn action_set_location_note(
 }
 
 pub fn action_say(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -629,8 +630,8 @@ pub fn action_say(
 }
 
 pub fn action_tell(
-    world: &mut World,
     printer: &Printer,
+    world: &mut World,
     entity_id: EntityId,
     it: &mut CommandBufferIterator,
 ) -> Result<()> {
@@ -667,7 +668,7 @@ pub fn action_tell(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub const fn action_wait() -> Result<()> {
+pub const fn action_wait(_printer: &Printer) -> Result<()> {
     Ok(())
 }
 

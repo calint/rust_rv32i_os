@@ -1,5 +1,5 @@
-use super::api::{uart_send_bytes, uart_send_hex_u32};
-use super::api_unsafe::{__heap_start__, uart_send_byte};
+use super::api::Printer;
+use super::api_unsafe::__heap_start__;
 use core::alloc::{GlobalAlloc, Layout};
 use core::mem;
 use core::ptr;
@@ -146,32 +146,32 @@ impl GlobalAllocator {
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-    pub fn debug_block_list() {
+    pub fn debug_block_list(printer: &Printer) {
         unsafe {
             let mut current = HEAP_ALLOCATOR.free_list;
             let mut total: usize = 0;
             let mut total_including_headers: usize = 0;
             while !current.is_null() {
-                uart_send_bytes(b"at: ");
-                uart_send_hex_u32(current as u32, true);
-                uart_send_bytes(b", size: ");
-                uart_send_hex_u32((*current).size as u32, true);
+                printer.p(b"at: ");
+                printer.p_hex_u32(current as u32, true);
+                printer.p(b", size: ");
+                printer.p_hex_u32((*current).size as u32, true);
                 if !(*current).is_free {
                     total += (*current).size;
                     total_including_headers += (*current).size + mem::size_of::<BlockHeader>();
                 }
-                uart_send_bytes(b", free: ");
-                uart_send_byte(if (*current).is_free { b'y' } else { b'n' });
-                uart_send_bytes(b"\r\n");
+                printer.p(b", free: ");
+                printer.pb(if (*current).is_free { b'y' } else { b'n' });
+                printer.p(b"\r\n");
 
                 current = (*current).next;
             }
-            uart_send_bytes(b"total user allocated: ");
-            uart_send_hex_u32(total as u32, true);
-            uart_send_bytes(b" bytes\r\n");
-            uart_send_bytes(b"total allocated including headers: ");
-            uart_send_hex_u32(total_including_headers as u32, true);
-            uart_send_bytes(b" bytes\r\n");
+            printer.p(b"total user allocated: ");
+            printer.p_hex_u32(total as u32, true);
+            printer.p(b" bytes\r\n");
+            printer.p(b"total allocated including headers: ");
+            printer.p_hex_u32(total_including_headers as u32, true);
+            printer.p(b" bytes\r\n");
         }
     }
 }

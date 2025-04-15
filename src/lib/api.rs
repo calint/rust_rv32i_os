@@ -6,7 +6,7 @@ pub const fn memory_end() -> u32 {
 }
 
 pub fn memory_heap_start() -> u32 {
-    &raw const super::api::__heap_start__ as u32
+    &raw const __heap_start__ as u32
 }
 
 pub fn uart_send_bytes(s: &[u8]) {
@@ -38,12 +38,6 @@ pub fn uart_send_hex_nibble(nibble: u8) {
         uart_send_byte(b'A' + (nibble - 10));
     }
 }
-
-// pub fn uart_send_move_back(count: usize) {
-//     for _ in 0..count {
-//         uart_send_byte(8);
-//     }
-// }
 
 pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;

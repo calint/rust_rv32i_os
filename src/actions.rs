@@ -390,8 +390,7 @@ pub fn action_memory_info(printer: &Printer) -> Result<()> {
     printer.p(b"\r\n   memory end: ");
     printer.p_hex_u32(memory_end(), true);
     printer.p(b"\r\n\r\nheap blocks:\r\n");
-    GlobalAllocator::debug_block_list();
-    printer.p(b"\r\n");
+    GlobalAllocator::debug_block_list(printer);
 
     Ok(())
 }

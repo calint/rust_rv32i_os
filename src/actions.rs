@@ -40,7 +40,7 @@ pub enum ActionFailed {
 }
 
 pub struct ActionContext<'a> {
-    pub printer: &'a dyn Printer,
+    pub printer: &'a mut dyn Printer,
     pub world: &'a mut World,
     pub entity_id: EntityId,
     pub tokens: &'a mut CommandBufferIterator<'a>,

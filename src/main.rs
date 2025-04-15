@@ -99,7 +99,7 @@ pub extern "C" fn run() -> ! {
 
     let mut world = create_world();
 
-    let printer = PrinterUART::new();
+    let mut printer = PrinterUART::new();
 
     printer.p(ASCII_ART);
     printer.p(HELLO);
@@ -110,7 +110,7 @@ pub extern "C" fn run() -> ! {
                 // note: for consistency
                 let command_buffer = CommandBuffer::new();
                 let mut ctx = ActionContext {
-                    printer: &printer,
+                    printer: &mut printer,
                     world: &mut world,
                     entity_id,
                     tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
@@ -129,7 +129,7 @@ pub extern "C" fn run() -> ! {
                 printer.p(b"\r\n");
 
                 let mut ctx = ActionContext {
-                    printer: &printer,
+                    printer: &mut printer,
                     world: &mut world,
                     entity_id,
                     tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
@@ -284,7 +284,7 @@ fn create_world() -> World {
         }
 
         let mut ctx = ActionContext {
-            printer: &PrinterVoid::new(),
+            printer: &mut PrinterVoid::new(),
             world: &mut world,
             entity_id: 0,
             tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),

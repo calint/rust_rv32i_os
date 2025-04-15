@@ -15,30 +15,6 @@ pub fn uart_send_bytes(s: &[u8]) {
     }
 }
 
-#[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-pub fn uart_send_hex_u32(i: u32, separate_half_words: bool) {
-    uart_send_hex_byte((i >> 24) as u8);
-    uart_send_hex_byte((i >> 16) as u8);
-    if separate_half_words {
-        uart_send_byte(b':');
-    }
-    uart_send_hex_byte((i >> 8) as u8);
-    uart_send_hex_byte(i as u8);
-}
-
-pub fn uart_send_hex_byte(ch: u8) {
-    uart_send_hex_nibble(ch >> 4);
-    uart_send_hex_nibble(ch & 0x0f);
-}
-
-pub fn uart_send_hex_nibble(nibble: u8) {
-    if nibble < 10 {
-        uart_send_byte(b'0' + nibble);
-    } else {
-        uart_send_byte(b'A' + (nibble - 10));
-    }
-}
-
 pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;
     for &ch in number_as_str {
@@ -78,8 +54,29 @@ impl Printer {
     }
 
     /// Prints a 32-bit unsigned integer as hexadecimal.
-    #[allow(clippy::unused_self, reason = "future use")]
+    #[allow(clippy::cast_possible_truncation, reason = "intended behavior")]
     pub fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
-        uart_send_hex_u32(i, separate_half_words);
+        self.p_hex_u8((i >> 24) as u8);
+        self.p_hex_u8((i >> 16) as u8);
+        if separate_half_words {
+            self.pb(b':');
+        }
+        self.p_hex_u8((i >> 8) as u8);
+        self.p_hex_u8(i as u8);
+    }
+
+    /// Prints a 8-bit unsigned integer as hexadecimal.
+    pub fn p_hex_u8(&self, i: u8) {
+        self.p_hex_nibble(i >> 4);
+        self.p_hex_nibble(i & 0x0f);
+    }
+
+    /// Prints a 4-bit unsigned integer as hexadecimal.
+    pub fn p_hex_nibble(&self, nibble: u8) {
+        if nibble < 10 {
+            self.pb(b'0' + nibble);
+        } else {
+            self.pb(b'A' + (nibble - 10));
+        }
     }
 }

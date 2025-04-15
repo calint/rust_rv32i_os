@@ -69,7 +69,7 @@ use actions::{
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{Printer, memory_end, uart_send_bytes};
+use lib::api::{Printer, memory_end};
 use lib::api_unsafe::{led_set, uart_read_byte};
 use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use lib::global_allocator::GlobalAllocator;
@@ -285,7 +285,8 @@ fn create_world(printer: &Printer) -> World {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    uart_send_bytes(b"PANIC!!!");
+    let printer = Printer::new();
+    printer.p(b"PANIC!!!\r\n");
     led_set(0b0000);
     loop {}
 }

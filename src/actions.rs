@@ -382,7 +382,7 @@ pub fn action_give(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_memory_info(printer: &Printer) -> Result<()> {
+pub fn action_memory_info(printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
     printer.p(b"   heap start: ");
     printer.p_hex_u32(memory_heap_start(), true);
     printer.p(b"\r\nstack pointer: ");
@@ -668,7 +668,7 @@ pub fn action_tell(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub const fn action_wait(_printer: &Printer) -> Result<()> {
+pub const fn action_wait(_printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
     Ok(())
 }
 

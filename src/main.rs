@@ -145,7 +145,7 @@ fn handle_input(
         Some(b"sds") => action_sdcard_status(printer)?,
         Some(b"sdr") => action_sdcard_read(printer, &mut it)?,
         Some(b"sdw") => action_sdcard_write(printer, &mut it)?,
-        Some(b"mi") => action_memory_info(printer)?,
+        Some(b"mi") => action_memory_info(printer, &mut it)?,
         Some(b"led") => action_led_set(printer, &mut it)?,
         Some(b"help") => action_help(printer, &mut it)?,
         Some(b"no") => action_new_object(printer, world, entity_id, &mut it)?,
@@ -154,7 +154,7 @@ fn handle_input(
         Some(b"ne") => action_new_entity(printer, world, entity_id, &mut it)?,
         Some(b"say") => action_say(printer, world, entity_id, &mut it)?,
         Some(b"tell") => action_tell(printer, world, entity_id, &mut it)?,
-        Some(b"wait") => action_wait(printer)?,
+        Some(b"wait") => action_wait(printer, &mut it)?,
         _ => {
             printer.p(b"not understood\r\n\r\n");
             return Err(ActionFailed::InvalidCommand);

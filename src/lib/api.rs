@@ -50,27 +50,21 @@ impl PrinterUART {
 }
 
 impl Printer for PrinterUART {
-    /// Prints a byte.
-    #[allow(clippy::unused_self, reason = "future use")]
     fn pb(&self, byte: u8) {
         uart_send_byte(byte);
     }
 
-    /// Prints a slice of bytes.
-    #[allow(clippy::unused_self, reason = "future use")]
     fn p(&self, bytes: &[u8]) {
         for &byte in bytes {
             uart_send_byte(byte);
         }
     }
 
-    /// Prints a slice of bytes followed by a carriage return and line feed.
     fn pl(&self, bytes: &[u8]) {
         self.p(bytes);
         self.p(b"\r\n");
     }
 
-    /// Prints a 32-bit unsigned integer as hexadecimal.
     #[allow(clippy::cast_possible_truncation, reason = "intended behavior")]
     fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
         self.p_hex_u8((i >> 24) as u8);
@@ -82,13 +76,11 @@ impl Printer for PrinterUART {
         self.p_hex_u8(i as u8);
     }
 
-    /// Prints a 8-bit unsigned integer as hexadecimal.
     fn p_hex_u8(&self, i: u8) {
         self.p_hex_nibble(i >> 4);
         self.p_hex_nibble(i & 0x0f);
     }
 
-    /// Prints a 4-bit unsigned integer as hexadecimal.
     fn p_hex_nibble(&self, nibble: u8) {
         if nibble < 10 {
             self.pb(b'0' + nibble);
@@ -108,18 +100,10 @@ impl PrinterNull {
 }
 
 impl Printer for PrinterNull {
-    #[allow(clippy::unused_self, reason = "future use")]
     fn pb(&self, _byte: u8) {}
-
-    #[allow(clippy::unused_self, reason = "future use")]
     fn p(&self, _bytes: &[u8]) {}
-
     fn pl(&self, _bytes: &[u8]) {}
-
-    #[allow(clippy::cast_possible_truncation, reason = "intended behavior")]
     fn p_hex_u32(&self, _i: u32, _separate_half_words: bool) {}
-
     fn p_hex_u8(&self, _i: u8) {}
-
     fn p_hex_nibble(&self, _nibble: u8) {}
 }

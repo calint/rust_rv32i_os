@@ -31,3 +31,7 @@ $OBJDUMP --source-comment -Sr $ELF > $FIRMWARE.lst
 $OBJDUMP -s --section=.rodata --section=.srodata --section=.data --section=.sdata --section=.bss --section=.sbss $ELF > $FIRMWARE.dat || true
 echo " * firmware built"
 ls -l --color $FIRMWARE.img
+
+file_size=$(stat -c "%s" $FIRMWARE.img)
+timestamp=$(date +"%Y-%m-%d %H:%M:%S")
+echo "$timestamp: $file_size" >> "notes/firmware-size-log.txt"

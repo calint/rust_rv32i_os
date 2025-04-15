@@ -3,8 +3,8 @@ use alloc::vec::Vec;
 
 pub type LocationId = usize;
 pub type LinkId = usize;
-pub type EntityId = usize;
 pub type ObjectId = usize;
+pub type EntityId = usize;
 pub type Name = FixedSizeString<32>;
 pub type Note = FixedSizeString<64>;
 pub type EntityMessage = FixedSizeString<128>;

@@ -90,20 +90,21 @@ impl Printer for PrinterUART {
     }
 }
 
-pub struct PrinterNull;
+pub struct PrinterVoid;
 
-impl PrinterNull {
+impl PrinterVoid {
     /// Creates a new `Printer` instance.
     pub const fn new() -> Self {
         Self {}
     }
 }
 
-impl Printer for PrinterNull {
-    fn pb(&self, _byte: u8) {}
-    fn p(&self, _bytes: &[u8]) {}
-    fn pl(&self, _bytes: &[u8]) {}
-    fn p_hex_nibble(&self, _nibble: u8) {}
-    fn p_hex_u8(&self, _i: u8) {}
-    fn p_hex_u32(&self, _i: u32, _separate_half_words: bool) {}
+/// Ignores all `Printer` methods.
+impl Printer for PrinterVoid {
+    fn pb(&self, _: u8) {}
+    fn p(&self, _: &[u8]) {}
+    fn pl(&self, _: &[u8]) {}
+    fn p_hex_nibble(&self, _: u8) {}
+    fn p_hex_u8(&self, _: u8) {}
+    fn p_hex_u32(&self, _: u32, _: bool) {}
 }

@@ -70,7 +70,7 @@ use actions::{
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{Printer, PrinterNull, PrinterUART, memory_end};
+use lib::api::{Printer, PrinterUART, PrinterVoid, memory_end};
 use lib::api_unsafe::{led_set, uart_read_byte};
 use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use lib::global_allocator::GlobalAllocator;
@@ -284,7 +284,7 @@ fn create_world() -> World {
         }
 
         let mut ctx = ActionContext {
-            printer: &PrinterNull::new(),
+            printer: &PrinterVoid::new(),
             world: &mut world,
             entity_id: 0,
             tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),

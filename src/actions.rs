@@ -43,7 +43,7 @@ pub struct ActionContext<'a> {
     pub printer: &'a Printer,
     pub world: &'a mut World,
     pub entity_id: EntityId,
-    pub it: &'a mut CommandBufferIterator<'a>,
+    pub tokens: &'a mut CommandBufferIterator<'a>,
 }
 
 #[allow(
@@ -111,7 +111,7 @@ pub fn action_look(printer: &Printer, world: &mut World, entity_id: EntityId) ->
 }
 
 pub fn action_go(ctx: &mut ActionContext) -> Result<()> {
-    let Some(named_link) = ctx.it.next() else {
+    let Some(named_link) = ctx.tokens.next() else {
         ctx.printer.p(b"go where\r\n\r\n");
         return Err(ActionFailed::GoWhere);
     };
@@ -221,7 +221,7 @@ pub fn action_inventory(ctx: &mut ActionContext) -> Result<()> {
 
 pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
     // get object name
-    let Some(object_name) = ctx.it.next() else {
+    let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"take what\r\n\r\n");
         return Err(ActionFailed::TakeWhat);
     };
@@ -264,7 +264,7 @@ pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
-    let Some(object_name) = ctx.it.next() else {
+    let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"drop what\r\n\r\n");
         return Err(ActionFailed::DropWhat);
     };
@@ -303,13 +303,13 @@ pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
 
 pub fn action_give(ctx: &mut ActionContext) -> Result<()> {
     // get entity name
-    let Some(to_entity_name) = ctx.it.next() else {
+    let Some(to_entity_name) = ctx.tokens.next() else {
         ctx.printer.p(b"give to whom\r\n\r\n");
         return Err(ActionFailed::GiveToWhom);
     };
 
     // get object name
-    let Some(object_name) = ctx.it.next() else {
+    let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"give what\r\n\r\n");
         return Err(ActionFailed::GiveWhat);
     };
@@ -399,7 +399,7 @@ pub fn action_sdcard_status(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn action_sdcard_read(ctx: &mut ActionContext) -> Result<()> {
-    let sector = if let Some(sector) = ctx.it.next() {
+    let sector = if let Some(sector) = ctx.tokens.next() {
         u8_slice_to_u32(sector)
     } else {
         ctx.printer.p(b"what sector\r\n");
@@ -415,14 +415,14 @@ pub fn action_sdcard_read(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
-    let sector = if let Some(sector) = ctx.it.next() {
+    let sector = if let Some(sector) = ctx.tokens.next() {
         u8_slice_to_u32(sector)
     } else {
         ctx.printer.p(b"what sector\r\n");
         return Err(ActionFailed::WhatSector);
     };
 
-    let data = ctx.it.rest();
+    let data = ctx.tokens.rest();
     let len = data.len().min(SDCARD_SECTOR_SIZE_BYTES);
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     buf[..len].copy_from_slice(&data[..len]);
@@ -433,7 +433,7 @@ pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
 
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
 pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
-    let bits = if let Some(bits) = ctx.it.next() {
+    let bits = if let Some(bits) = ctx.tokens.next() {
         u8_slice_to_u32(bits)
     } else {
         ctx.printer
@@ -458,7 +458,7 @@ pub fn action_help(ctx: &mut ActionContext) -> Result<()> {
 
 pub fn action_new_object(ctx: &mut ActionContext) -> Result<()> {
     // get object name
-    let Some(object_name) = ctx.it.next() else {
+    let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what object name\r\n");
         return Err(ActionFailed::WhatObjectName);
     };
@@ -482,17 +482,17 @@ pub fn action_new_object(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
-    let Some(to_link_name) = ctx.it.next() else {
+    let Some(to_link_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what link name\r\n");
         return Err(ActionFailed::WhatToLinkName);
     };
 
-    let Some(back_link_name) = ctx.it.next() else {
+    let Some(back_link_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what back link name\r\n");
         return Err(ActionFailed::WhatBackLinkName);
     };
 
-    let Some(new_location_name) = ctx.it.next() else {
+    let Some(new_location_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what new location name\r\n");
         return Err(ActionFailed::WhatNewLocationName);
     };
@@ -548,7 +548,7 @@ pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
 
 pub fn action_new_entity(ctx: &mut ActionContext) -> Result<()> {
     // get object name
-    let Some(entity_name) = ctx.it.next() else {
+    let Some(entity_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what entity name\r\n");
         return Err(ActionFailed::WhatEntityName);
     };
@@ -580,13 +580,13 @@ pub fn action_new_entity(ctx: &mut ActionContext) -> Result<()> {
 )]
 pub fn action_set_location_note(ctx: &mut ActionContext) -> Result<()> {
     ctx.world.locations[ctx.world.entities[ctx.entity_id].location].note =
-        Note::from(ctx.it.rest());
+        Note::from(ctx.tokens.rest());
 
     Ok(())
 }
 
 pub fn action_say(ctx: &mut ActionContext) -> Result<()> {
-    let say = ctx.it.rest();
+    let say = ctx.tokens.rest();
     if say.is_empty() {
         ctx.printer.p(b"say what");
         return Err(ActionFailed::SayWhat);
@@ -604,12 +604,12 @@ pub fn action_say(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn action_tell(ctx: &mut ActionContext) -> Result<()> {
-    let Some(to_name) = ctx.it.next() else {
+    let Some(to_name) = ctx.tokens.next() else {
         ctx.printer.p(b"tell to whom\r\n");
         return Err(ActionFailed::TellToWhom);
     };
 
-    let tell = ctx.it.rest();
+    let tell = ctx.tokens.rest();
     if tell.is_empty() {
         ctx.printer.p(b"tell what\r\n");
         return Err(ActionFailed::TellWhat);

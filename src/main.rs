@@ -132,14 +132,13 @@ fn handle_input(
     command_buffer: &CommandBuffer,
     separator_after_success: bool,
 ) -> Result<()> {
-    let mut it: CommandBufferIterator = command_buffer.iter_words(u8::is_ascii_whitespace);
     let mut ctx = ActionContext {
         printer,
         world,
         entity_id,
-        it: &mut it,
+        tokens: &mut command_buffer.iter_words(u8::is_ascii_whitespace),
     };
-    match ctx.it.next() {
+    match ctx.tokens.next() {
         Some(b"go") => action_go(&mut ctx)?,
         Some(b"n") => action_go_named_link(&mut ctx, b"north")?,
         Some(b"e") => action_go_named_link(&mut ctx, b"east")?,

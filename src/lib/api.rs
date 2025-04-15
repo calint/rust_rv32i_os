@@ -21,22 +21,22 @@ pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
 }
 
 pub trait Printer {
-    /// Prints a byte.
+    /// prints a byte
     fn pb(&self, byte: u8);
 
-    /// Prints a slice of bytes.
+    /// prints a slice of bytes
     fn p(&self, bytes: &[u8]);
 
-    /// Prints a slice of bytes followed by implementation specific new line.
+    /// prints a slice of bytes followed by implementation specific new line
     fn pl(&self, bytes: &[u8]);
 
-    /// Prints a 4-bit unsigned integer as hexadecimal.
+    /// prints a 4-bit unsigned integer as hexadecimal
     fn p_hex_nibble(&self, nibble: u8);
 
-    /// Prints a 8-bit unsigned integer as hexadecimal.
+    /// prints a 8-bit unsigned integer as hexadecimal
     fn p_hex_u8(&self, i: u8);
 
-    /// Prints a 32-bit unsigned integer as hexadecimal.
+    /// prints a 32-bit unsigned integer as hexadecimal
     fn p_hex_u32(&self, i: u32, separate_half_words: bool);
 }
 

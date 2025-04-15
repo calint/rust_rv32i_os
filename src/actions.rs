@@ -1,7 +1,7 @@
 use crate::lib::api::{Printer, memory_end, memory_heap_start, u8_slice_to_u32};
 use crate::lib::api_unsafe::{
     SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status,
-    sdcard_write_blocking, uart_send_byte,
+    sdcard_write_blocking,
 };
 use crate::lib::global_allocator::GlobalAllocator;
 use crate::model::{Entity, EntityId, Link, LinkId, LocationId, Object, ObjectId, World};
@@ -419,7 +419,7 @@ pub fn action_sdcard_read(printer: &Printer, it: &mut CommandBufferIterator) -> 
 
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     sdcard_read_blocking(sector, &mut buf);
-    buf.iter().for_each(|&x| uart_send_byte(x));
+    buf.iter().for_each(|&x| printer.pb(x));
     printer.p(b"\r\n");
 
     Ok(())

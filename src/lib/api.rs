@@ -27,17 +27,17 @@ pub trait Printer {
     /// Prints a slice of bytes.
     fn p(&self, bytes: &[u8]);
 
-    /// Prints a slice of bytes followed by a carriage return and line feed.
+    /// Prints a slice of bytes followed by a implementation specific new line.
     fn pl(&self, bytes: &[u8]);
 
-    /// Prints a 32-bit unsigned integer as hexadecimal.
-    fn p_hex_u32(&self, i: u32, separate_half_words: bool);
+    /// Prints a 4-bit unsigned integer as hexadecimal.
+    fn p_hex_nibble(&self, nibble: u8);
 
     /// Prints a 8-bit unsigned integer as hexadecimal.
     fn p_hex_u8(&self, i: u8);
 
-    /// Prints a 4-bit unsigned integer as hexadecimal.
-    fn p_hex_nibble(&self, nibble: u8);
+    /// Prints a 32-bit unsigned integer as hexadecimal.
+    fn p_hex_u32(&self, i: u32, separate_half_words: bool);
 }
 
 pub struct PrinterUART;
@@ -65,6 +65,19 @@ impl Printer for PrinterUART {
         self.p(b"\r\n");
     }
 
+    fn p_hex_nibble(&self, nibble: u8) {
+        if nibble < 10 {
+            self.pb(b'0' + nibble);
+        } else {
+            self.pb(b'A' + (nibble - 10));
+        }
+    }
+
+    fn p_hex_u8(&self, i: u8) {
+        self.p_hex_nibble(i >> 4);
+        self.p_hex_nibble(i & 0x0f);
+    }
+
     #[allow(clippy::cast_possible_truncation, reason = "intended behavior")]
     fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
         self.p_hex_u8((i >> 24) as u8);
@@ -74,19 +87,6 @@ impl Printer for PrinterUART {
         }
         self.p_hex_u8((i >> 8) as u8);
         self.p_hex_u8(i as u8);
-    }
-
-    fn p_hex_u8(&self, i: u8) {
-        self.p_hex_nibble(i >> 4);
-        self.p_hex_nibble(i & 0x0f);
-    }
-
-    fn p_hex_nibble(&self, nibble: u8) {
-        if nibble < 10 {
-            self.pb(b'0' + nibble);
-        } else {
-            self.pb(b'A' + (nibble - 10));
-        }
     }
 }
 
@@ -103,7 +103,7 @@ impl Printer for PrinterNull {
     fn pb(&self, _byte: u8) {}
     fn p(&self, _bytes: &[u8]) {}
     fn pl(&self, _bytes: &[u8]) {}
-    fn p_hex_u32(&self, _i: u32, _separate_half_words: bool) {}
-    fn p_hex_u8(&self, _i: u8) {}
     fn p_hex_nibble(&self, _nibble: u8) {}
+    fn p_hex_u8(&self, _i: u8) {}
+    fn p_hex_u32(&self, _i: u32, _separate_half_words: bool) {}
 }

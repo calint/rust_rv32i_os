@@ -1,13 +1,20 @@
+use crate::HELP;
 use crate::lib::api::{Printer, memory_end, memory_heap_start, u8_slice_to_u32};
 use crate::lib::api_unsafe::{
     SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status,
     sdcard_write_blocking,
 };
+use crate::lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use crate::lib::global_allocator::GlobalAllocator;
 use crate::model::{Entity, EntityId, Link, LinkId, LocationId, Object, ObjectId, World};
 use crate::model::{EntityMessage, Location, LocationLink, Name, Note};
-use crate::{CommandBufferIterator, HELP};
 use alloc::vec;
+
+const COMMAND_BUFFER_SIZE: usize = 80;
+
+pub type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
+pub type CommandBufferIterator<'a> =
+    CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
 
 pub type Result<T> = core::result::Result<T, ActionFailed>;
 

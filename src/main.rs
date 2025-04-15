@@ -61,29 +61,23 @@ mod model;
 extern crate alloc;
 
 use actions::{
-    ActionContext, ActionFailed, Result, action_drop, action_give, action_go, action_go_named_link,
-    action_help, action_inventory, action_led_set, action_look, action_memory_info,
-    action_new_entity, action_new_location, action_new_object, action_say, action_sdcard_read,
-    action_sdcard_status, action_sdcard_write, action_set_location_note, action_take, action_tell,
-    action_wait,
+    ActionContext, ActionFailed, CommandBuffer, Result, action_drop, action_give, action_go,
+    action_go_named_link, action_help, action_inventory, action_led_set, action_look,
+    action_memory_info, action_new_entity, action_new_location, action_new_object, action_say,
+    action_sdcard_read, action_sdcard_status, action_sdcard_write, action_set_location_note,
+    action_take, action_tell, action_wait,
 };
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
 use lib::api::{Printer, PrinterUART, PrinterVoid, memory_end};
 use lib::api_unsafe::{led_set, uart_read_byte};
-use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use lib::global_allocator::GlobalAllocator;
 use model::{Entity, Location, Name, Note, World};
-
-const COMMAND_BUFFER_SIZE: usize = 80;
 
 const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
 const CHAR_ESCAPE: u8 = 0x1b;
-
-type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
-type CommandBufferIterator<'a> = CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
 
 // setup bss section, stack and jump to 'run()'
 global_asm!(include_str!("startup.s"));

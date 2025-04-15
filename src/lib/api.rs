@@ -62,7 +62,7 @@ pub struct PrinterUART;
 
 impl PrinterUART {
     pub const fn new() -> Self {
-        Self {}
+        Self
     }
 }
 
@@ -111,7 +111,7 @@ pub struct PrinterVoid;
 
 impl PrinterVoid {
     pub const fn new() -> Self {
-        Self {}
+        Self
     }
 }
 

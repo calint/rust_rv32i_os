@@ -169,7 +169,7 @@ fn handle_input(ctx: &mut ActionContext, separator_after_success: bool) -> Resul
         Some(b"wait") => action_wait(ctx)?,
         _ => {
             ctx.printer.p(b"not understood\r\n\r\n");
-            return Err(ActionFailed::InvalidCommand);
+            return Err(ActionFailed::NotUnderstood);
         }
     }
 

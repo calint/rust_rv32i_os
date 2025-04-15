@@ -12,7 +12,7 @@ use alloc::vec;
 pub type Result<T> = core::result::Result<T, ActionFailed>;
 
 pub enum ActionFailed {
-    InvalidCommand,
+    NotUnderstood,
     GoWhere,
     NoSuchExit,
     CannotGoThere,

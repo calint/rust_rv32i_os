@@ -147,7 +147,7 @@ fn handle_input(
         Some(b"sdw") => action_sdcard_write(printer, &mut it)?,
         Some(b"mi") => action_memory_info(printer)?,
         Some(b"led") => action_led_set(printer, &mut it)?,
-        Some(b"help") => action_help(printer)?,
+        Some(b"help") => action_help(printer, &mut it)?,
         Some(b"no") => action_new_object(printer, world, entity_id, &mut it)?,
         Some(b"nl") => action_new_location(printer, world, entity_id, &mut it)?,
         Some(b"nln") => action_set_location_note(printer, world, entity_id, &mut it)?,

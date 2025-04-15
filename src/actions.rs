@@ -459,7 +459,7 @@ pub fn action_led_set(printer: &Printer, it: &mut CommandBufferIterator) -> Resu
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_help(printer: &Printer) -> Result<()> {
+pub fn action_help(printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
     printer.p(HELP);
 
     Ok(())

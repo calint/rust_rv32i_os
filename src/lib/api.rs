@@ -9,12 +9,6 @@ pub fn memory_heap_start() -> u32 {
     &raw const __heap_start__ as u32
 }
 
-pub fn uart_send_bytes(s: &[u8]) {
-    for &byte in s {
-        uart_send_byte(byte);
-    }
-}
-
 pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;
     for &ch in number_as_str {
@@ -43,14 +37,15 @@ impl Printer {
     /// Prints a slice of bytes.
     #[allow(clippy::unused_self, reason = "future use")]
     pub fn p(&self, bytes: &[u8]) {
-        uart_send_bytes(bytes);
+        for &byte in bytes {
+            uart_send_byte(byte);
+        }
     }
 
     /// Prints a slice of bytes followed by a carriage return and line feed.
-    #[allow(clippy::unused_self, reason = "future use")]
     pub fn pl(&self, bytes: &[u8]) {
-        uart_send_bytes(bytes);
-        uart_send_bytes(b"\r\n");
+        self.p(bytes);
+        self.p(b"\r\n");
     }
 
     /// Prints a 32-bit unsigned integer as hexadecimal.

@@ -130,7 +130,7 @@ pub extern "C" fn run() -> ! {
                     tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
                 };
 
-                if handle_input(&mut ctx, true).is_ok() {
+                if handle_input(&mut ctx).is_ok() {
                     break;
                 }
             }
@@ -138,7 +138,7 @@ pub extern "C" fn run() -> ! {
     }
 }
 
-fn handle_input(ctx: &mut ActionContext, separator_after_success: bool) -> Result<()> {
+fn handle_input(ctx: &mut ActionContext) -> Result<()> {
     match ctx.tokens.next() {
         Some(b"go") => action_go(ctx)?,
         Some(b"n") => action_go_named_link(ctx, b"north")?,
@@ -168,9 +168,7 @@ fn handle_input(ctx: &mut ActionContext, separator_after_success: bool) -> Resul
         }
     }
 
-    if separator_after_success {
-        ctx.printer.p(b"\r\n");
-    }
+    ctx.printer.p(b"\r\n");
 
     Ok(())
 }
@@ -285,10 +283,7 @@ fn create_world() -> World {
             tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
         };
 
-        assert!(
-            handle_input(&mut ctx, false).is_ok(),
-            "error creating world"
-        );
+        assert!(handle_input(&mut ctx).is_ok(), "error creating world");
 
         // clear messages on all entities in case input generated messages
         world.entities.iter_mut().for_each(|x| x.messages.clear());

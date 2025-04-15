@@ -387,7 +387,12 @@ pub fn action_give(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_memory_info(printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_memory_info(
+    printer: &Printer,
+    _world: &mut World,
+    _entity_id: EntityId,
+    _it: &mut CommandBufferIterator,
+) -> Result<()> {
     printer.p(b"   heap start: ");
     printer.p_hex_u32(memory_heap_start(), true);
     printer.p(b"\r\nstack pointer: ");
@@ -405,7 +410,12 @@ pub fn action_memory_info(printer: &Printer, _it: &mut CommandBufferIterator) ->
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_sdcard_status(printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_sdcard_status(
+    printer: &Printer,
+    _world: &mut World,
+    _entity_id: EntityId,
+    _it: &mut CommandBufferIterator,
+) -> Result<()> {
     printer.p(b"SDCARD_STATUS: 0x");
     printer.p_hex_u32(sdcard_status() as u32, true);
     printer.p(b"\r\n");
@@ -413,7 +423,12 @@ pub fn action_sdcard_status(printer: &Printer, _it: &mut CommandBufferIterator) 
     Ok(())
 }
 
-pub fn action_sdcard_read(printer: &Printer, it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_sdcard_read(
+    printer: &Printer,
+    _world: &mut World,
+    _entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
@@ -429,7 +444,12 @@ pub fn action_sdcard_read(printer: &Printer, it: &mut CommandBufferIterator) -> 
     Ok(())
 }
 
-pub fn action_sdcard_write(printer: &Printer, it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_sdcard_write(
+    printer: &Printer,
+    _world: &mut World,
+    _entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     let sector = if let Some(sector) = it.next() {
         u8_slice_to_u32(sector)
     } else {
@@ -447,7 +467,12 @@ pub fn action_sdcard_write(printer: &Printer, it: &mut CommandBufferIterator) ->
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-pub fn action_led_set(printer: &Printer, it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_led_set(
+    printer: &Printer,
+    _world: &mut World,
+    _entity_id: EntityId,
+    it: &mut CommandBufferIterator,
+) -> Result<()> {
     let bits = if let Some(bits) = it.next() {
         u8_slice_to_u32(bits)
     } else {
@@ -464,7 +489,12 @@ pub fn action_led_set(printer: &Printer, it: &mut CommandBufferIterator) -> Resu
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_help(printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
+pub fn action_help(
+    printer: &Printer,
+    _world: &mut World,
+    _entity_id: EntityId,
+    _it: &mut CommandBufferIterator,
+) -> Result<()> {
     printer.p(HELP);
 
     Ok(())
@@ -673,7 +703,12 @@ pub fn action_tell(
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub const fn action_wait(_printer: &Printer, _it: &mut CommandBufferIterator) -> Result<()> {
+pub const fn action_wait(
+    _printer: &Printer,
+    _world: &mut World,
+    _entity_id: EntityId,
+    _it: &mut CommandBufferIterator,
+) -> Result<()> {
     Ok(())
 }
 

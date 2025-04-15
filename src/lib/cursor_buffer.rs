@@ -79,9 +79,10 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    // pub const fn reset(&mut self) {
-    //     self.end = 0;
-    // }
+    pub const fn reset(&mut self) {
+        self.cursor = 0;
+        self.end = 0;
+    }
 
     pub const fn is_full(&self) -> bool {
         self.end == SIZE - 1
@@ -102,7 +103,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
 
     /// Iterate over the buffer returning a slice for each chunk delimited by returning true from delimiter lambda.
     /// Note: Adjacent delimiters are consumed.
-    pub const fn iter_words<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
+    pub const fn iter_tokens<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
     where
         F: Fn(&T) -> bool,
     {

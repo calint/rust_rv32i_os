@@ -20,37 +20,59 @@ pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     num
 }
 
-pub struct Printer;
+pub trait Printer {
+    /// Prints a byte.
+    fn pb(&self, byte: u8);
 
-impl Printer {
+    /// Prints a slice of bytes.
+    fn p(&self, bytes: &[u8]);
+
+    /// Prints a slice of bytes followed by a carriage return and line feed.
+    fn pl(&self, bytes: &[u8]);
+
+    /// Prints a 32-bit unsigned integer as hexadecimal.
+    fn p_hex_u32(&self, i: u32, separate_half_words: bool);
+
+    /// Prints a 8-bit unsigned integer as hexadecimal.
+    fn p_hex_u8(&self, i: u8);
+
+    /// Prints a 4-bit unsigned integer as hexadecimal.
+    fn p_hex_nibble(&self, nibble: u8);
+}
+
+pub struct PrinterUART;
+
+impl PrinterUART {
     /// Creates a new `Printer` instance.
     pub const fn new() -> Self {
         Self {}
     }
+}
 
+impl Printer for PrinterUART {
     /// Prints a byte.
     #[allow(clippy::unused_self, reason = "future use")]
-    pub fn pb(&self, byte: u8) {
+    fn pb(&self, byte: u8) {
         uart_send_byte(byte);
     }
 
     /// Prints a slice of bytes.
     #[allow(clippy::unused_self, reason = "future use")]
-    pub fn p(&self, bytes: &[u8]) {
+    fn p(&self, bytes: &[u8]) {
         for &byte in bytes {
             uart_send_byte(byte);
         }
     }
 
     /// Prints a slice of bytes followed by a carriage return and line feed.
-    pub fn pl(&self, bytes: &[u8]) {
+    fn pl(&self, bytes: &[u8]) {
         self.p(bytes);
         self.p(b"\r\n");
     }
 
     /// Prints a 32-bit unsigned integer as hexadecimal.
     #[allow(clippy::cast_possible_truncation, reason = "intended behavior")]
-    pub fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
+    fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
         self.p_hex_u8((i >> 24) as u8);
         self.p_hex_u8((i >> 16) as u8);
         if separate_half_words {
@@ -61,17 +83,43 @@ impl Printer {
     }
 
     /// Prints a 8-bit unsigned integer as hexadecimal.
-    pub fn p_hex_u8(&self, i: u8) {
+    fn p_hex_u8(&self, i: u8) {
         self.p_hex_nibble(i >> 4);
         self.p_hex_nibble(i & 0x0f);
     }
 
     /// Prints a 4-bit unsigned integer as hexadecimal.
-    pub fn p_hex_nibble(&self, nibble: u8) {
+    fn p_hex_nibble(&self, nibble: u8) {
         if nibble < 10 {
             self.pb(b'0' + nibble);
         } else {
             self.pb(b'A' + (nibble - 10));
         }
     }
+}
+
+pub struct PrinterNull;
+
+impl PrinterNull {
+    /// Creates a new `Printer` instance.
+    pub const fn new() -> Self {
+        Self {}
+    }
+}
+
+impl Printer for PrinterNull {
+    #[allow(clippy::unused_self, reason = "future use")]
+    fn pb(&self, _byte: u8) {}
+
+    #[allow(clippy::unused_self, reason = "future use")]
+    fn p(&self, _bytes: &[u8]) {}
+
+    fn pl(&self, _bytes: &[u8]) {}
+
+    #[allow(clippy::cast_possible_truncation, reason = "intended behavior")]
+    fn p_hex_u32(&self, _i: u32, _separate_half_words: bool) {}
+
+    fn p_hex_u8(&self, _i: u8) {}
+
+    fn p_hex_nibble(&self, _nibble: u8) {}
 }

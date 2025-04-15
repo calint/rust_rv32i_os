@@ -70,11 +70,11 @@ use actions::{
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{Printer, memory_end};
+use lib::api::{Printer, PrinterNull, PrinterUART, memory_end};
 use lib::api_unsafe::{led_set, uart_read_byte};
 use lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use lib::global_allocator::GlobalAllocator;
-use model::{Entity, EntityId, Location, Name, Note, World};
+use model::{Entity, Location, Name, Note, World};
 
 const COMMAND_BUFFER_SIZE: usize = 80;
 
@@ -97,27 +97,46 @@ pub extern "C" fn run() -> ! {
 
     GlobalAllocator::init(memory_end() as usize);
 
-    let printer = Printer::new();
+    let printer = PrinterUART::new();
 
-    let mut world = create_world(&printer);
+    let mut world = create_world();
 
     printer.p(ASCII_ART);
     printer.p(HELLO);
 
+    let mut command_buffer = CommandBuffer::new();
+
     loop {
         for entity_id in 0..world.entities.len() {
-            assert!(
-                action_look(&printer, &mut world, entity_id).is_ok(),
-                "cannot look"
-            );
+            {
+                command_buffer.reset();
+                let mut ctx = ActionContext {
+                    printer: &printer,
+                    world: &mut world,
+                    entity_id,
+                    tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
+                };
+
+                assert!(action_look(&mut ctx).is_ok(), "cannot look");
+            }
+
             loop {
                 // loop until action succeeded
                 printer.p(&world.entities[entity_id].name);
                 printer.p(b" > ");
-                let mut command_buffer = CommandBuffer::new();
+
+                command_buffer.reset();
                 input(&mut command_buffer, &printer);
                 printer.p(b"\r\n");
-                if handle_input(&mut world, &printer, entity_id, &command_buffer, true).is_ok() {
+
+                let mut ctx = ActionContext {
+                    printer: &printer,
+                    world: &mut world,
+                    entity_id,
+                    tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
+                };
+
+                if handle_input(&mut ctx, true).is_ok() {
                     break;
                 }
             }
@@ -125,56 +144,44 @@ pub extern "C" fn run() -> ! {
     }
 }
 
-fn handle_input(
-    world: &mut World,
-    printer: &Printer,
-    entity_id: EntityId,
-    command_buffer: &CommandBuffer,
-    separator_after_success: bool,
-) -> Result<()> {
-    let mut ctx = ActionContext {
-        printer,
-        world,
-        entity_id,
-        tokens: &mut command_buffer.iter_words(u8::is_ascii_whitespace),
-    };
+fn handle_input(ctx: &mut ActionContext, separator_after_success: bool) -> Result<()> {
     match ctx.tokens.next() {
-        Some(b"go") => action_go(&mut ctx)?,
-        Some(b"n") => action_go_named_link(&mut ctx, b"north")?,
-        Some(b"e") => action_go_named_link(&mut ctx, b"east")?,
-        Some(b"s") => action_go_named_link(&mut ctx, b"south")?,
-        Some(b"w") => action_go_named_link(&mut ctx, b"west")?,
-        Some(b"i") => action_inventory(&mut ctx)?,
-        Some(b"t") => action_take(&mut ctx)?,
-        Some(b"d") => action_drop(&mut ctx)?,
-        Some(b"g") => action_give(&mut ctx)?,
-        Some(b"sds") => action_sdcard_status(&mut ctx)?,
-        Some(b"sdr") => action_sdcard_read(&mut ctx)?,
-        Some(b"sdw") => action_sdcard_write(&mut ctx)?,
-        Some(b"mi") => action_memory_info(&mut ctx)?,
-        Some(b"led") => action_led_set(&mut ctx)?,
-        Some(b"help") => action_help(&mut ctx)?,
-        Some(b"no") => action_new_object(&mut ctx)?,
-        Some(b"nl") => action_new_location(&mut ctx)?,
-        Some(b"nln") => action_set_location_note(&mut ctx)?,
-        Some(b"ne") => action_new_entity(&mut ctx)?,
-        Some(b"say") => action_say(&mut ctx)?,
-        Some(b"tell") => action_tell(&mut ctx)?,
-        Some(b"wait") => action_wait(&mut ctx)?,
+        Some(b"go") => action_go(ctx)?,
+        Some(b"n") => action_go_named_link(ctx, b"north")?,
+        Some(b"e") => action_go_named_link(ctx, b"east")?,
+        Some(b"s") => action_go_named_link(ctx, b"south")?,
+        Some(b"w") => action_go_named_link(ctx, b"west")?,
+        Some(b"i") => action_inventory(ctx)?,
+        Some(b"t") => action_take(ctx)?,
+        Some(b"d") => action_drop(ctx)?,
+        Some(b"g") => action_give(ctx)?,
+        Some(b"sds") => action_sdcard_status(ctx)?,
+        Some(b"sdr") => action_sdcard_read(ctx)?,
+        Some(b"sdw") => action_sdcard_write(ctx)?,
+        Some(b"mi") => action_memory_info(ctx)?,
+        Some(b"led") => action_led_set(ctx)?,
+        Some(b"help") => action_help(ctx)?,
+        Some(b"no") => action_new_object(ctx)?,
+        Some(b"nl") => action_new_location(ctx)?,
+        Some(b"nln") => action_set_location_note(ctx)?,
+        Some(b"ne") => action_new_entity(ctx)?,
+        Some(b"say") => action_say(ctx)?,
+        Some(b"tell") => action_tell(ctx)?,
+        Some(b"wait") => action_wait(ctx)?,
         _ => {
-            printer.p(b"not understood\r\n\r\n");
+            ctx.printer.p(b"not understood\r\n\r\n");
             return Err(ActionFailed::InvalidCommand);
         }
     }
 
     if separator_after_success {
-        printer.p(b"\r\n");
+        ctx.printer.p(b"\r\n");
     }
 
     Ok(())
 }
 
-fn input(command_buffer: &mut CommandBuffer, printer: &Printer) {
+fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
     loop {
         let ch = uart_read_byte();
         led_set(!ch);
@@ -189,7 +196,7 @@ fn input(command_buffer: &mut CommandBuffer, printer: &Printer) {
     }
 }
 
-fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &Printer) {
+fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
     if uart_read_byte() != b'[' {
         return;
     }
@@ -228,7 +235,7 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &Printer) 
     }
 }
 
-fn input_backspace(command_buffer: &mut CommandBuffer, printer: &Printer) {
+fn input_backspace(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
     if command_buffer.backspace() {
         printer.pb(CHAR_BACKSPACE);
         command_buffer.for_each_from_cursor(|x| printer.pb(x));
@@ -241,7 +248,7 @@ fn input_backspace(command_buffer: &mut CommandBuffer, printer: &Printer) {
     }
 }
 
-fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &Printer, ch: u8) {
+fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, ch: u8) {
     if command_buffer.insert(ch) {
         printer.pb(ch);
         command_buffer.for_each_from_cursor(|x| printer.pb(x));
@@ -252,7 +259,7 @@ fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &Printer, ch: 
     }
 }
 
-fn create_world(printer: &Printer) -> World {
+fn create_world() -> World {
     let mut world = World {
         entities: vec![Entity {
             name: Name::from(b"u"),
@@ -271,14 +278,22 @@ fn create_world(printer: &Printer) -> World {
         links: vec![],
     };
 
+    let mut command_buffer = CommandBuffer::new();
     for line in CREATION.split(|&x| x == b'\n') {
-        let mut command_buffer = CommandBuffer::new();
+        command_buffer.reset();
         for &byte in line {
             assert!(command_buffer.insert(byte), "command to large");
         }
 
+        let mut ctx = ActionContext {
+            printer: &PrinterNull::new(),
+            world: &mut world,
+            entity_id: 0,
+            tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
+        };
+
         assert!(
-            handle_input(&mut world, printer, 0, &command_buffer, false).is_ok(),
+            handle_input(&mut ctx, false).is_ok(),
             "error creating world"
         );
 
@@ -291,8 +306,7 @@ fn create_world(printer: &Printer) -> World {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    let printer = Printer::new();
-    printer.p(b"PANIC!!!\r\n");
-    led_set(0b0000);
+    led_set(0b0000); // turn on all leds
+    PrinterUART::new().pl(b"PANIC!!!");
     loop {}
 }

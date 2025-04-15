@@ -40,7 +40,7 @@ pub enum ActionFailed {
 }
 
 pub struct ActionContext<'a> {
-    pub printer: &'a Printer,
+    pub printer: &'a dyn Printer,
     pub world: &'a mut World,
     pub entity_id: EntityId,
     pub tokens: &'a mut CommandBufferIterator<'a>,
@@ -50,61 +50,61 @@ pub struct ActionContext<'a> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_look(printer: &Printer, world: &mut World, entity_id: EntityId) -> Result<()> {
-    let entity = &mut world.entities[entity_id];
-    let location = &world.locations[entity.location];
+pub fn action_look(ctx: &mut ActionContext) -> Result<()> {
+    let entity = &mut ctx.world.entities[ctx.entity_id];
+    let location = &ctx.world.locations[entity.location];
 
     let messages = &entity.messages;
     for x in messages {
-        printer.pl(x);
+        ctx.printer.pl(x);
     }
 
     // clear messages after displayed
     entity.messages.clear();
 
-    printer.p(b"u r in ");
-    printer.p(&location.name);
+    ctx.printer.p(b"u r in ");
+    ctx.printer.p(&location.name);
 
-    printer.p(b"\r\nu c ");
+    ctx.printer.p(b"\r\nu c ");
     let mut i = 0;
     for &eid in &location.entities {
-        if eid != entity_id {
+        if eid != ctx.entity_id {
             if i != 0 {
-                printer.p(b", ");
+                ctx.printer.p(b", ");
             }
-            printer.p(&world.entities[eid].name);
+            ctx.printer.p(&ctx.world.entities[eid].name);
             i += 1;
         }
     }
     for &oid in &location.objects {
         if i != 0 {
-            printer.p(b", ");
+            ctx.printer.p(b", ");
         }
         i += 1;
-        printer.p(&world.objects[oid].name);
+        ctx.printer.p(&ctx.world.objects[oid].name);
     }
     if i == 0 {
-        printer.p(b"nothing");
+        ctx.printer.p(b"nothing");
     }
-    printer.p(b"\r\n");
+    ctx.printer.p(b"\r\n");
 
-    printer.p(b"exits: ");
+    ctx.printer.p(b"exits: ");
     i = 0;
     for lid in &location.links {
         if i != 0 {
-            printer.p(b", ");
+            ctx.printer.p(b", ");
         }
         i += 1;
-        printer.p(&world.links[lid.link].name);
+        ctx.printer.p(&ctx.world.links[lid.link].name);
     }
     if i == 0 {
-        printer.p(b"none");
+        ctx.printer.p(b"none");
     }
-    printer.p(b"\r\n");
+    ctx.printer.p(b"\r\n");
 
     if !location.note.is_empty() {
-        printer.p(&location.note);
-        printer.p(b"\r\n");
+        ctx.printer.p(&location.note);
+        ctx.printer.p(b"\r\n");
     }
 
     Ok(())

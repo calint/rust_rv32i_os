@@ -146,7 +146,7 @@ impl GlobalAllocator {
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-    pub fn debug_block_list(printer: &Printer) {
+    pub fn debug_block_list(printer: &dyn Printer) {
         unsafe {
             let mut current = HEAP_ALLOCATOR.free_list;
             let mut total: usize = 0;

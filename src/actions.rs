@@ -1,4 +1,6 @@
-use crate::lib::api::{Printer, memory_end, memory_heap_start, u8_slice_to_u32};
+use crate::lib::api::{
+    Printer, memory_end, memory_heap_start, u8_slice_bits_to_u32, u8_slice_to_u32,
+};
 use crate::lib::api_unsafe::{
     SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status,
     sdcard_write_blocking,
@@ -440,10 +442,9 @@ pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
 pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
     let bits = if let Some(bits) = ctx.tokens.next() {
-        u8_slice_to_u32(bits)
+        u8_slice_bits_to_u32(bits)
     } else {
-        ctx.printer
-            .p(b"which leds (in bits as decimal with 0 being on)\r\n");
+        ctx.printer.p(b"which leds (in bits with 0 being on)\r\n");
         return Err(ActionFailed::WhichLeds);
     };
 

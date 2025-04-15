@@ -20,6 +20,24 @@ pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     num
 }
 
+pub fn u8_slice_bits_to_u32(binary_as_str: &[u8]) -> u32 {
+    if binary_as_str.is_empty() {
+        return 0;
+    }
+    let mut num = 0;
+    let mut bit_value = 1 << (binary_as_str.len() - 1);
+    for &ch in binary_as_str {
+        if ch != b'0' && ch != b'1' {
+            break;
+        }
+        if ch == b'1' {
+            num += bit_value;
+        }
+        bit_value >>= 1;
+    }
+    num
+}
+
 pub trait Printer {
     /// prints a byte
     fn pb(&self, byte: u8);

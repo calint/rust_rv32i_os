@@ -47,6 +47,8 @@ no mirror
 go back
 ne me";
 
+extern crate alloc;
+
 mod lib {
     pub mod api;
     pub mod api_unsafe;
@@ -57,8 +59,6 @@ mod lib {
 }
 mod actions;
 mod model;
-
-extern crate alloc;
 
 use actions::{
     ActionContext, ActionFailed, CommandBuffer, Result, action_drop, action_give, action_go,

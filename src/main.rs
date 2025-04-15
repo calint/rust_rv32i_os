@@ -97,9 +97,9 @@ pub extern "C" fn run() -> ! {
 
     GlobalAllocator::init(memory_end() as usize);
 
-    let printer = PrinterUART::new();
-
     let mut world = create_world();
+
+    let printer = PrinterUART::new();
 
     printer.p(ASCII_ART);
     printer.p(HELLO);

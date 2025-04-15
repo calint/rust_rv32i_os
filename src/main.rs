@@ -209,7 +209,10 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &Printer) 
                     command_buffer.del();
                     command_buffer.for_each_from_cursor(|x| printer.pb(x));
                     printer.pb(b' ');
-                    printer.move_back(command_buffer.elements_after_cursor_count() + 1);
+                    let count = command_buffer.elements_after_cursor_count() + 1;
+                    for _ in 0..count {
+                        printer.pb(8);
+                    }
                     // note: +1 because of ' ' that erases the trailing character
                 }
                 _ => {}
@@ -224,7 +227,11 @@ fn input_backspace(command_buffer: &mut CommandBuffer, printer: &Printer) {
         printer.pb(CHAR_BACKSPACE);
         command_buffer.for_each_from_cursor(|x| printer.pb(x));
         printer.pb(b' ');
-        printer.move_back(command_buffer.elements_after_cursor_count() + 1);
+        let count = command_buffer.elements_after_cursor_count() + 1;
+        // note: +1 because of ' ' that erases the trailing character
+        for _ in 0..count {
+            printer.pb(8);
+        }
     }
 }
 
@@ -232,7 +239,10 @@ fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &Printer, ch: 
     if command_buffer.insert(ch) {
         printer.pb(ch);
         command_buffer.for_each_from_cursor(|x| printer.pb(x));
-        printer.move_back(command_buffer.elements_after_cursor_count());
+        let count = command_buffer.elements_after_cursor_count();
+        for _ in 0..count {
+            printer.pb(8);
+        }
     }
 }
 

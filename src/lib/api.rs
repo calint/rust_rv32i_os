@@ -39,11 +39,11 @@ pub fn uart_send_hex_nibble(nibble: u8) {
     }
 }
 
-pub fn uart_send_move_back(count: usize) {
-    for _ in 0..count {
-        uart_send_byte(8);
-    }
-}
+// pub fn uart_send_move_back(count: usize) {
+//     for _ in 0..count {
+//         uart_send_byte(8);
+//     }
+// }
 
 pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
     let mut num = 0;
@@ -87,11 +87,5 @@ impl Printer {
     #[allow(clippy::unused_self, reason = "future use")]
     pub fn p_hex_u32(&self, i: u32, separate_half_words: bool) {
         uart_send_hex_u32(i, separate_half_words);
-    }
-
-    /// Moves the cursor back by the specified number of characters.
-    #[allow(clippy::unused_self, reason = "future use")]
-    pub fn move_back(&self, count: usize) {
-        uart_send_move_back(count);
     }
 }

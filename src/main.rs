@@ -275,7 +275,7 @@ fn create_world() -> World {
     for line in CREATION.split(|&x| x == b'\n') {
         let mut command_buffer = CommandBuffer::new();
         for &byte in line {
-            assert!(command_buffer.insert(byte), "command to large");
+            assert!(command_buffer.insert(byte), "command too large");
         }
 
         let mut ctx = ActionContext {

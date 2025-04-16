@@ -121,7 +121,7 @@ pub extern "C" fn run() -> ! {
 
                 let mut command_buffer = CommandBuffer::new();
                 input(&mut command_buffer, &printer);
-                printer.p(b"\r\n");
+                printer.nl();
 
                 let mut ctx = ActionContext {
                     printer: &mut printer,
@@ -168,7 +168,7 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
         }
     }
 
-    ctx.printer.p(b"\r\n");
+    ctx.printer.nl();
 
     Ok(())
 }

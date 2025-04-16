@@ -278,7 +278,8 @@ pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
 
 pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
     let Some(object_name) = ctx.tokens.next() else {
-        ctx.printer.p(b"drop what\r\n\r\n");
+        ctx.printer.p(b"drop what");
+        ctx.printer.nlc(2);
         return Err(ActionFailed::DropWhat);
     };
 

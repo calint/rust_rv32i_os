@@ -45,8 +45,15 @@ pub trait Printer {
     /// Prints a slice of bytes.
     fn p(&self, bytes: &[u8]);
 
-    /// Prints omplementation specific new line.
+    /// Prints implementation specific new line.
     fn nl(&self);
+
+    /// Prints implementation specific multiple new lines new line.
+    fn nlc(&self, count: usize) {
+        for _ in 0..count {
+            self.nl();
+        }
+    }
 
     /// Prints a slice of bytes followed by implementation specific new line.
     fn pl(&self, bytes: &[u8]) {
@@ -125,7 +132,6 @@ impl Printer for PrinterVoid {
     fn pb(&self, _: u8) {}
     fn p(&self, _: &[u8]) {}
     fn nl(&self) {}
-    fn pl(&self, _: &[u8]) {}
     fn p_hex_nibble(&self, _: u8) {}
     fn p_hex_u8(&self, _: u8) {}
     fn p_hex_u32(&self, _: u32, _: bool) {}

@@ -442,9 +442,10 @@ pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
 pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
     let bits = if let Some(bits) = ctx.tokens.next() {
-        u8_slice_bits_to_u32(bits)
+        !u8_slice_bits_to_u32(bits)
+        // note: inverted since '0' is 'on'
     } else {
-        ctx.printer.p(b"which leds (in bits with 0 being on)\r\n");
+        ctx.printer.p(b"which leds\r\n");
         return Err(ActionFailed::WhichLeds);
     };
 

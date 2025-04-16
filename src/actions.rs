@@ -131,7 +131,7 @@ pub fn action_go(ctx: &mut ActionContext) -> Result<()> {
 pub fn action_go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     // find link id
     let Some(link_id) = ctx.world.links.iter().position(|x| x.name == link_name) else {
-        ctx.printer.p(b"no such exit");
+        ctx.printer.p(b"cannot go there");
         ctx.printer.nlc(2);
         return Err(ActionFailed::NoSuchExit);
     };
@@ -250,7 +250,7 @@ pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
             .find(|&(_, &oid)| ctx.world.objects[oid].name == object_name)
         else {
             ctx.printer.p(object_name);
-            ctx.printer.p(b" is not here");
+            ctx.printer.p(b" not here");
             ctx.printer.nlc(2);
             return Err(ActionFailed::ObjectNotHere);
         };
@@ -663,7 +663,7 @@ pub fn action_tell(ctx: &mut ActionContext) -> Result<()> {
     else {
         ctx.printer.p(to_name);
         ctx.printer.p(b" not here");
-        ctx.printer.nl();
+        ctx.printer.nlc(2);
         return Err(ActionFailed::EntityNotHere);
     };
 

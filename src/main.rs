@@ -163,7 +163,8 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
         Some(b"tell") => action_tell(ctx)?,
         Some(b"wait") => action_wait(ctx)?,
         _ => {
-            ctx.printer.p(b"not understood\r\n\r\n");
+            ctx.printer.p(b"not understood");
+            ctx.printer.nlc(2);
             return Err(ActionFailed::NotUnderstood);
         }
     }

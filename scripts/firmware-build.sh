@@ -6,6 +6,11 @@ ELF=target/riscv32i-unknown-none-elf/release/firmware
 OBJCOPY=riscv64-elf-objcopy
 OBJDUMP=riscv64-elf-objdump
 FIRMWARE=firmware
+FIRMWARE_IMG="$FIRMWARE.img"
+FIRMWARE_LIST="$FIRMWARE.lst"
+FIRMWARE_DATA="$FIRMWARE.dat"
+FIRMWARE_LOG="notes/firmware-size-and-changed-log.txt"
+FIRMWARE_TMP="$FIRMWARE.img.tmp"
 
 cd ..
 
@@ -23,16 +28,31 @@ cargo clippy --release -- -W clippy::all -W clippy::pedantic -W clippy::nursery 
 #                          -A clippy::undocumented_unsafe_blocks -A clippy::arbitrary_source_item_ordering \
 #                          -A clippy::missing_trait_methods -A clippy::module_name_repetitions -A clippy::missing_assert_message \
 
-
 cargo build --release
-$OBJCOPY -O binary $ELF $FIRMWARE.img
-#$OBJDUMP --source-comment -Mnumeric,no-aliases -Sr $ELF > firmware.lst
-$OBJDUMP --source-comment -SCr $ELF > $FIRMWARE.lst
-$OBJDUMP -s --section=.rodata --section=.srodata --section=.data --section=.sdata --section=.bss --section=.sbss $ELF > $FIRMWARE.dat || true
-echo " * firmware built"
-ls -l --color $FIRMWARE.img
 
-file_size=$(stat -c "%s" $FIRMWARE.img)
+# Check if firmware.img already exists and make a backup.
+if [ -f "$FIRMWARE_IMG" ]; then
+  cp "$FIRMWARE_IMG" "$FIRMWARE_TMP"
+else
+  touch "$FIRMWARE_TMP" # create an empty file for comparison if needed
+fi
+
+$OBJCOPY -O binary "$ELF" "$FIRMWARE_IMG"
+$OBJDUMP --source-comment -SCr "$ELF" > "$FIRMWARE_LIST"
+$OBJDUMP -s --section=.rodata --section=.srodata --section=.data --section=.sdata --section=.bss --section=.sbss "$ELF" > "$FIRMWARE_DATA" || true
+
+echo " * firmware built"
+ls -l --color "$FIRMWARE_IMG"
+
+file_size=$(stat -c "%s" "$FIRMWARE_IMG")
 timestamp=$(date +"%Y-%m-%d %H:%M:%S")
-md5sum=$(md5sum $FIRMWARE.img | awk '{print $1}')
-echo "$timestamp: $file_size ($md5sum)" >> "notes/firmware-size-log.txt"
+
+# Compare the old and new firmware.img files.
+if cmp -s "$FIRMWARE_TMP" "$FIRMWARE_IMG"; then
+  echo "$timestamp: $file_size B  (same)" >> "$FIRMWARE_LOG"
+else
+  echo "$timestamp: $file_size B  (changed)" >> "$FIRMWARE_LOG"
+fi
+
+# Clean up the temporary file.
+rm "$FIRMWARE_TMP"

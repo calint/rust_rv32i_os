@@ -75,38 +75,38 @@ pub fn action_look(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.nl();
 
     ctx.printer.p(b"u c ");
-    let mut i = 0;
+    let mut count = 0;
     for &eid in &location.entities {
         if eid != ctx.entity_id {
-            if i != 0 {
+            if count != 0 {
                 ctx.printer.p(b", ");
             }
             ctx.printer.p(&ctx.world.entities[eid].name);
-            i += 1;
+            count += 1;
         }
     }
     for &oid in &location.objects {
-        if i != 0 {
+        if count != 0 {
             ctx.printer.p(b", ");
         }
-        i += 1;
+        count += 1;
         ctx.printer.p(&ctx.world.objects[oid].name);
     }
-    if i == 0 {
+    if count == 0 {
         ctx.printer.p(b"nothing");
     }
     ctx.printer.nl();
 
     ctx.printer.p(b"exits: ");
-    i = 0;
+    count = 0;
     for lid in &location.links {
-        if i != 0 {
+        if count != 0 {
             ctx.printer.p(b", ");
         }
-        i += 1;
+        count += 1;
         ctx.printer.p(&ctx.world.links[lid.link].name);
     }
-    if i == 0 {
+    if count == 0 {
         ctx.printer.p(b"none");
     }
     ctx.printer.nl();

@@ -27,7 +27,7 @@ cargo clippy --release -- -W clippy::all -W clippy::pedantic -W clippy::nursery 
 cargo build --release
 $OBJCOPY -O binary $ELF $FIRMWARE.img
 #$OBJDUMP --source-comment -Mnumeric,no-aliases -Sr $ELF > firmware.lst
-$OBJDUMP --source-comment -Sr $ELF > $FIRMWARE.lst
+$OBJDUMP --source-comment -SCr $ELF > $FIRMWARE.lst
 $OBJDUMP -s --section=.rodata --section=.srodata --section=.data --section=.sdata --section=.bss --section=.sbss $ELF > $FIRMWARE.dat || true
 echo " * firmware built"
 ls -l --color $FIRMWARE.img

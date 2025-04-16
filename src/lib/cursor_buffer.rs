@@ -4,7 +4,10 @@ pub struct CursorBuffer<const SIZE: usize, T> {
     cursor: usize,
 }
 
-impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
+impl<const SIZE: usize, T> CursorBuffer<SIZE, T>
+where
+    T: Default + Copy,
+{
     pub fn new() -> Self {
         Self {
             buffer: [T::default(); SIZE],
@@ -33,14 +36,15 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    pub fn del(&mut self) {
+    pub fn delete(&mut self) -> bool {
         if self.cursor == self.end {
-            return;
+            return false;
         }
 
         self.buffer
             .copy_within(self.cursor + 1..self.end, self.cursor);
         self.end -= 1;
+        true
     }
 
     pub fn backspace(&mut self) -> bool {
@@ -61,7 +65,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    pub const fn move_cursor_left(&mut self) -> bool {
+    pub const fn cursor_left(&mut self) -> bool {
         if self.cursor == 0 {
             return false;
         }
@@ -70,7 +74,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         true
     }
 
-    pub const fn move_cursor_right(&mut self) -> bool {
+    pub const fn cursor_right(&mut self) -> bool {
         if self.cursor == self.end {
             return false;
         }
@@ -101,7 +105,7 @@ impl<const SIZE: usize, T: Default + Copy> CursorBuffer<SIZE, T> {
         self.end - self.cursor
     }
 
-    /// Iterate over the buffer returning a slice for each chunk delimited by returning true from delimiter lambda.
+    /// Iterates over the buffer, returning a slice for each chunk delimited by the provided closure.
     /// Note: Adjacent delimiters are consumed.
     pub const fn iter_tokens<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
     where

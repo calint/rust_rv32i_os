@@ -39,22 +39,28 @@ pub fn u8_slice_bits_to_u32(binary_as_str: &[u8]) -> u32 {
 }
 
 pub trait Printer {
-    /// prints a byte
+    /// Prints a byte.
     fn pb(&self, byte: u8);
 
-    /// prints a slice of bytes
+    /// Prints a slice of bytes.
     fn p(&self, bytes: &[u8]);
 
-    /// prints a slice of bytes followed by implementation specific new line
-    fn pl(&self, bytes: &[u8]);
+    /// Prints omplementation specific new line.
+    fn nl(&self);
 
-    /// prints a 4-bit unsigned integer as hexadecimal
+    /// Prints a slice of bytes followed by implementation specific new line.
+    fn pl(&self, bytes: &[u8]) {
+        self.p(bytes);
+        self.nl();
+    }
+
+    /// Prints a 4-bit unsigned integer as hexadecimal.
     fn p_hex_nibble(&self, nibble: u8);
 
-    /// prints a 8-bit unsigned integer as hexadecimal
+    /// Prints a 8-bit unsigned integer as hexadecimal.
     fn p_hex_u8(&self, i: u8);
 
-    /// prints a 32-bit unsigned integer as hexadecimal
+    /// Prints a 32-bit unsigned integer as hexadecimal.
     fn p_hex_u32(&self, i: u32, separate_half_words: bool);
 }
 
@@ -77,8 +83,7 @@ impl Printer for PrinterUART {
         }
     }
 
-    fn pl(&self, bytes: &[u8]) {
-        self.p(bytes);
+    fn nl(&self) {
         self.p(b"\r\n");
     }
 
@@ -107,6 +112,7 @@ impl Printer for PrinterUART {
     }
 }
 
+/// A printer that ignores all output.
 pub struct PrinterVoid;
 
 impl PrinterVoid {
@@ -115,10 +121,10 @@ impl PrinterVoid {
     }
 }
 
-/// Ignores all `Printer` methods.
 impl Printer for PrinterVoid {
     fn pb(&self, _: u8) {}
     fn p(&self, _: &[u8]) {}
+    fn nl(&self) {}
     fn pl(&self, _: &[u8]) {}
     fn p_hex_nibble(&self, _: u8) {}
     fn p_hex_u8(&self, _: u8) {}

@@ -4,19 +4,22 @@ use core::alloc::{GlobalAlloc, Layout};
 use core::mem;
 use core::ptr;
 
-// minimum block size and alignment
-const MIN_BLOCK_SIZE: usize = 16;
+#[global_allocator]
+static mut HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
+    free_list: ptr::null_mut(),
+};
 
-// block metadata structure
 struct BlockHeader {
-    size: usize,            // total size of the block including header
-    is_free: bool,          // whether the block is available for allocation
-    next: *mut BlockHeader, // next block in the free list
-    prev: *mut BlockHeader, // previous block in the free list
+    size: usize,            // Total size of the block, including the header.
+    is_free: bool,          // Indicates whether the block is available for allocation.
+    next: *mut BlockHeader, // Pointer to the next block in the free list.
+    prev: *mut BlockHeader, // Pointer to the previous block in the free list.
 }
 
+const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>();
+
 pub struct GlobalAllocator {
-    free_list: *mut BlockHeader, // head of the free list
+    free_list: *mut BlockHeader, // Head of the free list.
 }
 
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
@@ -162,21 +165,22 @@ impl GlobalAllocator {
                 }
                 printer.p(b", free: ");
                 printer.pb(if (*current).is_free { b'y' } else { b'n' });
-                printer.p(b"\r\n");
+                printer.nl();
 
                 current = (*current).next;
             }
             printer.p(b"total user allocated: ");
             printer.p_hex_u32(total as u32, true);
-            printer.p(b" bytes\r\n");
+            printer.pl(b" bytes");
             printer.p(b"total allocated including headers: ");
             printer.p_hex_u32(total_including_headers as u32, true);
-            printer.p(b" bytes\r\n");
+            printer.pl(b" bytes");
+            printer.p(b"block header size: ");
+            printer.p_hex_u32(mem::size_of::<BlockHeader>() as u32, true);
+            printer.nl();
+            printer.p(b"min block size: ");
+            printer.p_hex_u32(MIN_BLOCK_SIZE as u32, true);
+            printer.nl();
         }
     }
 }
-
-#[global_allocator]
-static mut HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
-    free_list: ptr::null_mut(),
-};

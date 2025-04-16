@@ -79,7 +79,7 @@ const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
 const CHAR_ESCAPE: u8 = 0x1b;
 
-// setup bss section, stack and jump to 'run()'
+// Setup bss section, stack and jump to `run()`.
 global_asm!(include_str!("startup.s"));
 
 /// # Panics
@@ -201,23 +201,24 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUA
         } else {
             match ch {
                 b'D' => {
-                    if command_buffer.move_cursor_left() {
+                    if command_buffer.cursor_left() {
                         printer.p(b"\x1B[D");
                     }
                 }
                 b'C' => {
-                    if command_buffer.move_cursor_right() {
+                    if command_buffer.cursor_right() {
                         printer.p(b"\x1B[C");
                     }
                 }
                 b'~' => {
-                    command_buffer.del();
-                    command_buffer.for_each_from_cursor(|x| printer.pb(x));
-                    printer.pb(b' ');
-                    let count = command_buffer.elements_after_cursor_count() + 1;
-                    // note: +1 because of ' ' that erases the trailing character
-                    for _ in 0..count {
-                        printer.pb(8);
+                    if command_buffer.delete() {
+                        command_buffer.for_each_from_cursor(|x| printer.pb(x));
+                        printer.pb(b' ');
+                        let count = command_buffer.elements_after_cursor_count() + 1;
+                        // note: +1 because of ' ' that erases the trailing character
+                        for _ in 0..count {
+                            printer.pb(8);
+                        }
                     }
                 }
                 _ => {}

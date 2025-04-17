@@ -75,10 +75,12 @@ use lib::api_unsafe::{led_set, uart_read_byte};
 use lib::global_allocator::GlobalAllocator;
 use model::{Entity, Location, Name, Note, World};
 
-const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
-const CHAR_FORM_FEED: u8 = 0xc;
+const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_ESCAPE: u8 = 0x1b;
+const CHAR_CTRL_A: u8 = 1;
+const CHAR_CTRL_E: u8 = 5;
+const CHAR_FORM_FEED: u8 = 0xc;
 
 // Setup bss section, stack and jump to `run()`.
 global_asm!(include_str!("startup.s"));
@@ -184,7 +186,9 @@ fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
             CHAR_ESCAPE => input_escape_sequence(command_buffer, printer),
             CHAR_BACKSPACE => input_backspace(command_buffer, printer),
             CHAR_CARRIAGE_RETURN => return,
-            CHAR_FORM_FEED => {} // ignore CTRL+l
+            CHAR_FORM_FEED => {} // ignore CTRL+L
+            CHAR_CTRL_A => input_move_to_start_of_line(command_buffer, printer),
+            CHAR_CTRL_E => input_move_to_end_of_line(command_buffer, printer),
             _ if command_buffer.is_full() => return,
             _ => input_normal_char(command_buffer, printer, ch),
         }
@@ -252,6 +256,18 @@ fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, 
         for _ in 0..count {
             printer.pb(8);
         }
+    }
+}
+
+fn input_move_to_start_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
+    while command_buffer.cursor_left() {
+        printer.p(b"\x1B[D");
+    }
+}
+
+fn input_move_to_end_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
+    while command_buffer.cursor_right() {
+        printer.p(b"\x1B[C");
     }
 }
 

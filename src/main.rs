@@ -32,9 +32,31 @@ static ASCII_ART: &[u8] = b"\x20                                  oOo.o.\r\n\
 \x20      | |\r\n\
 \r\n";
 
-static HELP:&[u8]=b"\r\ncommand:\r\n  go <exit>: go\r\n  n: go north\r\n  e: go east\r\n  s: go south\r\n  w: go west\r\n  i: display inventory\r\n  t <object>: take object\r\n  d <object>: drop object\r\n  g <entity> <object>: give object to entity\r\n  say <what>: say to all in location\r\n  tell <whom> <what>: tells entity in location\r\n  sds: SD card status\r\n  sdr <sector>: read sector from SD card\r\n  sdw <sector> <text>: write sector to SD card\r\n  mi: memory info\r\n  led <bits with 1 being on>: turn on/off leds\r\n  no <object name>: new object into current inventory\r\n  nl <to link> <back link> <new location name>: new linked location\r\n  help: this message\r\n\r\n";
+static HELP: &[u8] = b"command:\r
+\x20 go <exit>: go\r
+\x20 n: go north\r
+\x20 e: go east\r
+\x20 s: go south\r
+\x20 w: go west\r
+\x20 i: display inventory\r
+\x20 t <object>: take object\r
+\x20 d <object>: drop object\r
+\x20 g <entity> <object>: give entity object from inventory\r
+\x20 say <what>: say to all in location\r
+\x20 tell <whom> <what>: tells entity in location\r
+\x20 sln <text>: set location note\r
+\x20 sds: SD card status\r
+\x20 sdr <sector>: read sector from SD card\r
+\x20 sdw <sector> <text>: write sector to SD card\r
+\x20 led <bits with 1 being on>: turn on/off leds\r
+\x20 no <object name>: new object into current inventory\r
+\x20 nl <to link> <back link> <new location name>: new linked location\r
+\x20 ne <name>: create new entity\r
+\x20 mi: memory allocation info\r
+\x20 wait: do nothing\r
+\x20 help: this message\r\n";
 
-static CREATION: &[u8] = b"nln todo: find an exit
+static CREATION: &[u8] = b"sln todo: find an exit
 nl none back office
 go none
 no notebook
@@ -152,19 +174,19 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
         Some(b"t") => action_take(ctx)?,
         Some(b"d") => action_drop(ctx)?,
         Some(b"g") => action_give(ctx)?,
+        Some(b"say") => action_say(ctx)?,
+        Some(b"tell") => action_tell(ctx)?,
+        Some(b"sln") => action_set_location_note(ctx)?,
         Some(b"sds") => action_sdcard_status(ctx)?,
         Some(b"sdr") => action_sdcard_read(ctx)?,
         Some(b"sdw") => action_sdcard_write(ctx)?,
-        Some(b"mi") => action_memory_info(ctx)?,
         Some(b"led") => action_led_set(ctx)?,
-        Some(b"help") => action_help(ctx, HELP)?,
         Some(b"no") => action_new_object(ctx)?,
         Some(b"nl") => action_new_location(ctx)?,
-        Some(b"nln") => action_set_location_note(ctx)?,
         Some(b"ne") => action_new_entity(ctx)?,
-        Some(b"say") => action_say(ctx)?,
-        Some(b"tell") => action_tell(ctx)?,
+        Some(b"mi") => action_memory_info(ctx)?,
         Some(b"wait") => action_wait(ctx)?,
+        Some(b"help") => action_help(ctx, HELP)?,
         _ => {
             ctx.printer.p(b"not understood");
             ctx.printer.nlc(2);

@@ -77,6 +77,7 @@ use model::{Entity, Location, Name, Note, World};
 
 const CHAR_BACKSPACE: u8 = 0x7f;
 const CHAR_CARRIAGE_RETURN: u8 = 0xd;
+const CHAR_FORM_FEED: u8 = 0xc;
 const CHAR_ESCAPE: u8 = 0x1b;
 
 // Setup bss section, stack and jump to `run()`.
@@ -183,6 +184,7 @@ fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
             CHAR_ESCAPE => input_escape_sequence(command_buffer, printer),
             CHAR_BACKSPACE => input_backspace(command_buffer, printer),
             CHAR_CARRIAGE_RETURN => return,
+            CHAR_FORM_FEED => {} // ignore CTRL+l
             _ if command_buffer.is_full() => return,
             _ => input_normal_char(command_buffer, printer, ch),
         }

@@ -52,7 +52,10 @@ pub fn sdcard_status() -> i32 {
 }
 
 pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
-    assert!(buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES);
+    assert!(
+        buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES,
+        "buffer length does not have expected size"
+    );
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}
@@ -65,7 +68,10 @@ pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
 }
 
 pub fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
-    assert!(buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES);
+    assert!(
+        buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES,
+        "buffer length does not have expected size"
+    );
 
     unsafe {
         while read_volatile(SDCARD_BUSY as *const i32) != 0 {}

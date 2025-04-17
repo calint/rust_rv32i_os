@@ -36,6 +36,7 @@ if [ -f "$FIRMWARE_IMG" ]; then
 else
   touch "$FIRMWARE_TMP" # create an empty file for comparison if needed
 fi
+old_file_size=$(stat -c "%s" "$FIRMWARE_IMG")
 
 $OBJCOPY -O binary "$ELF" "$FIRMWARE_IMG"
 $OBJDUMP --source-comment -SCr "$ELF" > "$FIRMWARE_LIST"
@@ -51,7 +52,11 @@ timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 if cmp -s "$FIRMWARE_TMP" "$FIRMWARE_IMG"; then
   echo "$timestamp: $file_size B  (same)" >> "$FIRMWARE_LOG"
 else
-  echo "$timestamp: $file_size B  (changed)" >> "$FIRMWARE_LOG"
+  if [ $file_size -eq $old_file_size ]; then
+    echo "$timestamp: $file_size B  (changed)" >> "$FIRMWARE_LOG"
+  else
+    echo "$timestamp: $file_size B" >> "$FIRMWARE_LOG"
+  fi
 fi
 
 # Clean up the temporary file.

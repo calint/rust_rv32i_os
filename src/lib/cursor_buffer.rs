@@ -107,13 +107,19 @@ where
 
     /// Iterates over the buffer, returning a slice for each chunk delimited by the provided closure.
     /// Note: Adjacent delimiters are consumed.
-    pub const fn iter_tokens<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
+    pub fn iter_tokens<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
     where
         F: Fn(&T) -> bool,
     {
+        // skip leading delimiters
+        let mut index = 0;
+        while index < self.end && (delimiter)(&self.buffer[index]) {
+            index += 1;
+        }
+
         CursorBufferIterator {
             cmd_buf: self,
-            index: 0,
+            index,
             delimiter,
         }
     }
@@ -144,16 +150,6 @@ where
     type Item = &'a [T];
 
     fn next(&mut self) -> Option<Self::Item> {
-        // todo this can be done with only 2 loops by skipping the leading delimiters before creation of iterator
-        // skip leading delimiters and find the start of the next chunk
-        while self.index < self.cmd_buf.end && (self.delimiter)(&self.cmd_buf.buffer[self.index]) {
-            self.index += 1;
-        }
-
-        if self.index >= self.cmd_buf.end {
-            return None;
-        }
-
         // find the end of the chunk
         let start = self.index;
         while self.index < self.cmd_buf.end && !(self.delimiter)(&self.cmd_buf.buffer[self.index]) {

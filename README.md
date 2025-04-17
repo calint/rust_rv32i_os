@@ -2,7 +2,6 @@
 
 ## setup
 ```
-rustup default nightly
 rustup target add riscv32i-unknown-none-elf
 ```
 

@@ -45,7 +45,7 @@ static HELP: &[u8] = b"command:\r
 \x20 say <what>: say to all in location\r
 \x20 tell <whom> <what>: tells entity in location\r
 \x20 sln <text>: set location note\r
-\x20 sds: SD card status\r
+\x20 sds: SD card status (6 is ok)\r
 \x20 sdr <sector>: read sector from SD card\r
 \x20 sdw <sector> <text>: write sector to SD card\r
 \x20 led <bits with 1 being on>: turn on/off leds\r

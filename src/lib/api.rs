@@ -132,6 +132,7 @@ impl Printer for PrinterVoid {
     fn pb(&self, _: u8) {}
     fn p(&self, _: &[u8]) {}
     fn nl(&self) {}
+    fn pl(&self, _: &[u8]) {}
     fn p_hex_nibble(&self, _: u8) {}
     fn p_hex_u8(&self, _: u8) {}
     fn p_hex_u32(&self, _: u32, _: bool) {}

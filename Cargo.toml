@@ -1,6 +1,6 @@
 [package]
 name = "os"
-version = "1.0.0"
+version = "1.86.0"
 edition = "2024"
 
 [[bin]]

@@ -230,18 +230,18 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUA
         } else {
             match ch {
                 b'D' => {
-                    if command_buffer.cursor_left() {
+                    if command_buffer.cursor_left().is_ok() {
                         printer.p(b"\x1B[D");
                     }
                 }
                 b'C' => {
-                    if command_buffer.cursor_right() {
+                    if command_buffer.cursor_right().is_ok() {
                         printer.p(b"\x1B[C");
                     }
                 }
                 b'~' => {
-                    if command_buffer.delete() {
-                        command_buffer.for_each_from_cursor(|x| printer.pb(x));
+                    if command_buffer.delete().is_ok() {
+                        command_buffer.for_each_from_cursor(|&x| printer.pb(x));
                         printer.pb(b' ');
                         let count = command_buffer.elements_after_cursor_count() + 1;
                         // note: +1 because of ' ' that erases the trailing character
@@ -258,9 +258,9 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUA
 }
 
 fn input_backspace(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
-    if command_buffer.backspace() {
+    if command_buffer.backspace().is_ok() {
         printer.pb(CHAR_BACKSPACE);
-        command_buffer.for_each_from_cursor(|x| printer.pb(x));
+        command_buffer.for_each_from_cursor(|&x| printer.pb(x));
         printer.pb(b' ');
         let count = command_buffer.elements_after_cursor_count() + 1;
         // note: +1 because of ' ' that erases the trailing character
@@ -271,9 +271,9 @@ fn input_backspace(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
 }
 
 fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, ch: u8) {
-    if command_buffer.insert(ch) {
+    if command_buffer.insert(ch).is_ok() {
         printer.pb(ch);
-        command_buffer.for_each_from_cursor(|x| printer.pb(x));
+        command_buffer.for_each_from_cursor(|&x| printer.pb(x));
         let count = command_buffer.elements_after_cursor_count();
         for _ in 0..count {
             printer.pb(8);
@@ -282,13 +282,13 @@ fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, 
 }
 
 fn input_move_to_start_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
-    while command_buffer.cursor_left() {
+    while command_buffer.cursor_left().is_ok() {
         printer.p(b"\x1B[D");
     }
 }
 
 fn input_move_to_end_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
-    while command_buffer.cursor_right() {
+    while command_buffer.cursor_right().is_ok() {
         printer.p(b"\x1B[C");
     }
 }
@@ -315,7 +315,7 @@ fn create_world() -> World {
     for line in CREATION.split(|&x| x == b'\n') {
         let mut command_buffer = CommandBuffer::new();
         for &byte in line {
-            assert!(command_buffer.insert(byte), "command too large");
+            assert!(command_buffer.insert(byte).is_ok(), "command too large");
         }
 
         let mut ctx = ActionContext {

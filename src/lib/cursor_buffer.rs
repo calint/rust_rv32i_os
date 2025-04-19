@@ -4,6 +4,14 @@ pub struct CursorBuffer<const SIZE: usize, T> {
     cursor: usize,
 }
 
+pub type Result<T> = core::result::Result<T, CursorBufferError>;
+
+pub enum CursorBufferError {
+    BufferFull,
+    CursorAtStart,
+    CursorAtEnd,
+}
+
 impl<const SIZE: usize, T> CursorBuffer<SIZE, T>
 where
     T: Default + Copy,
@@ -16,71 +24,73 @@ where
         }
     }
 
-    pub fn insert(&mut self, ch: T) -> bool {
+    pub fn insert(&mut self, ch: T) -> Result<()> {
         if self.end == SIZE {
-            return false;
+            return Err(CursorBufferError::BufferFull);
         }
 
         if self.cursor == self.end {
             self.buffer[self.cursor] = ch;
             self.cursor += 1;
             self.end += 1;
-            return true;
+        } else {
+            self.end += 1;
+            self.buffer
+                .copy_within(self.cursor..self.end - 1, self.cursor + 1);
+            self.buffer[self.cursor] = ch;
+            self.cursor += 1;
         }
-
-        self.end += 1;
-        self.buffer
-            .copy_within(self.cursor..self.end - 1, self.cursor + 1);
-        self.buffer[self.cursor] = ch;
-        self.cursor += 1;
-        true
+        Ok(())
     }
 
-    pub fn delete(&mut self) -> bool {
+    pub fn delete(&mut self) -> Result<()> {
         if self.cursor == self.end {
-            return false;
+            return Err(CursorBufferError::CursorAtEnd);
         }
 
         self.buffer
             .copy_within(self.cursor + 1..self.end, self.cursor);
         self.end -= 1;
-        true
+
+        Ok(())
     }
 
-    pub fn backspace(&mut self) -> bool {
+    pub fn backspace(&mut self) -> Result<()> {
         if self.cursor == 0 {
-            return false;
+            return Err(CursorBufferError::CursorAtStart);
         }
 
         if self.cursor == self.end {
             self.end -= 1;
             self.cursor -= 1;
-            return true;
+        } else {
+            self.buffer
+                .copy_within(self.cursor..self.end, self.cursor - 1);
+            self.cursor -= 1;
+            self.end -= 1;
         }
 
-        self.buffer
-            .copy_within(self.cursor..self.end, self.cursor - 1);
-        self.cursor -= 1;
-        self.end -= 1;
-        true
+        Ok(())
     }
 
-    pub const fn cursor_left(&mut self) -> bool {
+    pub const fn cursor_left(&mut self) -> Result<()> {
         if self.cursor == 0 {
-            return false;
+            return Err(CursorBufferError::CursorAtStart);
         }
 
         self.cursor -= 1;
-        true
+
+        Ok(())
     }
 
-    pub const fn cursor_right(&mut self) -> bool {
+    pub const fn cursor_right(&mut self) -> Result<()> {
         if self.cursor == self.end {
-            return false;
+            return Err(CursorBufferError::CursorAtEnd);
         }
 
         self.cursor += 1;
-        true
+
+        Ok(())
     }
 
     // pub const fn reset(&mut self) {
@@ -89,15 +99,15 @@ where
     // }
 
     pub const fn is_full(&self) -> bool {
-        self.end == SIZE - 1
+        self.end == SIZE
     }
 
     pub fn for_each_from_cursor<F>(&self, f: F)
     where
-        F: Fn(T),
+        F: Fn(&T),
     {
         for i in self.cursor..self.end {
-            f(self.buffer[i]);
+            f(&self.buffer[i]);
         }
     }
 

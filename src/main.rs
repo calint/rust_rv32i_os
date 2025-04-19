@@ -83,7 +83,7 @@ mod actions;
 mod model;
 
 use actions::{
-    ActionContext, ActionFailed, CommandBuffer, Result, action_drop, action_give, action_go,
+    ActionContext, ActionError, CommandBuffer, Result, action_drop, action_give, action_go,
     action_go_named_link, action_help, action_inventory, action_led_set, action_look,
     action_memory_info, action_new_entity, action_new_location, action_new_object, action_say,
     action_sdcard_read, action_sdcard_status, action_sdcard_write, action_set_location_note,
@@ -190,7 +190,7 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
         _ => {
             ctx.printer.p(b"not understood");
             ctx.printer.nlc(2);
-            return Err(ActionFailed::NotUnderstood);
+            return Err(ActionError::NotUnderstood);
         }
     }
 

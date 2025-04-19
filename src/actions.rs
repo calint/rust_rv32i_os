@@ -17,9 +17,9 @@ pub type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 pub type CommandBufferIterator<'a> =
     CursorBufferIterator<'a, COMMAND_BUFFER_SIZE, u8, fn(&u8) -> bool>;
 
-pub type Result<T> = core::result::Result<T, ActionFailed>;
+pub type Result<T> = core::result::Result<T, ActionError>;
 
-pub enum ActionFailed {
+pub enum ActionError {
     NotUnderstood,
     GoWhere,
     NoSuchExit,
@@ -122,7 +122,7 @@ pub fn action_go(ctx: &mut ActionContext) -> Result<()> {
     let Some(named_link) = ctx.tokens.next() else {
         ctx.printer.p(b"go where");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::GoWhere);
+        return Err(ActionError::GoWhere);
     };
 
     action_go_named_link(ctx, named_link)
@@ -133,7 +133,7 @@ pub fn action_go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result
     let Some(link_id) = ctx.world.links.iter().position(|x| x.name == link_name) else {
         ctx.printer.p(b"cannot go there");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::NoSuchExit);
+        return Err(ActionError::NoSuchExit);
     };
 
     // move entity
@@ -149,7 +149,7 @@ pub fn action_go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result
             } else {
                 ctx.printer.p(b"cannot go there");
                 ctx.printer.nlc(2);
-                return Err(ActionFailed::CannotGoThere);
+                return Err(ActionError::CannotGoThere);
             };
 
         // remove entity from old location
@@ -235,7 +235,7 @@ pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
     let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"take what");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::TakeWhat);
+        return Err(ActionError::TakeWhat);
     };
 
     {
@@ -252,7 +252,7 @@ pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
             ctx.printer.p(object_name);
             ctx.printer.p(b" not here");
             ctx.printer.nlc(2);
-            return Err(ActionFailed::ObjectNotHere);
+            return Err(ActionError::ObjectNotHere);
         };
 
         // remove object from location
@@ -280,7 +280,7 @@ pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
     let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"drop what");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::DropWhat);
+        return Err(ActionError::DropWhat);
     };
 
     {
@@ -290,7 +290,7 @@ pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
             ctx.printer.p(object_name);
             ctx.printer.p(b" not in inventory");
             ctx.printer.nlc(2);
-            return Err(ActionFailed::ObjectNotInInventory);
+            return Err(ActionError::ObjectNotInInventory);
         };
 
         let entity = &mut ctx.world.entities[ctx.entity_id];
@@ -321,14 +321,14 @@ pub fn action_give(ctx: &mut ActionContext) -> Result<()> {
     let Some(to_entity_name) = ctx.tokens.next() else {
         ctx.printer.p(b"give to whom");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::GiveToWhom);
+        return Err(ActionError::GiveToWhom);
     };
 
     // get object name
     let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"give what");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::GiveWhat);
+        return Err(ActionError::GiveWhat);
     };
 
     let Some((object_index, object_id)) =
@@ -337,7 +337,7 @@ pub fn action_give(ctx: &mut ActionContext) -> Result<()> {
         ctx.printer.p(object_name);
         ctx.printer.p(b" not in inventory");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::ObjectNotInInventory);
+        return Err(ActionError::ObjectNotInInventory);
     };
 
     // find "to" entity
@@ -349,7 +349,7 @@ pub fn action_give(ctx: &mut ActionContext) -> Result<()> {
         ctx.printer.p(to_entity_name);
         ctx.printer.p(b" not here");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::EntityNotHere);
+        return Err(ActionError::EntityNotHere);
     };
 
     // remove object from entity
@@ -428,7 +428,7 @@ pub fn action_sdcard_read(ctx: &mut ActionContext) -> Result<()> {
     } else {
         ctx.printer.p(b"what sector");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhatSector);
+        return Err(ActionError::WhatSector);
     };
 
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
@@ -445,7 +445,7 @@ pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
     } else {
         ctx.printer.p(b"what sector");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhatSector);
+        return Err(ActionError::WhatSector);
     };
 
     let data = ctx.tokens.rest();
@@ -465,7 +465,7 @@ pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
     } else {
         ctx.printer.p(b"which leds");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhichLeds);
+        return Err(ActionError::WhichLeds);
     };
 
     led_set(bits as u8);
@@ -488,13 +488,13 @@ pub fn action_new_object(ctx: &mut ActionContext) -> Result<()> {
     let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what object name");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhatObjectName);
+        return Err(ActionError::WhatObjectName);
     };
 
     if ctx.world.objects.iter().any(|x| x.name == object_name) {
         ctx.printer.p(b"object already exists");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::ObjectAlreadyExists);
+        return Err(ActionError::ObjectAlreadyExists);
     }
 
     let object_id = {
@@ -514,19 +514,19 @@ pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
     let Some(to_link_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what link name");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhatToLinkName);
+        return Err(ActionError::WhatToLinkName);
     };
 
     let Some(back_link_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what back link name");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhatBackLinkName);
+        return Err(ActionError::WhatBackLinkName);
     };
 
     let Some(new_location_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what new location name");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhatNewLocationName);
+        return Err(ActionError::WhatNewLocationName);
     };
 
     if ctx
@@ -537,7 +537,7 @@ pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
     {
         ctx.printer.p(b"location already exists");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::LocationAlreadyExists);
+        return Err(ActionError::LocationAlreadyExists);
     }
 
     let from_location_id = ctx.world.entities[ctx.entity_id].location;
@@ -552,7 +552,7 @@ pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
     {
         ctx.printer.p(b"link from this location already exists");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::LinkFromLocationAlreadyExists);
+        return Err(ActionError::LinkFromLocationAlreadyExists);
     }
 
     let back_link_id = find_or_add_link(ctx.world, back_link_name);
@@ -585,13 +585,13 @@ pub fn action_new_entity(ctx: &mut ActionContext) -> Result<()> {
     let Some(entity_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what entity name");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::WhatEntityName);
+        return Err(ActionError::WhatEntityName);
     };
 
     if ctx.world.entities.iter().any(|x| x.name == entity_name) {
         ctx.printer.p(b"entity already exists");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::EntityAlreadyExists);
+        return Err(ActionError::EntityAlreadyExists);
     }
 
     {
@@ -626,7 +626,7 @@ pub fn action_say(ctx: &mut ActionContext) -> Result<()> {
     if say.is_empty() {
         ctx.printer.p(b"say what");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::SayWhat);
+        return Err(ActionError::SayWhat);
     }
 
     let entity = &ctx.world.entities[ctx.entity_id];
@@ -644,14 +644,14 @@ pub fn action_tell(ctx: &mut ActionContext) -> Result<()> {
     let Some(to_name) = ctx.tokens.next() else {
         ctx.printer.p(b"tell to whom");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::TellToWhom);
+        return Err(ActionError::TellToWhom);
     };
 
     let tell = ctx.tokens.rest();
     if tell.is_empty() {
         ctx.printer.p(b"tell what");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::TellWhat);
+        return Err(ActionError::TellWhat);
     }
 
     let entity = &ctx.world.entities[ctx.entity_id];
@@ -664,7 +664,7 @@ pub fn action_tell(ctx: &mut ActionContext) -> Result<()> {
         ctx.printer.p(to_name);
         ctx.printer.p(b" not here");
         ctx.printer.nlc(2);
-        return Err(ActionFailed::EntityNotHere);
+        return Err(ActionError::EntityNotHere);
     };
 
     let message = EntityMessage::from_parts(&[&entity.name, b" tells u ", tell]);

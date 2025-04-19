@@ -10,6 +10,7 @@ pub enum CursorBufferError {
     BufferFull,
     CursorAtStart,
     CursorAtEnd,
+    IndexOutOfRange,
 }
 
 impl<const SIZE: usize, T> CursorBuffer<SIZE, T>
@@ -24,6 +25,24 @@ where
         }
     }
 
+    pub const fn set_cursor_position(&mut self, index: usize) -> Result<()> {
+        if index > self.end {
+            return Err(CursorBufferError::IndexOutOfRange);
+        }
+
+        self.cursor = index;
+
+        Ok(())
+    }
+
+    pub const fn cursor_position(&self) -> usize {
+        self.cursor
+    }
+
+    pub const fn end_position(&self) -> usize {
+        self.end
+    }
+
     pub fn insert(&mut self, ch: T) -> Result<()> {
         if self.end == SIZE {
             return Err(CursorBufferError::BufferFull);
@@ -33,13 +52,16 @@ where
             self.buffer[self.cursor] = ch;
             self.cursor += 1;
             self.end += 1;
-        } else {
-            self.end += 1;
-            self.buffer
-                .copy_within(self.cursor..self.end - 1, self.cursor + 1);
-            self.buffer[self.cursor] = ch;
-            self.cursor += 1;
+
+            return Ok(());
         }
+
+        self.end += 1;
+        self.buffer
+            .copy_within(self.cursor..self.end - 1, self.cursor + 1);
+        self.buffer[self.cursor] = ch;
+        self.cursor += 1;
+
         Ok(())
     }
 
@@ -63,12 +85,14 @@ where
         if self.cursor == self.end {
             self.end -= 1;
             self.cursor -= 1;
-        } else {
-            self.buffer
-                .copy_within(self.cursor..self.end, self.cursor - 1);
-            self.cursor -= 1;
-            self.end -= 1;
+
+            return Ok(());
         }
+
+        self.buffer
+            .copy_within(self.cursor..self.end, self.cursor - 1);
+        self.cursor -= 1;
+        self.end -= 1;
 
         Ok(())
     }

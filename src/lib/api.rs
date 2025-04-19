@@ -69,6 +69,9 @@ pub trait Printer {
 
     /// Prints a 32-bit unsigned integer as hexadecimal.
     fn p_hex_u32(&self, i: u32, separate_half_words: bool);
+
+    /// Prints a 32-bit unsigned integer.
+    fn p_u32(&self, i: u32);
 }
 
 pub struct PrinterUART;
@@ -117,6 +120,24 @@ impl Printer for PrinterUART {
         self.p_hex_u8((i >> 8) as u8);
         self.p_hex_u8(i as u8);
     }
+
+    fn p_u32(&self, num: u32) {
+        let mut n = num;
+        let mut digits = [0_u8; 10];
+        let mut i = 0;
+        while n > 0 {
+            digits[i] = b'0' + (n % 10) as u8;
+            n /= 10;
+            i += 1;
+        }
+        if i == 0 {
+            self.pb(b'0');
+            return;
+        }
+        for &b in digits.iter().rev() {
+            self.pb(b);
+        }
+    }
 }
 
 /// A printer that ignores all output.
@@ -136,4 +157,5 @@ impl Printer for PrinterVoid {
     fn p_hex_nibble(&self, _: u8) {}
     fn p_hex_u8(&self, _: u8) {}
     fn p_hex_u32(&self, _: u32, _: bool) {}
+    fn p_u32(&self, _: u32) {}
 }

@@ -282,14 +282,25 @@ fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, 
 }
 
 fn input_move_to_start_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
-    while command_buffer.cursor_left().is_ok() {
-        printer.p(b"\x1B[D");
+    let steps = command_buffer.cursor_position();
+    if steps != 0 && command_buffer.set_cursor_position(0).is_ok() {
+        printer.p(b"\x1B[");
+        if steps > 1 {
+            printer.p_u32(u32::try_from(steps).expect("steps out of range"));
+        }
+        printer.p(b"D");
     }
 }
 
 fn input_move_to_end_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
-    while command_buffer.cursor_right().is_ok() {
-        printer.p(b"\x1B[C");
+    let end = command_buffer.end_position();
+    let steps = end - command_buffer.cursor_position();
+    if steps != 0 && command_buffer.set_cursor_position(end).is_ok() {
+        printer.p(b"\x1B[");
+        if steps > 1 {
+            printer.p_u32(u32::try_from(steps).expect("steps out of range"));
+        }
+        printer.p(b"C");
     }
 }
 

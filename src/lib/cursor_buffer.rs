@@ -10,7 +10,6 @@ pub enum CursorBufferError {
     BufferFull,
     CursorAtStart,
     CursorAtEnd,
-    IndexOutOfRange,
 }
 
 impl<const SIZE: usize, T> CursorBuffer<SIZE, T>
@@ -23,24 +22,6 @@ where
             end: 0,
             cursor: 0,
         }
-    }
-
-    pub const fn set_cursor_position(&mut self, index: usize) -> Result<()> {
-        if index > self.end {
-            return Err(CursorBufferError::IndexOutOfRange);
-        }
-
-        self.cursor = index;
-
-        Ok(())
-    }
-
-    pub const fn cursor_position(&self) -> usize {
-        self.cursor
-    }
-
-    pub const fn end_position(&self) -> usize {
-        self.end
     }
 
     pub fn insert(&mut self, ch: T) -> Result<()> {
@@ -117,10 +98,19 @@ where
         Ok(())
     }
 
-    // pub const fn reset(&mut self) {
-    //     self.cursor = 0;
-    //     self.end = 0;
-    // }
+    pub const fn move_cursor_to_start_of_line(&mut self) -> usize {
+        let moves = self.cursor;
+        self.cursor = 0;
+
+        moves
+    }
+
+    pub const fn move_cursor_to_end_of_line(&mut self) -> usize {
+        let moves = self.end - self.cursor;
+        self.cursor = self.end;
+
+        moves
+    }
 
     pub const fn is_full(&self) -> bool {
         self.end == SIZE

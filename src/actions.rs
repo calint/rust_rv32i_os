@@ -59,16 +59,8 @@ pub struct ActionContext<'a> {
     reason = "actions return Result for consistency"
 )]
 pub fn action_look(ctx: &mut ActionContext) -> Result<()> {
-    let entity = &mut ctx.world.entities[ctx.entity_id];
+    let entity = &ctx.world.entities[ctx.entity_id];
     let location = &ctx.world.locations[entity.location];
-
-    let messages = &entity.messages;
-    for x in messages {
-        ctx.printer.pl(x);
-    }
-
-    // clear messages after displayed
-    entity.messages.clear();
 
     ctx.printer.p(b"u r in ");
     ctx.printer.p(&location.name);
@@ -114,6 +106,13 @@ pub fn action_look(ctx: &mut ActionContext) -> Result<()> {
     if !location.note.is_empty() {
         ctx.printer.pl(&location.note);
     }
+
+    for x in &entity.messages {
+        ctx.printer.pl(x);
+    }
+
+    // clear messages after displayed
+    ctx.world.entities[ctx.entity_id].messages.clear();
 
     Ok(())
 }

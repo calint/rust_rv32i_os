@@ -103,6 +103,7 @@ const CHAR_ESCAPE: u8 = 0x1b;
 const CHAR_CTRL_A: u8 = 1;
 const CHAR_CTRL_E: u8 = 5;
 const CHAR_FORM_FEED: u8 = 0xc;
+const CHAR_MOVE_CURSOR_BACK: u8 = 8;
 
 // Setup bss section, stack and jump to `run()`.
 global_asm!(include_str!("startup.s"));
@@ -246,7 +247,7 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUA
                         let count = command_buffer.elements_after_cursor_count() + 1;
                         // note: +1 because of ' ' that erases the trailing character
                         for _ in 0..count {
-                            printer.pb(8);
+                            printer.pb(CHAR_MOVE_CURSOR_BACK);
                         }
                     }
                 }
@@ -265,7 +266,7 @@ fn input_backspace(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
         let count = command_buffer.elements_after_cursor_count() + 1;
         // note: +1 because of ' ' that erases the trailing character
         for _ in 0..count {
-            printer.pb(8);
+            printer.pb(CHAR_MOVE_CURSOR_BACK);
         }
     }
 }
@@ -276,7 +277,7 @@ fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, 
         command_buffer.for_each_from_cursor(|&x| printer.pb(x));
         let count = command_buffer.elements_after_cursor_count();
         for _ in 0..count {
-            printer.pb(8);
+            printer.pb(CHAR_MOVE_CURSOR_BACK);
         }
     }
 }

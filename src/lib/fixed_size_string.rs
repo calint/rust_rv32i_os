@@ -6,10 +6,10 @@ pub struct FixedSizeString<const SIZE: usize> {
     len: usize,
 }
 
-impl<const N: usize> FixedSizeString<N> {
+impl<const SIZE: usize> FixedSizeString<SIZE> {
     pub const fn new() -> Self {
         Self {
-            data: [0_u8; N],
+            data: [0_u8; SIZE],
             len: 0,
         }
     }
@@ -35,20 +35,20 @@ impl<const N: usize> FixedSizeString<N> {
     /// Will not write more than the allocated length.
     /// Silently returns self.
     pub fn append(&mut self, s: &[u8]) -> &Self {
-        let cpy_len = s.len().min(N - self.len);
+        let cpy_len = s.len().min(SIZE - self.len);
         self.data[self.len..self.len + cpy_len].copy_from_slice(&s[..cpy_len]);
         self.len += cpy_len;
         self
     }
 }
 
-impl<const N: usize> Default for FixedSizeString<N> {
+impl<const SIZE: usize> Default for FixedSizeString<SIZE> {
     fn default() -> Self {
         Self::new()
     }
 }
 
-impl<const N: usize> Deref for FixedSizeString<N> {
+impl<const SIZE: usize> Deref for FixedSizeString<SIZE> {
     type Target = [u8];
 
     fn deref(&self) -> &Self::Target {
@@ -56,13 +56,13 @@ impl<const N: usize> Deref for FixedSizeString<N> {
     }
 }
 
-impl<const N: usize> PartialEq<&[u8]> for FixedSizeString<N> {
+impl<const SIZE: usize> PartialEq<&[u8]> for FixedSizeString<SIZE> {
     fn eq(&self, other: &&[u8]) -> bool {
-        &**self == *other
+        **self == **other
     }
 }
 
-impl<const N: usize> PartialEq<Self> for FixedSizeString<N> {
+impl<const SIZE: usize> PartialEq<Self> for FixedSizeString<SIZE> {
     fn eq(&self, other: &Self) -> bool {
         **self == **other
     }

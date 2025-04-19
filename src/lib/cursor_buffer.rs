@@ -78,26 +78,29 @@ where
         Ok(())
     }
 
-    pub const fn move_cursor_left(&mut self) -> Result<()> {
+    /// Returns the number of character positions the cursor moved.
+    pub const fn move_cursor_left(&mut self) -> usize {
         if self.cursor == 0 {
-            return Err(CursorBufferError::CursorAtStart);
+            return 0;
         }
 
         self.cursor -= 1;
 
-        Ok(())
+        1
     }
 
-    pub const fn move_cursor_right(&mut self) -> Result<()> {
+    /// Returns the number of character positions the cursor moved.
+    pub const fn move_cursor_right(&mut self) -> usize {
         if self.cursor == self.end {
-            return Err(CursorBufferError::CursorAtEnd);
+            return 0;
         }
 
         self.cursor += 1;
 
-        Ok(())
+        1
     }
 
+    /// Returns the number of character positions the cursor moved to reach the start of the line.
     pub const fn move_cursor_to_start_of_line(&mut self) -> usize {
         let moves = self.cursor;
         self.cursor = 0;
@@ -105,6 +108,7 @@ where
         moves
     }
 
+    /// Returns the number of character positions the cursor moved to reach the end of the line.
     pub const fn move_cursor_to_end_of_line(&mut self) -> usize {
         let moves = self.end - self.cursor;
         self.cursor = self.end;

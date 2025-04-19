@@ -170,17 +170,17 @@ impl GlobalAllocator {
                 current = (*current).next;
             }
             printer.p(b"total user allocated: ");
-            printer.p_hex_u32(total as u32, true);
+            printer.p_u32(total as u32);
             printer.pl(b" bytes");
             printer.p(b"total allocated including headers: ");
-            printer.p_hex_u32(total_including_headers as u32, true);
+            printer.p_u32(total_including_headers as u32);
             printer.pl(b" bytes");
             printer.p(b"block header size: ");
-            printer.p_hex_u32(mem::size_of::<BlockHeader>() as u32, true);
-            printer.nl();
+            printer.p_u32(mem::size_of::<BlockHeader>() as u32);
+            printer.pl(b" bytes");
             printer.p(b"min block size: ");
-            printer.p_hex_u32(MIN_BLOCK_SIZE as u32, true);
-            printer.nl();
+            printer.p_u32(MIN_BLOCK_SIZE as u32);
+            printer.pl(b" bytes");
         }
     }
 }

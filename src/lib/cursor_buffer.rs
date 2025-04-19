@@ -97,7 +97,7 @@ where
         Ok(())
     }
 
-    pub const fn cursor_left(&mut self) -> Result<()> {
+    pub const fn move_cursor_left(&mut self) -> Result<()> {
         if self.cursor == 0 {
             return Err(CursorBufferError::CursorAtStart);
         }
@@ -107,7 +107,7 @@ where
         Ok(())
     }
 
-    pub const fn cursor_right(&mut self) -> Result<()> {
+    pub const fn move_cursor_right(&mut self) -> Result<()> {
         if self.cursor == self.end {
             return Err(CursorBufferError::CursorAtEnd);
         }

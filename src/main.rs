@@ -230,12 +230,12 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUA
         } else {
             match ch {
                 b'D' => {
-                    if command_buffer.cursor_left().is_ok() {
+                    if command_buffer.move_cursor_left().is_ok() {
                         printer.p(b"\x1B[D");
                     }
                 }
                 b'C' => {
-                    if command_buffer.cursor_right().is_ok() {
+                    if command_buffer.move_cursor_right().is_ok() {
                         printer.p(b"\x1B[C");
                     }
                 }

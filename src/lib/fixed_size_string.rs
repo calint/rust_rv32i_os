@@ -1,8 +1,8 @@
 use core::ops::Deref;
 
 #[derive(Clone, Copy)]
-pub struct FixedSizeString<const N: usize> {
-    data: [u8; N],
+pub struct FixedSizeString<const SIZE: usize> {
+    data: [u8; SIZE],
     len: usize,
 }
 

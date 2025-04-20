@@ -289,7 +289,7 @@ fn input_move_to_start_of_line(command_buffer: &mut CommandBuffer, printer: &Pri
     if steps != 0 {
         printer.p(b"\x1B[");
         if steps > 1 {
-            printer.p_u32(u32::try_from(steps).expect("steps out of range"));
+            printer.p_u32(u32::try_from(steps).expect("steps should be within range"));
         }
         printer.p(b"D");
     }
@@ -300,7 +300,7 @@ fn input_move_to_end_of_line(command_buffer: &mut CommandBuffer, printer: &Print
     if steps != 0 {
         printer.p(b"\x1B[");
         if steps > 1 {
-            printer.p_u32(u32::try_from(steps).expect("steps out of range"));
+            printer.p_u32(u32::try_from(steps).expect("steps should be within range"));
         }
         printer.p(b"C");
     }

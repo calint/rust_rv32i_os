@@ -1,8 +1,7 @@
 //
 // reviewed: 2025-04-21
 //
-use super::api::Printer;
-use super::api_unsafe::__heap_start__;
+use super::api::{Memory, Printer};
 use core::alloc::{GlobalAlloc, Layout};
 use core::mem;
 use core::ptr;
@@ -137,7 +136,7 @@ impl GlobalAllocator {
     /// Called once at start of program.
     pub fn init(heap_size: usize) {
         unsafe {
-            HEAP_ALLOCATOR = Self::new((&raw const __heap_start__).cast_mut(), heap_size);
+            HEAP_ALLOCATOR = Self::new(Memory::heap_start() as *mut u8, heap_size);
         }
     }
 

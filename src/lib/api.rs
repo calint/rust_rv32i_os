@@ -139,6 +139,7 @@ pub trait Printer {
     }
 }
 
+/// Printer that writes to UART.
 pub struct PrinterUart;
 
 impl PrinterUart {
@@ -157,7 +158,7 @@ impl Printer for PrinterUart {
     }
 }
 
-/// A printer that ignores all output.
+/// Printer that writes nothing.
 pub struct PrinterVoid;
 
 impl PrinterVoid {

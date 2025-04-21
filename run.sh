@@ -4,6 +4,7 @@ cd $(dirname "$0")
 
 touch firmware.img.bak
 cp -a firmware.img firmware.img.bak || true
+
 scripts/firmware-build.sh
 
 echo " * comparing previous firmware.img with current"

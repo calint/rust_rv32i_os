@@ -1,3 +1,6 @@
+//
+// reviewed: 2025-04-21
+//
 use core::ops::Deref;
 
 #[derive(Clone, Copy)]
@@ -14,8 +17,10 @@ impl<const SIZE: usize> FixedSizeString<SIZE> {
         }
     }
 
-    pub fn from(src: &[u8]) -> Self {
-        Self::from_parts(&[src])
+    /// Will not write more than the allocated length.
+    /// Silently returns self.
+    pub fn from(source: &[u8]) -> Self {
+        Self::from_parts(&[source])
     }
 
     /// Will not write more than the allocated length.
@@ -34,9 +39,9 @@ impl<const SIZE: usize> FixedSizeString<SIZE> {
 
     /// Will not write more than the allocated length.
     /// Silently returns self.
-    pub fn append(&mut self, s: &[u8]) -> &Self {
-        let cpy_len = s.len().min(SIZE - self.len);
-        self.data[self.len..self.len + cpy_len].copy_from_slice(&s[..cpy_len]);
+    pub fn append(&mut self, source: &[u8]) -> &Self {
+        let cpy_len = source.len().min(SIZE - self.len);
+        self.data[self.len..self.len + cpy_len].copy_from_slice(&source[..cpy_len]);
         self.len += cpy_len;
         self
     }

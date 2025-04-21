@@ -1,3 +1,6 @@
+//
+// reviewed: 2025-04-21
+//
 #![no_std]
 #![no_main]
 
@@ -86,7 +89,7 @@ use actions::{ActionContext, ActionError, CommandBuffer, Result};
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{Printer, PrinterUART, PrinterVoid, memory_end};
+use lib::api::{Memory, Printer, PrinterUART, PrinterVoid};
 use lib::api_unsafe::{led_set, uart_read_byte};
 use lib::global_allocator::GlobalAllocator;
 use model::{Entity, Location, Name, Note, World};
@@ -109,7 +112,7 @@ global_asm!(include_str!("startup.s"));
 pub extern "C" fn run() -> ! {
     led_set(0b0000); // turn all leds on
 
-    GlobalAllocator::init(memory_end() as usize);
+    GlobalAllocator::init(Memory::end() as usize);
 
     let mut world = create_world();
 
@@ -134,7 +137,7 @@ pub extern "C" fn run() -> ! {
             }
 
             loop {
-                // loop until action succeeded
+                // loop until action succeeds
 
                 printer.p(&world.entities[entity_id].name);
                 printer.p(b" > ");

@@ -1,3 +1,6 @@
+//
+// reviewed: 2025-04-21
+//
 use super::api::Printer;
 use super::api_unsafe::__heap_start__;
 use core::alloc::{GlobalAlloc, Layout};
@@ -10,13 +13,13 @@ static mut HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
 };
 
 struct BlockHeader {
-    size: usize,            // Total size of the block, including the header.
-    is_free: bool,          // Indicates whether the block is available for allocation.
     next: *mut BlockHeader, // Pointer to the next block in the free list.
     prev: *mut BlockHeader, // Pointer to the previous block in the free list.
+    size: usize,            // Total size of the block, including the header.
+    is_free: bool,          // Indicates whether the block is available for allocation.
 }
 
-const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>();
+const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>() * 2;
 
 pub struct GlobalAllocator {
     free_list: *mut BlockHeader, // Head of the free list.
@@ -44,10 +47,10 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                         let new_block =
                             current.cast::<u8>().add(aligned_size).cast::<BlockHeader>();
 
-                        (*new_block).size = remaining_size;
-                        (*new_block).is_free = true;
                         (*new_block).next = (*current).next;
                         (*new_block).prev = current;
+                        (*new_block).size = remaining_size;
+                        (*new_block).is_free = true;
 
                         if !(*current).next.is_null() {
                             (*(*current).next).prev = new_block;
@@ -59,29 +62,18 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
                     (*current).is_free = false;
 
-                    // uart_send_bytes(b"alloc: ");
-                    // uart_send_hex_u32(current as u32, true);
-                    // uart_send_bytes(b" size: ");
-                    // uart_send_hex_u32(request_size as u32, true);
-                    // uart_send_bytes(b"\r\n");
-
                     return current.cast::<u8>().add(mem::size_of::<BlockHeader>());
                 }
 
                 current = (*current).next;
             }
         }
+
         // no suitable block found
-        ptr::null_mut()
+        panic!("out of heap space");
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, _layout: Layout) {
-        // uart_send_bytes(b"free: ");
-        // uart_send_hex_u32(ptr as u32, true);
-        // uart_send_bytes(b" size: ");
-        // uart_send_hex_u32(_layout.size() as u32, true);
-        // uart_send_bytes(b"\r\n");
-
         unsafe {
             // get the block header
             let block = ptr.sub(mem::size_of::<BlockHeader>()).cast::<BlockHeader>();
@@ -131,10 +123,10 @@ impl GlobalAllocator {
         // initialize the entire memory as one free block
         let first_block = memory.cast::<BlockHeader>();
         unsafe {
-            (*first_block).size = total_size;
-            (*first_block).is_free = true;
             (*first_block).next = ptr::null_mut();
             (*first_block).prev = ptr::null_mut();
+            (*first_block).size = total_size;
+            (*first_block).is_free = true;
         };
 
         Self {
@@ -142,6 +134,7 @@ impl GlobalAllocator {
         }
     }
 
+    /// Called once at start of program.
     pub fn init(heap_size: usize) {
         unsafe {
             HEAP_ALLOCATOR = Self::new((&raw const __heap_start__).cast_mut(), heap_size);

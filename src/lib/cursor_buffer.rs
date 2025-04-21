@@ -1,3 +1,6 @@
+//
+// reviewed: 2025-04-21
+//
 pub struct CursorBuffer<const SIZE: usize, T> {
     buffer: [T; SIZE],
     end: usize,
@@ -120,6 +123,7 @@ where
         self.end == SIZE
     }
 
+    // Applies `f` on each element from cursor to end.
     pub fn for_each_from_cursor<F>(&self, f: F)
     where
         F: Fn(&T),
@@ -166,6 +170,7 @@ impl<'a, const SIZE: usize, T, F> CursorBufferIterator<'a, SIZE, T, F>
 where
     F: Fn(&T) -> bool,
 {
+    // Returns the rest of elements as a slice.
     pub fn rest(&self) -> &'a [T] {
         &self.cmd_buf.buffer[self.index..self.cmd_buf.end]
     }

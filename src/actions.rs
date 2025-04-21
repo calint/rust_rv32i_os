@@ -1,6 +1,4 @@
-use crate::lib::api::{
-    Printer, memory_end, memory_heap_start, u8_slice_bits_to_u32, u8_slice_to_u32,
-};
+use crate::lib::api::{Memory, Printer, u8_slice_bits_to_u32, u8_slice_to_u32};
 use crate::lib::api_unsafe::{
     SDCARD_SECTOR_SIZE_BYTES, led_set as api_led_set, memory_stack_pointer, sdcard_read_blocking,
     sdcard_status as api_sdcard_status, sdcard_write_blocking,
@@ -392,13 +390,13 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
 )]
 pub fn memory_info(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.p(b"   heap start: ");
-    ctx.printer.p_hex_u32(memory_heap_start(), true);
+    ctx.printer.p_hex_u32(Memory::heap_start(), true);
     ctx.printer.nl();
     ctx.printer.p(b"stack pointer: ");
     ctx.printer.p_hex_u32(memory_stack_pointer(), true);
     ctx.printer.nl();
     ctx.printer.p(b"   memory end: ");
-    ctx.printer.p_hex_u32(memory_end(), true);
+    ctx.printer.p_hex_u32(Memory::end(), true);
     ctx.printer.nl();
     ctx.printer.nl();
     ctx.printer.p(b"heap blocks:");

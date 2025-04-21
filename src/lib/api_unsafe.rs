@@ -35,8 +35,8 @@ pub(super) fn uart_read_byte() -> u8 {
     }
 }
 
-pub(super) fn led_set(bits_low_being_on: u8) {
-    unsafe { write_volatile(LED as *mut u8, bits_low_being_on) }
+pub(super) fn led_set(bits_low_being_on: u32) {
+    unsafe { write_volatile(LED as *mut u32, bits_low_being_on) }
 }
 
 pub(super) fn memory_stack_pointer() -> u32 {

@@ -199,7 +199,7 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
 fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     loop {
         let ch = Uart::read_blocking();
-        Leds::set(!ch);
+        Leds::set(!u32::from(ch));
 
         match ch {
             CHAR_ESCAPE => input_escape_sequence(command_buffer, printer),

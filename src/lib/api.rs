@@ -40,7 +40,7 @@ impl Uart {
 pub struct Leds;
 
 impl Leds {
-    pub fn set(bits_low_being_on: u8) {
+    pub fn set(bits_low_being_on: u32) {
         led_set(bits_low_being_on);
     }
 }

@@ -451,7 +451,6 @@ pub fn sdcard_write(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-#[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
 pub fn led_set(ctx: &mut ActionContext) -> Result<()> {
     let bits = if let Some(bits) = ctx.tokens.next() {
         !u8_slice_bits_to_u32(bits)
@@ -462,7 +461,7 @@ pub fn led_set(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::WhichLeds);
     };
 
-    Leds::set(bits as u8);
+    Leds::set(bits);
 
     Ok(())
 }

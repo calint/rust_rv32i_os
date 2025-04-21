@@ -139,15 +139,15 @@ pub trait Printer {
     }
 }
 
-pub struct PrinterUART;
+pub struct PrinterUart;
 
-impl PrinterUART {
+impl PrinterUart {
     pub const fn new() -> Self {
         Self
     }
 }
 
-impl Printer for PrinterUART {
+impl Printer for PrinterUart {
     fn pb(&self, byte: u8) {
         Uart::write_blocking(byte);
     }

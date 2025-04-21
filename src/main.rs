@@ -89,7 +89,7 @@ use actions::{ActionContext, ActionError, CommandBuffer, Result};
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{Leds, Memory, Printer, PrinterUART, PrinterVoid, Uart};
+use lib::api::{Leds, Memory, Printer, PrinterUart, PrinterVoid, Uart};
 use lib::global_allocator::GlobalAllocator;
 use model::{Entity, Location, Name, Note, World};
 
@@ -115,7 +115,7 @@ pub extern "C" fn run() -> ! {
 
     let mut world = create_world();
 
-    let mut printer = PrinterUART::new();
+    let mut printer = PrinterUart::new();
 
     printer.p(ASCII_ART);
     printer.p(HELLO);
@@ -196,7 +196,7 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
+fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     loop {
         let ch = Uart::read_blocking();
         Leds::set(!ch);
@@ -214,7 +214,7 @@ fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
     }
 }
 
-fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
+fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     if Uart::read_blocking() != b'[' {
         return;
     }
@@ -256,7 +256,7 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUA
     }
 }
 
-fn input_backspace(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
+fn input_backspace(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     if command_buffer.backspace().is_ok() {
         printer.pb(CHAR_BACKSPACE);
         command_buffer.for_each_from_cursor(|&x| printer.pb(x));
@@ -269,7 +269,7 @@ fn input_backspace(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
     }
 }
 
-fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, ch: u8) {
+fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUart, ch: u8) {
     if command_buffer.insert(ch).is_ok() {
         printer.pb(ch);
         command_buffer.for_each_from_cursor(|&x| printer.pb(x));
@@ -280,7 +280,7 @@ fn input_normal_char(command_buffer: &mut CommandBuffer, printer: &PrinterUART, 
     }
 }
 
-fn input_move_to_start_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
+fn input_move_to_start_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     let steps = command_buffer.move_cursor_to_start_of_line();
     if steps != 0 {
         printer.p(b"\x1B[");
@@ -291,7 +291,7 @@ fn input_move_to_start_of_line(command_buffer: &mut CommandBuffer, printer: &Pri
     }
 }
 
-fn input_move_to_end_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
+fn input_move_to_end_of_line(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     let steps = command_buffer.move_cursor_to_end_of_line();
     if steps != 0 {
         printer.p(b"\x1B[");
@@ -346,6 +346,6 @@ fn create_world() -> World {
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
     Leds::set(0b0000); // turn on all leds
-    PrinterUART::new().pl(b"PANIC!!!");
+    PrinterUart::new().pl(b"PANIC!!!");
     loop {}
 }

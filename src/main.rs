@@ -76,7 +76,7 @@ extern crate alloc;
 
 mod lib {
     pub mod api;
-    pub mod api_unsafe;
+    mod api_unsafe;
     pub mod constants;
     pub mod cursor_buffer;
     pub mod fixed_size_string;
@@ -89,8 +89,7 @@ use actions::{ActionContext, ActionError, CommandBuffer, Result};
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
-use lib::api::{Memory, Printer, PrinterUART, PrinterVoid};
-use lib::api_unsafe::{led_set, uart_read_byte};
+use lib::api::{Leds, Memory, Printer, PrinterUART, PrinterVoid, Uart};
 use lib::global_allocator::GlobalAllocator;
 use model::{Entity, Location, Name, Note, World};
 
@@ -110,7 +109,7 @@ global_asm!(include_str!("startup.s"));
 /// Will panic if `action_look` fails or the application state is inconsistent.
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
-    led_set(0b0000); // turn all leds on
+    Leds::set(0b0000); // turn all leds on
 
     GlobalAllocator::init(Memory::end() as usize);
 
@@ -199,8 +198,8 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
 
 fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
     loop {
-        let ch = uart_read_byte();
-        led_set(!ch);
+        let ch = Uart::read_blocking();
+        Leds::set(!ch);
 
         match ch {
             CHAR_ESCAPE => input_escape_sequence(command_buffer, printer),
@@ -216,13 +215,13 @@ fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
 }
 
 fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUART) {
-    if uart_read_byte() != b'[' {
+    if Uart::read_blocking() != b'[' {
         return;
     }
 
     let mut parameter = 0;
     loop {
-        let ch = uart_read_byte();
+        let ch = Uart::read_blocking();
         if ch.is_ascii_digit() {
             parameter = parameter * 10 + (ch - b'0');
         } else {
@@ -346,7 +345,7 @@ fn create_world() -> World {
 
 #[panic_handler]
 fn panic(_info: &PanicInfo) -> ! {
-    led_set(0b0000); // turn on all leds
+    Leds::set(0b0000); // turn on all leds
     PrinterUART::new().pl(b"PANIC!!!");
     loop {}
 }

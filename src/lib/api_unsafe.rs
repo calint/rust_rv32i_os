@@ -8,23 +8,23 @@ use super::constants::{
 use core::arch::asm;
 use core::ptr::{read_volatile, write_volatile};
 
-pub const SDCARD_SECTOR_SIZE_BYTES: usize = 512;
+pub(super) const SDCARD_SECTOR_SIZE_BYTES: usize = 512;
 
 unsafe extern "C" {
-    pub unsafe static __heap_start__: u8;
+    pub(super) unsafe static __heap_start__: u8;
     // note: declared in `linker.ld`
 }
 
-pub fn uart_send_byte(ch: u8) {
+pub(super) fn uart_send_byte(byte: u8) {
     unsafe {
         while read_volatile(UART_OUT_ADDR as *const i32) != -1 {}
-        write_volatile(UART_OUT_ADDR as *mut u8, ch);
+        write_volatile(UART_OUT_ADDR as *mut u8, byte);
     }
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
 #[expect(clippy::cast_sign_loss, reason = "intended behavior")]
-pub fn uart_read_byte() -> u8 {
+pub(super) fn uart_read_byte() -> u8 {
     unsafe {
         loop {
             let input = read_volatile(UART_IN_ADDR as *const i32);
@@ -35,11 +35,11 @@ pub fn uart_read_byte() -> u8 {
     }
 }
 
-pub fn led_set(low_being_on_bits: u8) {
-    unsafe { write_volatile(LED as *mut u8, low_being_on_bits) }
+pub(super) fn led_set(bits_low_being_on: u8) {
+    unsafe { write_volatile(LED as *mut u8, bits_low_being_on) }
 }
 
-pub fn memory_stack_pointer() -> u32 {
+pub(super) fn memory_stack_pointer() -> u32 {
     let sp: u32;
     unsafe {
         asm!(
@@ -50,11 +50,11 @@ pub fn memory_stack_pointer() -> u32 {
     sp
 }
 
-pub fn sdcard_status() -> i32 {
+pub(super) fn sdcard_status() -> i32 {
     unsafe { read_volatile(SDCARD_STATUS as *const i32) }
 }
 
-pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
+pub(super) fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
     assert!(
         buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES,
         "buffer length does not have expected size"
@@ -70,7 +70,7 @@ pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
     }
 }
 
-pub fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
+pub(super) fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
     assert!(
         buffer_512_bytes.len() == SDCARD_SECTOR_SIZE_BYTES,
         "buffer length does not have expected size"

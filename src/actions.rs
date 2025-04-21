@@ -1,11 +1,7 @@
 //
 // reviewed: 2025-04-21
 //
-use crate::lib::api::{Memory, Printer, u8_slice_bits_to_u32, u8_slice_to_u32};
-use crate::lib::api_unsafe::{
-    SDCARD_SECTOR_SIZE_BYTES, led_set as api_led_set, memory_stack_pointer, sdcard_read_blocking,
-    sdcard_status as api_sdcard_status, sdcard_write_blocking,
-};
+use crate::lib::api::{Leds, Memory, Printer, SDCard, u8_slice_bits_to_u32, u8_slice_to_u32};
 use crate::lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use crate::lib::global_allocator::GlobalAllocator;
 use crate::model::{Entity, EntityId, Link, LinkId, LocationId, Object, ObjectId, World};
@@ -393,7 +389,7 @@ pub fn memory_info(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.p_hex_u32(Memory::heap_start(), true);
     ctx.printer.nl();
     ctx.printer.p(b"stack pointer: ");
-    ctx.printer.p_hex_u32(memory_stack_pointer(), true);
+    ctx.printer.p_hex_u32(Memory::stack_pointer(), true);
     ctx.printer.nl();
     ctx.printer.p(b"   memory end: ");
     ctx.printer.p_hex_u32(Memory::end(), true);
@@ -413,7 +409,7 @@ pub fn memory_info(ctx: &mut ActionContext) -> Result<()> {
 )]
 pub fn sdcard_status(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.p(b"SDCARD_STATUS: 0x");
-    ctx.printer.p_hex_u32(api_sdcard_status() as u32, true);
+    ctx.printer.p_hex_u32(SDCard::status() as u32, true);
     ctx.printer.nl();
 
     Ok(())
@@ -428,8 +424,8 @@ pub fn sdcard_read(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::WhatSector);
     };
 
-    let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
-    sdcard_read_blocking(sector, &mut buf);
+    let mut buf = [0_u8; SDCard::sector_size_bytes()];
+    SDCard::read_blocking(sector, &mut buf);
     buf.iter().for_each(|&x| ctx.printer.pb(x));
     ctx.printer.nl();
 
@@ -446,11 +442,11 @@ pub fn sdcard_write(ctx: &mut ActionContext) -> Result<()> {
     };
 
     let data = ctx.tokens.rest();
-    let len = data.len().min(SDCARD_SECTOR_SIZE_BYTES);
-    let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
+    let len = data.len().min(SDCard::sector_size_bytes());
+    let mut buf = [0_u8; SDCard::sector_size_bytes()];
     buf[..len].copy_from_slice(&data[..len]);
     // todo: allow slice to be less than sector size on pad rest with zeros
-    sdcard_write_blocking(sector, &buf);
+    SDCard::write_blocking(sector, &buf);
 
     Ok(())
 }
@@ -466,7 +462,7 @@ pub fn led_set(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::WhichLeds);
     };
 
-    api_led_set(bits as u8);
+    Leds::set(bits as u8);
 
     Ok(())
 }

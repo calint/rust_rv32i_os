@@ -1,7 +1,12 @@
+use crate::lib::api_unsafe::sdcard_status;
+
 //
 // reviewed: 2025-04-21
 //
-use super::api_unsafe::{__heap_start__, uart_send_byte};
+use super::api_unsafe::{
+    __heap_start__, SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking,
+    sdcard_write_blocking, uart_read_byte, uart_send_byte,
+};
 use super::constants::MEMORY_END;
 
 pub struct Memory;
@@ -14,35 +19,50 @@ impl Memory {
     pub fn heap_start() -> u32 {
         &raw const __heap_start__ as u32
     }
+
+    pub fn stack_pointer() -> u32 {
+        memory_stack_pointer()
+    }
 }
 
-pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
-    let mut num = 0;
-    for &ch in number_as_str {
-        if !ch.is_ascii_digit() {
-            break;
-        }
-        num = num * 10 + u32::from(ch - b'0');
+pub struct Uart;
+
+impl Uart {
+    pub fn read_blocking() -> u8 {
+        uart_read_byte()
     }
-    num
+
+    pub fn write_blocking(byte: u8) {
+        uart_send_byte(byte);
+    }
 }
 
-pub fn u8_slice_bits_to_u32(binary_as_str: &[u8]) -> u32 {
-    if binary_as_str.is_empty() {
-        return 0;
+pub struct Leds;
+
+impl Leds {
+    pub fn set(bits_low_being_on: u8) {
+        led_set(bits_low_being_on);
     }
-    let mut num = 0;
-    let mut bit_value = 1 << (binary_as_str.len() - 1);
-    for &ch in binary_as_str {
-        if ch != b'0' && ch != b'1' {
-            break;
-        }
-        if ch == b'1' {
-            num += bit_value;
-        }
-        bit_value >>= 1;
+}
+
+pub struct SDCard;
+
+impl SDCard {
+    pub fn status() -> i32 {
+        sdcard_status()
     }
-    num
+
+    pub fn read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
+        sdcard_read_blocking(sector, buffer_512_bytes);
+    }
+
+    pub fn write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
+        sdcard_write_blocking(sector, buffer_512_bytes);
+    }
+
+    pub const fn sector_size_bytes() -> usize {
+        SDCARD_SECTOR_SIZE_BYTES
+    }
 }
 
 pub trait Printer {
@@ -129,7 +149,7 @@ impl PrinterUART {
 
 impl Printer for PrinterUART {
     fn pb(&self, byte: u8) {
-        uart_send_byte(byte);
+        Uart::write_blocking(byte);
     }
 
     fn nl(&self) {
@@ -156,4 +176,33 @@ impl Printer for PrinterVoid {
     fn p_hex_u8(&self, _: u8) {}
     fn p_hex_u32(&self, _: u32, _: bool) {}
     fn p_u32(&self, _: u32) {}
+}
+
+pub fn u8_slice_to_u32(number_as_str: &[u8]) -> u32 {
+    let mut num = 0;
+    for &ch in number_as_str {
+        if !ch.is_ascii_digit() {
+            break;
+        }
+        num = num * 10 + u32::from(ch - b'0');
+    }
+    num
+}
+
+pub fn u8_slice_bits_to_u32(binary_as_str: &[u8]) -> u32 {
+    if binary_as_str.is_empty() {
+        return 0;
+    }
+    let mut num = 0;
+    let mut bit_value = 1 << (binary_as_str.len() - 1);
+    for &ch in binary_as_str {
+        if ch != b'0' && ch != b'1' {
+            break;
+        }
+        if ch == b'1' {
+            num += bit_value;
+        }
+        bit_value >>= 1;
+    }
+    num
 }

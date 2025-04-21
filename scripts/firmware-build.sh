@@ -34,7 +34,9 @@ cargo build --release
 if [ -f "$FIRMWARE_IMG" ]; then
   cp "$FIRMWARE_IMG" "$FIRMWARE_TMP"
 else
-  touch "$FIRMWARE_TMP" # create an empty file for comparison if needed
+  # first build
+  touch "$FIRMWARE_IMG"
+  touch "$FIRMWARE_TMP"
 fi
 old_file_size=$(stat -c "%s" "$FIRMWARE_IMG")
 

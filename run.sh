@@ -6,14 +6,6 @@ touch firmware.img.bak
 cp -a firmware.img firmware.img.bak || true
 scripts/firmware-build.sh
 
-# run
-echo " * build emulator"
-emulator/make.sh
-emulator/qa/test.sh
-
-# run tests
-qa/emulator/test.sh
-
 echo " * comparing previous firmware.img with current"
 if cmp -s firmware.img firmware.img.bak; then
     echo "no change"
@@ -25,6 +17,14 @@ else
 fi
 
 rm firmware.img.bak
+
+# run
+echo " * build emulator"
+emulator/make.sh
+emulator/qa/test.sh
+
+# run tests
+qa/emulator/test.sh
 
 echo " * run emulator"
 emulator/osqa firmware.img sdcard.img

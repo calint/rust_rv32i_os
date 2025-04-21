@@ -4,8 +4,10 @@
 use crate::lib::api::{Leds, Memory, Printer, SDCard, u8_slice_bits_to_u32, u8_slice_to_u32};
 use crate::lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use crate::lib::global_allocator::GlobalAllocator;
-use crate::model::{Entity, EntityId, Link, LinkId, LocationId, Object, ObjectId, World};
-use crate::model::{EntityMessage, Location, LocationLink, Name, Note};
+use crate::model::{
+    Entity, EntityId, EntityMessage, Link, LinkId, Location, LocationId, LocationLink, Name, Note,
+    Object, ObjectId, World,
+};
 use alloc::vec;
 
 const COMMAND_BUFFER_SIZE: usize = 256;

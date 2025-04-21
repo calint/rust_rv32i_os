@@ -82,13 +82,7 @@ mod lib {
 mod actions;
 mod model;
 
-use actions::{
-    ActionContext, ActionError, CommandBuffer, Result, action_drop, action_give, action_go,
-    action_go_named_link, action_help, action_inventory, action_led_set, action_look,
-    action_memory_info, action_new_entity, action_new_location, action_new_object, action_say,
-    action_sdcard_read, action_sdcard_status, action_sdcard_write, action_set_location_note,
-    action_take, action_tell, action_wait,
-};
+use actions::{ActionContext, ActionError, CommandBuffer, Result};
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
@@ -136,7 +130,7 @@ pub extern "C" fn run() -> ! {
                     tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
                 };
 
-                assert!(action_look(&mut ctx).is_ok(), "cannot look");
+                assert!(actions::look(&mut ctx).is_ok(), "cannot look");
             }
 
             loop {
@@ -166,28 +160,28 @@ pub extern "C" fn run() -> ! {
 
 fn handle_input(ctx: &mut ActionContext) -> Result<()> {
     match ctx.tokens.next() {
-        Some(b"go") => action_go(ctx)?,
-        Some(b"n") => action_go_named_link(ctx, b"north")?,
-        Some(b"e") => action_go_named_link(ctx, b"east")?,
-        Some(b"s") => action_go_named_link(ctx, b"south")?,
-        Some(b"w") => action_go_named_link(ctx, b"west")?,
-        Some(b"i") => action_inventory(ctx)?,
-        Some(b"t") => action_take(ctx)?,
-        Some(b"d") => action_drop(ctx)?,
-        Some(b"g") => action_give(ctx)?,
-        Some(b"say") => action_say(ctx)?,
-        Some(b"tell") => action_tell(ctx)?,
-        Some(b"sln") => action_set_location_note(ctx)?,
-        Some(b"sds") => action_sdcard_status(ctx)?,
-        Some(b"sdr") => action_sdcard_read(ctx)?,
-        Some(b"sdw") => action_sdcard_write(ctx)?,
-        Some(b"led") => action_led_set(ctx)?,
-        Some(b"no") => action_new_object(ctx)?,
-        Some(b"nl") => action_new_location(ctx)?,
-        Some(b"ne") => action_new_entity(ctx)?,
-        Some(b"mi") => action_memory_info(ctx)?,
-        Some(b"wait") => action_wait(ctx)?,
-        Some(b"help") => action_help(ctx, HELP)?,
+        Some(b"go") => actions::go(ctx)?,
+        Some(b"n") => actions::go_named_link(ctx, b"north")?,
+        Some(b"e") => actions::go_named_link(ctx, b"east")?,
+        Some(b"s") => actions::go_named_link(ctx, b"south")?,
+        Some(b"w") => actions::go_named_link(ctx, b"west")?,
+        Some(b"i") => actions::inventory(ctx)?,
+        Some(b"t") => actions::take(ctx)?,
+        Some(b"d") => actions::drop(ctx)?,
+        Some(b"g") => actions::give(ctx)?,
+        Some(b"say") => actions::say(ctx)?,
+        Some(b"tell") => actions::tell(ctx)?,
+        Some(b"sln") => actions::set_location_note(ctx)?,
+        Some(b"sds") => actions::sdcard_status(ctx)?,
+        Some(b"sdr") => actions::sdcard_read(ctx)?,
+        Some(b"sdw") => actions::sdcard_write(ctx)?,
+        Some(b"led") => actions::led_set(ctx)?,
+        Some(b"no") => actions::new_object(ctx)?,
+        Some(b"nl") => actions::new_location(ctx)?,
+        Some(b"ne") => actions::new_entity(ctx)?,
+        Some(b"mi") => actions::memory_info(ctx)?,
+        Some(b"wait") => actions::wait(ctx)?,
+        Some(b"help") => actions::help(ctx, HELP)?,
         _ => {
             ctx.printer.p(b"not understood");
             ctx.printer.nlc(2);

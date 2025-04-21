@@ -2,8 +2,8 @@ use crate::lib::api::{
     Printer, memory_end, memory_heap_start, u8_slice_bits_to_u32, u8_slice_to_u32,
 };
 use crate::lib::api_unsafe::{
-    SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking, sdcard_status,
-    sdcard_write_blocking,
+    SDCARD_SECTOR_SIZE_BYTES, led_set as api_led_set, memory_stack_pointer, sdcard_read_blocking,
+    sdcard_status as api_sdcard_status, sdcard_write_blocking,
 };
 use crate::lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use crate::lib::global_allocator::GlobalAllocator;
@@ -58,7 +58,7 @@ pub struct ActionContext<'a> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_look(ctx: &mut ActionContext) -> Result<()> {
+pub fn look(ctx: &mut ActionContext) -> Result<()> {
     let entity = &ctx.world.entities[ctx.entity_id];
     let location = &ctx.world.locations[entity.location];
 
@@ -117,17 +117,17 @@ pub fn action_look(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_go(ctx: &mut ActionContext) -> Result<()> {
+pub fn go(ctx: &mut ActionContext) -> Result<()> {
     let Some(named_link) = ctx.tokens.next() else {
         ctx.printer.p(b"go where");
         ctx.printer.nlc(2);
         return Err(ActionError::GoWhere);
     };
 
-    action_go_named_link(ctx, named_link)
+    go_named_link(ctx, named_link)
 }
 
-pub fn action_go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
+pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     // find link id
     let Some(link_id) = ctx.world.links.iter().position(|x| x.name == link_name) else {
         ctx.printer.p(b"cannot go there");
@@ -210,7 +210,7 @@ pub fn action_go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_inventory(ctx: &mut ActionContext) -> Result<()> {
+pub fn inventory(ctx: &mut ActionContext) -> Result<()> {
     let entity = &ctx.world.entities[ctx.entity_id];
     ctx.printer.p(b"u have: ");
     let mut i = 0;
@@ -229,7 +229,7 @@ pub fn action_inventory(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
+pub fn take(ctx: &mut ActionContext) -> Result<()> {
     // get object name
     let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"take what");
@@ -275,7 +275,7 @@ pub fn action_take(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
+pub fn drop(ctx: &mut ActionContext) -> Result<()> {
     let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"drop what");
         ctx.printer.nlc(2);
@@ -315,7 +315,7 @@ pub fn action_drop(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_give(ctx: &mut ActionContext) -> Result<()> {
+pub fn give(ctx: &mut ActionContext) -> Result<()> {
     // get entity name
     let Some(to_entity_name) = ctx.tokens.next() else {
         ctx.printer.p(b"give to whom");
@@ -390,7 +390,7 @@ pub fn action_give(ctx: &mut ActionContext) -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_memory_info(ctx: &mut ActionContext) -> Result<()> {
+pub fn memory_info(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.p(b"   heap start: ");
     ctx.printer.p_hex_u32(memory_heap_start(), true);
     ctx.printer.nl();
@@ -413,15 +413,15 @@ pub fn action_memory_info(ctx: &mut ActionContext) -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_sdcard_status(ctx: &mut ActionContext) -> Result<()> {
+pub fn sdcard_status(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.p(b"SDCARD_STATUS: 0x");
-    ctx.printer.p_hex_u32(sdcard_status() as u32, true);
+    ctx.printer.p_hex_u32(api_sdcard_status() as u32, true);
     ctx.printer.nl();
 
     Ok(())
 }
 
-pub fn action_sdcard_read(ctx: &mut ActionContext) -> Result<()> {
+pub fn sdcard_read(ctx: &mut ActionContext) -> Result<()> {
     let sector = if let Some(sector) = ctx.tokens.next() {
         u8_slice_to_u32(sector)
     } else {
@@ -438,7 +438,7 @@ pub fn action_sdcard_read(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
+pub fn sdcard_write(ctx: &mut ActionContext) -> Result<()> {
     let sector = if let Some(sector) = ctx.tokens.next() {
         u8_slice_to_u32(sector)
     } else {
@@ -457,7 +457,7 @@ pub fn action_sdcard_write(ctx: &mut ActionContext) -> Result<()> {
 }
 
 #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
+pub fn led_set(ctx: &mut ActionContext) -> Result<()> {
     let bits = if let Some(bits) = ctx.tokens.next() {
         !u8_slice_bits_to_u32(bits)
         // note: inverted since '0' is 'on'
@@ -467,7 +467,7 @@ pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::WhichLeds);
     };
 
-    led_set(bits as u8);
+    api_led_set(bits as u8);
 
     Ok(())
 }
@@ -476,13 +476,13 @@ pub fn action_led_set(ctx: &mut ActionContext) -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_help(ctx: &mut ActionContext, help: &[u8]) -> Result<()> {
+pub fn help(ctx: &mut ActionContext, help: &[u8]) -> Result<()> {
     ctx.printer.p(help);
 
     Ok(())
 }
 
-pub fn action_new_object(ctx: &mut ActionContext) -> Result<()> {
+pub fn new_object(ctx: &mut ActionContext) -> Result<()> {
     // get object name
     let Some(object_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what object name");
@@ -509,7 +509,7 @@ pub fn action_new_object(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
+pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
     let Some(to_link_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what link name");
         ctx.printer.nlc(2);
@@ -579,7 +579,7 @@ pub fn action_new_location(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_new_entity(ctx: &mut ActionContext) -> Result<()> {
+pub fn new_entity(ctx: &mut ActionContext) -> Result<()> {
     // get object name
     let Some(entity_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what entity name");
@@ -613,14 +613,14 @@ pub fn action_new_entity(ctx: &mut ActionContext) -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub fn action_set_location_note(ctx: &mut ActionContext) -> Result<()> {
+pub fn set_location_note(ctx: &mut ActionContext) -> Result<()> {
     ctx.world.locations[ctx.world.entities[ctx.entity_id].location].note =
         Note::from(ctx.tokens.rest());
 
     Ok(())
 }
 
-pub fn action_say(ctx: &mut ActionContext) -> Result<()> {
+pub fn say(ctx: &mut ActionContext) -> Result<()> {
     let say = ctx.tokens.rest();
     if say.is_empty() {
         ctx.printer.p(b"say what");
@@ -639,7 +639,7 @@ pub fn action_say(ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 
-pub fn action_tell(ctx: &mut ActionContext) -> Result<()> {
+pub fn tell(ctx: &mut ActionContext) -> Result<()> {
     let Some(to_name) = ctx.tokens.next() else {
         ctx.printer.p(b"tell to whom");
         ctx.printer.nlc(2);
@@ -676,7 +676,7 @@ pub fn action_tell(ctx: &mut ActionContext) -> Result<()> {
     clippy::unnecessary_wraps,
     reason = "actions return Result for consistency"
 )]
-pub const fn action_wait(_ctx: &mut ActionContext) -> Result<()> {
+pub const fn wait(_ctx: &mut ActionContext) -> Result<()> {
     Ok(())
 }
 

@@ -1,3 +1,6 @@
+//
+// reviewed: 2025-04-21
+//
 use crate::lib::api::{Memory, Printer, u8_slice_bits_to_u32, u8_slice_to_u32};
 use crate::lib::api_unsafe::{
     SDCARD_SECTOR_SIZE_BYTES, led_set as api_led_set, memory_stack_pointer, sdcard_read_blocking,
@@ -9,7 +12,7 @@ use crate::model::{Entity, EntityId, Link, LinkId, LocationId, Object, ObjectId,
 use crate::model::{EntityMessage, Location, LocationLink, Name, Note};
 use alloc::vec;
 
-const COMMAND_BUFFER_SIZE: usize = 80;
+const COMMAND_BUFFER_SIZE: usize = 256;
 
 pub type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 pub type CommandBufferIterator<'a> =
@@ -48,7 +51,7 @@ pub enum ActionError {
 pub struct ActionContext<'a> {
     pub printer: &'a mut dyn Printer,
     pub world: &'a mut World,
-    pub entity_id: EntityId,
+    pub entity: EntityId,
     pub tokens: &'a mut CommandBufferIterator<'a>,
 }
 
@@ -57,7 +60,7 @@ pub struct ActionContext<'a> {
     reason = "actions return Result for consistency"
 )]
 pub fn look(ctx: &mut ActionContext) -> Result<()> {
-    let entity = &ctx.world.entities[ctx.entity_id];
+    let entity = &ctx.world.entities[ctx.entity];
     let location = &ctx.world.locations[entity.location];
 
     ctx.printer.p(b"u r in ");
@@ -67,7 +70,7 @@ pub fn look(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.p(b"u c ");
     let mut count = 0;
     for &eid in &location.entities {
-        if eid != ctx.entity_id {
+        if eid != ctx.entity {
             if count != 0 {
                 ctx.printer.p(b", ");
             }
@@ -110,7 +113,7 @@ pub fn look(ctx: &mut ActionContext) -> Result<()> {
     }
 
     // clear messages after displayed
-    ctx.world.entities[ctx.entity_id].messages.clear();
+    ctx.world.entities[ctx.entity].messages.clear();
 
     Ok(())
 }
@@ -135,7 +138,7 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
 
     // move entity
     let (from_location_id, to_location_id) = {
-        let entity = &mut ctx.world.entities[ctx.entity_id];
+        let entity = &mut ctx.world.entities[ctx.entity];
         let from_location_id = entity.location;
         let from_location = &mut ctx.world.locations[from_location_id];
 
@@ -153,7 +156,7 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
         let pos = from_location
             .entities
             .iter()
-            .position(|&x| x == ctx.entity_id)
+            .position(|&x| x == ctx.entity)
             .expect("entity should be in location");
 
         from_location.entities.remove(pos);
@@ -161,7 +164,7 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
         // add entity to new location
         ctx.world.locations[to_location_id]
             .entities
-            .push(ctx.entity_id);
+            .push(ctx.entity);
 
         // update entity location
         entity.location = to_location_id;
@@ -173,9 +176,9 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     send_message_to_entities_in_location(
         ctx.world,
         from_location_id,
-        &[ctx.entity_id],
+        &[ctx.entity],
         EntityMessage::from_parts(&[
-            &ctx.world.entities[ctx.entity_id].name,
+            &ctx.world.entities[ctx.entity].name,
             b" left to ",
             link_name,
         ]),
@@ -193,9 +196,9 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     send_message_to_entities_in_location(
         ctx.world,
         to_location_id,
-        &[ctx.entity_id],
+        &[ctx.entity],
         EntityMessage::from_parts(&[
-            &ctx.world.entities[ctx.entity_id].name,
+            &ctx.world.entities[ctx.entity].name,
             b" arrived from ",
             &ctx.world.links[back_link_id].name,
         ]),
@@ -209,10 +212,9 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     reason = "actions return Result for consistency"
 )]
 pub fn inventory(ctx: &mut ActionContext) -> Result<()> {
-    let entity = &ctx.world.entities[ctx.entity_id];
     ctx.printer.p(b"u have: ");
     let mut i = 0;
-    for &oid in &entity.objects {
+    for &oid in &ctx.world.entities[ctx.entity].objects {
         if i != 0 {
             ctx.printer.p(b", ");
         }
@@ -236,7 +238,7 @@ pub fn take(ctx: &mut ActionContext) -> Result<()> {
     };
 
     {
-        let entity = &mut ctx.world.entities[ctx.entity_id];
+        let entity = &mut ctx.world.entities[ctx.entity];
         let location = &mut ctx.world.locations[entity.location];
 
         // find object id and index in list
@@ -261,11 +263,11 @@ pub fn take(ctx: &mut ActionContext) -> Result<()> {
 
     // send message
     {
-        let entity = &ctx.world.entities[ctx.entity_id];
+        let entity = &ctx.world.entities[ctx.entity];
         send_message_to_entities_in_location(
             ctx.world,
             entity.location,
-            &[ctx.entity_id],
+            &[ctx.entity],
             EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
         );
     }
@@ -282,7 +284,7 @@ pub fn drop(ctx: &mut ActionContext) -> Result<()> {
 
     {
         let Some((object_index, object_id)) =
-            find_object_in_entity_inventory(ctx.world, ctx.entity_id, object_name)
+            find_object_in_entity_inventory(ctx.world, ctx.entity, object_name)
         else {
             ctx.printer.p(object_name);
             ctx.printer.p(b" not in inventory");
@@ -290,7 +292,7 @@ pub fn drop(ctx: &mut ActionContext) -> Result<()> {
             return Err(ActionError::ObjectNotInInventory);
         };
 
-        let entity = &mut ctx.world.entities[ctx.entity_id];
+        let entity = &mut ctx.world.entities[ctx.entity];
 
         // remove object from entity
         entity.objects.remove(object_index);
@@ -301,11 +303,11 @@ pub fn drop(ctx: &mut ActionContext) -> Result<()> {
 
     // send message
     {
-        let entity = &ctx.world.entities[ctx.entity_id];
+        let entity = &ctx.world.entities[ctx.entity];
         send_message_to_entities_in_location(
             ctx.world,
             entity.location,
-            &[ctx.entity_id],
+            &[ctx.entity],
             EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
         );
     }
@@ -329,7 +331,7 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
     };
 
     let Some((object_index, object_id)) =
-        find_object_in_entity_inventory(ctx.world, ctx.entity_id, object_name)
+        find_object_in_entity_inventory(ctx.world, ctx.entity, object_name)
     else {
         ctx.printer.p(object_name);
         ctx.printer.p(b" not in inventory");
@@ -338,7 +340,7 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
     };
 
     // find "to" entity
-    let Some(&to_entity_id) = ctx.world.locations[ctx.world.entities[ctx.entity_id].location]
+    let Some(&to_entity_id) = ctx.world.locations[ctx.world.entities[ctx.entity].location]
         .entities
         .iter()
         .find(|&&x| ctx.world.entities[x].name == to_entity_name)
@@ -350,9 +352,7 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
     };
 
     // remove object from entity
-    ctx.world.entities[ctx.entity_id]
-        .objects
-        .remove(object_index);
+    ctx.world.entities[ctx.entity].objects.remove(object_index);
 
     // add object to "to" entity
     ctx.world.entities[to_entity_id].objects.push(object_id);
@@ -360,10 +360,10 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
     // send messages
     send_message_to_entities_in_location(
         ctx.world,
-        ctx.world.entities[ctx.entity_id].location,
+        ctx.world.entities[ctx.entity].location,
         &[to_entity_id],
         EntityMessage::from_parts(&[
-            &ctx.world.entities[ctx.entity_id].name,
+            &ctx.world.entities[ctx.entity].name,
             b" gave ",
             &ctx.world.entities[to_entity_id].name,
             b" ",
@@ -375,7 +375,7 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
         ctx.world,
         &[to_entity_id],
         EntityMessage::from_parts(&[
-            &ctx.world.entities[ctx.entity_id].name,
+            &ctx.world.entities[ctx.entity].name,
             b" gave u ",
             &ctx.world.objects[object_id].name,
         ]),
@@ -449,6 +449,7 @@ pub fn sdcard_write(ctx: &mut ActionContext) -> Result<()> {
     let len = data.len().min(SDCARD_SECTOR_SIZE_BYTES);
     let mut buf = [0_u8; SDCARD_SECTOR_SIZE_BYTES];
     buf[..len].copy_from_slice(&data[..len]);
+    // todo: allow slice to be less than sector size on pad rest with zeros
     sdcard_write_blocking(sector, &buf);
 
     Ok(())
@@ -502,7 +503,7 @@ pub fn new_object(ctx: &mut ActionContext) -> Result<()> {
         object_id
     };
 
-    ctx.world.entities[ctx.entity_id].objects.push(object_id);
+    ctx.world.entities[ctx.entity].objects.push(object_id);
 
     Ok(())
 }
@@ -537,7 +538,7 @@ pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::LocationAlreadyExists);
     }
 
-    let from_location_id = ctx.world.entities[ctx.entity_id].location;
+    let from_location_id = ctx.world.entities[ctx.entity].location;
 
     let to_link_id = find_or_add_link(ctx.world, to_link_name);
 
@@ -591,18 +592,15 @@ pub fn new_entity(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::EntityAlreadyExists);
     }
 
-    {
-        let location_id = ctx.world.entities[ctx.entity_id].location;
-        let entity_id = ctx.world.entities.len();
-        ctx.world.entities.push(Entity {
-            name: Name::from(entity_name),
-            location: location_id,
-            objects: vec![],
-            messages: vec![],
-        });
-        ctx.world.locations[location_id].entities.push(entity_id);
-        entity_id
-    };
+    let location_id = ctx.world.entities[ctx.entity].location;
+    let entity_id = ctx.world.entities.len();
+    ctx.world.entities.push(Entity {
+        name: Name::from(entity_name),
+        location: location_id,
+        objects: vec![],
+        messages: vec![],
+    });
+    ctx.world.locations[location_id].entities.push(entity_id);
 
     Ok(())
 }
@@ -612,7 +610,7 @@ pub fn new_entity(ctx: &mut ActionContext) -> Result<()> {
     reason = "actions return Result for consistency"
 )]
 pub fn set_location_note(ctx: &mut ActionContext) -> Result<()> {
-    ctx.world.locations[ctx.world.entities[ctx.entity_id].location].note =
+    ctx.world.locations[ctx.world.entities[ctx.entity].location].note =
         Note::from(ctx.tokens.rest());
 
     Ok(())
@@ -626,11 +624,11 @@ pub fn say(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::SayWhat);
     }
 
-    let entity = &ctx.world.entities[ctx.entity_id];
+    let entity = &ctx.world.entities[ctx.entity];
     send_message_to_entities_in_location(
         ctx.world,
         entity.location,
-        &[ctx.entity_id],
+        &[ctx.entity],
         EntityMessage::from_parts(&[&entity.name, b" says ", say]),
     );
 
@@ -651,7 +649,7 @@ pub fn tell(ctx: &mut ActionContext) -> Result<()> {
         return Err(ActionError::TellWhat);
     }
 
-    let entity = &ctx.world.entities[ctx.entity_id];
+    let entity = &ctx.world.entities[ctx.entity];
 
     let Some(&to_entity_id) = ctx.world.locations[entity.location]
         .entities
@@ -684,10 +682,10 @@ pub const fn wait(_ctx: &mut ActionContext) -> Result<()> {
 
 fn find_object_in_entity_inventory(
     world: &World,
-    entity_id: EntityId,
+    entity: EntityId,
     object_name: &[u8],
 ) -> Option<(usize, ObjectId)> {
-    world.entities[entity_id]
+    world.entities[entity]
         .objects
         .iter()
         .enumerate()
@@ -696,23 +694,24 @@ fn find_object_in_entity_inventory(
 
 fn find_or_add_link(world: &mut World, link_name: &[u8]) -> LinkId {
     if let Some(id) = world.links.iter().position(|x| x.name == link_name) {
-        id
-    } else {
-        let id = world.links.len();
-        world.links.push(Link {
-            name: Name::from(link_name),
-        });
-        id
+        return id;
     }
+
+    let id = world.links.len();
+    world.links.push(Link {
+        name: Name::from(link_name),
+    });
+
+    id
 }
 
 fn send_message_to_entities_in_location(
     world: &mut World,
-    location_id: LocationId,
+    location: LocationId,
     exclude_entities: &[EntityId],
     message: EntityMessage,
 ) {
-    for &eid in &world.locations[location_id].entities {
+    for &eid in &world.locations[location].entities {
         if !exclude_entities.contains(&eid) {
             world.entities[eid].messages.push(message);
         }

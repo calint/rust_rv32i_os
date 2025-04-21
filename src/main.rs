@@ -129,7 +129,7 @@ pub extern "C" fn run() -> ! {
                 let mut ctx = ActionContext {
                     printer: &mut printer,
                     world: &mut world,
-                    entity_id,
+                    entity: entity_id,
                     tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
                 };
 
@@ -149,7 +149,7 @@ pub extern "C" fn run() -> ! {
                 let mut ctx = ActionContext {
                     printer: &mut printer,
                     world: &mut world,
-                    entity_id,
+                    entity: entity_id,
                     tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
                 };
 
@@ -331,7 +331,7 @@ fn create_world() -> World {
         let mut ctx = ActionContext {
             printer: &mut PrinterVoid::new(),
             world: &mut world,
-            entity_id: 0,
+            entity: 0,
             tokens: &mut command_buffer.iter_tokens(u8::is_ascii_whitespace),
         };
 

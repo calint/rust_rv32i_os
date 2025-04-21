@@ -14,3 +14,8 @@ rustup target add riscv32i-unknown-none-elf
 * see https://github.com/calint/tang-nano-9k--riscv--cache-psram for FPGA implementation of the RISC-V RV32I that runs the application
 *  committed code has been tested in emulator
 *  tagged versions have been tested in emulator and on hardware
+
+## todo
+```
+[ ] emulator: track maximum stack usage of a run
+```

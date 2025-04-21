@@ -1,11 +1,9 @@
-use crate::lib::api_unsafe::sdcard_status;
-
 //
 // reviewed: 2025-04-21
 //
 use super::api_unsafe::{
     __heap_start__, SDCARD_SECTOR_SIZE_BYTES, led_set, memory_stack_pointer, sdcard_read_blocking,
-    sdcard_write_blocking, uart_read_byte, uart_send_byte,
+    sdcard_status, sdcard_write_blocking, uart_read_byte, uart_send_byte,
 };
 use super::constants::MEMORY_END;
 

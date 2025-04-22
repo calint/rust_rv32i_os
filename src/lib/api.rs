@@ -125,16 +125,16 @@ pub trait Printer {
         }
 
         let mut n = num;
-        let mut digits = [0_u8; 10];
+        let mut buf = [0_u8; 10];
         // note: 10 is maximum digits for u32
-        let mut pos = digits.len();
+        let mut pos = buf.len();
         while n > 0 {
             pos -= 1;
-            digits[pos] = b'0' + (n % 10) as u8;
+            buf[pos] = b'0' + (n % 10) as u8;
             n /= 10;
         }
 
-        self.p(&digits[pos..]);
+        self.p(&buf[pos..]);
     }
 }
 

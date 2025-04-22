@@ -119,21 +119,22 @@ pub trait Printer {
 
     /// Prints a 32-bit unsigned integer.
     fn p_u32(&self, num: u32) {
-        let mut n = num;
-        let mut digits = [0_u8; 10];
-        let mut i = 0;
-        while n > 0 {
-            digits[i] = b'0' + (n % 10) as u8;
-            n /= 10;
-            i += 1;
-        }
-        if i == 0 {
+        if num == 0 {
             self.pb(b'0');
             return;
         }
-        for &b in digits.iter().rev() {
-            self.pb(b);
+
+        let mut n = num;
+        let mut digits = [0_u8; 10];
+        // note: 10 is maximum digits for u32
+        let mut pos = digits.len();
+        while n > 0 {
+            pos -= 1;
+            digits[pos] = b'0' + (n % 10) as u8;
+            n /= 10;
         }
+
+        self.p(&digits[pos..]);
     }
 }
 

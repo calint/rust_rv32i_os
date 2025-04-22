@@ -106,7 +106,7 @@ global_asm!(include_str!("startup.s"));
 
 /// # Panics
 ///
-/// Will panic if `action_look` fails or the application state is inconsistent.
+/// Will panic if application state is inconsistent.
 #[unsafe(no_mangle)]
 pub extern "C" fn run() -> ! {
     Leds::set(0b0000); // turn all leds on

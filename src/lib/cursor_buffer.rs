@@ -7,9 +7,9 @@ pub struct CursorBuffer<const SIZE: usize, T> {
     cursor: usize,
 }
 
-pub type Result<T> = core::result::Result<T, CursorBufferError>;
+pub type Result<T> = core::result::Result<T, Error>;
 
-pub enum CursorBufferError {
+pub enum Error {
     BufferFull,
     CursorAtStart,
     CursorAtEnd,
@@ -29,7 +29,7 @@ where
 
     pub fn insert(&mut self, ch: T) -> Result<()> {
         if self.end == SIZE {
-            return Err(CursorBufferError::BufferFull);
+            return Err(Error::BufferFull);
         }
 
         if self.cursor == self.end {
@@ -51,7 +51,7 @@ where
 
     pub fn delete(&mut self) -> Result<()> {
         if self.cursor == self.end {
-            return Err(CursorBufferError::CursorAtEnd);
+            return Err(Error::CursorAtEnd);
         }
 
         self.buffer
@@ -63,7 +63,7 @@ where
 
     pub fn backspace(&mut self) -> Result<()> {
         if self.cursor == 0 {
-            return Err(CursorBufferError::CursorAtStart);
+            return Err(Error::CursorAtStart);
         }
 
         if self.cursor == self.end {

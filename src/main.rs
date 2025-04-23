@@ -85,7 +85,7 @@ mod lib {
 mod actions;
 mod model;
 
-use actions::{ActionContext, ActionError, CommandBuffer, Result};
+use actions::{ActionContext, CommandBuffer, Error, Result};
 use alloc::vec;
 use core::arch::global_asm;
 use core::panic::PanicInfo;
@@ -187,7 +187,7 @@ fn handle_input(ctx: &mut ActionContext) -> Result<()> {
         _ => {
             ctx.printer.p(b"not understood");
             ctx.printer.nlc(2);
-            return Err(ActionError::NotUnderstood);
+            return Err(Error::NotUnderstood);
         }
     }
 

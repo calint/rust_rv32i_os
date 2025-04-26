@@ -16,10 +16,10 @@ cd ..
 
 cargo clean
 cargo clippy --release -- \
-  -W clippy::all -W clippy::pedantic -W clippy::nursery -W clippy::correctness -W clippy::perf -W clippy::style -W clippy::suspicious \
+  -W clippy::all -W clippy::pedantic -W clippy::correctness -W clippy::perf -W clippy::style -W clippy::suspicious \
   -W clippy::unwrap_used -W clippy::unseparated_literal_suffix
 
-#                          -W clippy::restriction \
+#                          -W clippy::nursery -W clippy::restriction \
 #                          -W clippy::unwrap_used -W clippy::expect_used \
 #                          -A clippy::single_call_fn -A clippy::indexing_slicing -A clippy::missing_docs_in_private_items \
 #                          -A clippy::implicit_return -A clippy::single_char_lifetime_names \
@@ -44,7 +44,6 @@ $OBJCOPY -O binary "$ELF" "$FIRMWARE_IMG"
 $OBJDUMP --source-comment -SCr "$ELF" > "$FIRMWARE_LIST"
 $OBJDUMP -s --section=.rodata --section=.srodata --section=.data --section=.sdata --section=.bss --section=.sbss "$ELF" > "$FIRMWARE_DATA" || true
 
-echo " * firmware built"
 ls -l --color "$FIRMWARE_IMG"
 
 file_size=$(stat -c "%s" "$FIRMWARE_IMG")

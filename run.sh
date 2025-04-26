@@ -7,7 +7,7 @@ cp -a firmware.img firmware.img.bak || true
 
 scripts/firmware-build.sh
 
-echo " * comparing previous firmware.img with current"
+echo " * compare previous firmware.img with current"
 if cmp -s firmware.img firmware.img.bak; then
     echo "no change"
 else

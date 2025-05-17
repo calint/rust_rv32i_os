@@ -1,5 +1,5 @@
 // generated - do not edit (see `configuration.py`)
-pub const MEMORY_END: u32 = 0x0020_0000;
+pub const MEMORY_END: u32 = 0x0080_0000;
 pub const LED: u32 = 0xffff_fffc;
 pub const UART_OUT_ADDR: u32 = 0xffff_fff8;
 pub const UART_IN_ADDR: u32 = 0xffff_fff4;

@@ -8,11 +8,11 @@ rustup target add riscv32i-unknown-none-elf
 ## build and emulate
 initialize for Tang Nano 9K
 ```sh
-./configuration.py 9k
+./configure.py 9k
 ```
 or Tang Nano 20K
 ```sh
-./configuration.py 20k
+./configure.py 20k
 ```
 then run
 ```sh

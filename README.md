@@ -22,10 +22,5 @@ then run
 ## note
 * see https://github.com/calint/tang-nano-9k--riscv--cache-psram for FPGA implementation of the RISC-V RV32I for Tang Nano 9K that runs the application
 * see https://github.com/calint/tang-nano-20k--riscv--cache-sdram for Tang Nano 20K version
-*  committed code has been tested in emulator
-*  tagged versions have been tested in emulator and on hardware
-
-## todo
-```
-[ ] emulator: track maximum stack usage of a run
-```
+* committed code has been tested in emulator
+* tagged versions have been tested in emulator and on hardware

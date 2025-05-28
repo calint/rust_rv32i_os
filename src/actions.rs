@@ -10,7 +10,7 @@ use crate::model::{
 };
 use alloc::vec;
 
-const COMMAND_BUFFER_SIZE: usize = 256;
+const COMMAND_BUFFER_SIZE: usize = 520;
 
 pub type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 pub type CommandBufferIterator<'a> =

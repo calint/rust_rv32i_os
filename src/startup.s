@@ -12,5 +12,5 @@ _start:
     j .bss_clear_loop
 .bss_clear_done:
     # set stack pointer and enter program
-    li sp, 0x200000
+    li sp, 0x800000
     j run

@@ -27,22 +27,11 @@ with open("src/startup.s", "w") as file:
     file.write("    j .bss_clear_loop\n")
     file.write(".bss_clear_done:\n")
     file.write("    # set stack pointer and enter program\n")
-    file.write("    li sp, ")
-    if card == "9k":
-        file.write("0x200000")
-    elif card == "20k":
-        file.write("0x800000")
-    file.write("\n")
+    file.write("    li sp, 0x800000\n")
     file.write("    j run\n")
 
 with open("src/lib/constants.rs", "w") as file:
     file.write("// generated - do not edit (see `configuration.py`)\n")
-    file.write("pub const MEMORY_END: u32 = ")
-    if card == "9k":
-        file.write("0x0020_0000")
-    elif card == "20k":
-        file.write("0x0080_0000")
-    file.write(";\n")
     file.write("pub const LED: u32 = 0xffff_fffc;\n")
     file.write("pub const UART_OUT_ADDR: u32 = 0xffff_fff8;\n")
     file.write("pub const UART_IN_ADDR: u32 = 0xffff_fff4;\n")
@@ -51,6 +40,7 @@ with open("src/lib/constants.rs", "w") as file:
     file.write("pub const SDCARD_NEXT_BYTE: u32 = 0xffff_ffe8;\n")
     file.write("pub const SDCARD_STATUS: u32 = 0xffff_ffe4;\n")
     file.write("pub const SDCARD_WRITE_SECTOR: u32 = 0xffff_ffe0;\n")
+    file.write("pub const MEMORY_END: u32 = 0x0080_0000;\n")
 
 with open("emulator/src/main_config.hpp", "w") as file:
     file.write("// generated - do not edit (see `configuration.py`)\n")
@@ -69,11 +59,6 @@ with open("emulator/src/main_config.hpp", "w") as file:
     file.write("std::uint32_t constexpr sdcard_status = 0xffff'ffe4;\n")
     file.write("std::uint32_t constexpr sdcard_write_sector = 0xffff'ffe0;\n")
     file.write("std::uint32_t constexpr io_addresses_start = 0xffff'ffe0;\n")
-    file.write("std::uint32_t constexpr memory_end = ")
-    if card == "9k":
-        file.write("0x0020'0000")
-    elif card == "20k":
-        file.write("0x0080'0000")
-    file.write(";\n")
+    file.write("std::uint32_t constexpr memory_end = 0x0080'0000;\n")
     file.write("\n")
     file.write("} // namespace osqa\n")

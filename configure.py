@@ -12,7 +12,8 @@ os.chdir(script_dir)
 
 card = sys.argv[1]
 
-print("generate `src/startup.s`")
+print(f"generate for Tang Nano {card}")
+print("* `src/startup.s`")
 with open("src/startup.s", "w") as file:
     file.write("# generated - do not edit (see `configuration.py`)\n")
     file.write(".global _start\n")
@@ -31,7 +32,7 @@ with open("src/startup.s", "w") as file:
     file.write("    li sp, 0x800000\n")
     file.write("    j run\n")
 
-print("generate `src/lib/constants.rs`")
+print("* `src/lib/constants.rs`")
 with open("src/lib/constants.rs", "w") as file:
     file.write("// generated - do not edit (see `configuration.py`)\n")
     file.write("pub const LED: u32 = 0xffff_fffc;\n")
@@ -44,7 +45,7 @@ with open("src/lib/constants.rs", "w") as file:
     file.write("pub const SDCARD_WRITE_SECTOR: u32 = 0xffff_ffe0;\n")
     file.write("pub const MEMORY_END: u32 = 0x0080_0000;\n")
 
-print("generate `emulator/src/main_config.hpp`")
+print("* `emulator/src/main_config.hpp`")
 with open("emulator/src/main_config.hpp", "w") as file:
     file.write("// generated - do not edit (see `configuration.py`)\n")
     file.write("#pragma once\n")

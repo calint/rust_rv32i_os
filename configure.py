@@ -12,7 +12,7 @@ os.chdir(script_dir)
 
 card = sys.argv[1]
 
-print(f"generate for Tang Nano {card}")
+print(f"configure for Tang Nano {card}")
 print("* `src/startup.s`")
 with open("src/startup.s", "w") as file:
     file.write("# generated - do not edit (see `configuration.py`)\n")

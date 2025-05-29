@@ -1,5 +1,5 @@
 #!/bin/python3
-# generates configuration files source, emulator
+# generates configuration files for Tang Nano 9K or 20K
 import os
 import sys
 

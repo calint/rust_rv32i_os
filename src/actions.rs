@@ -546,20 +546,20 @@ pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
 
     let from_location_id = ctx.world.entities[ctx.entity].location;
 
-    let to_link_id = find_or_add_link(ctx.world, to_link_name);
+    let to_link_name_id = find_or_add_link(ctx.world, to_link_name);
 
     // check if link is already used
     if ctx.world.locations[from_location_id]
         .links
         .iter()
-        .any(|x| x.link_name == to_link_id)
+        .any(|x| x.link_name == to_link_name_id)
     {
         ctx.printer.p(b"link from this location already exists");
         ctx.printer.nlc(2);
         return Err(Error::LinkFromLocationAlreadyExists);
     }
 
-    let back_link_id = find_or_add_link(ctx.world, back_link_name);
+    let back_link_name_id = find_or_add_link(ctx.world, back_link_name);
 
     // add location and link it back to from location
     let new_location_id = ctx.world.locations.len();
@@ -567,7 +567,7 @@ pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
         name: Name::from(new_location_name),
         note: Note::default(),
         links: vec![Link {
-            link_name: back_link_id,
+            link_name: back_link_name_id,
             location: from_location_id,
         }],
         objects: vec![],
@@ -575,7 +575,7 @@ pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
     });
 
     ctx.world.locations[from_location_id].links.push(Link {
-        link_name: to_link_id,
+        link_name: to_link_name_id,
         location: new_location_id,
     });
 

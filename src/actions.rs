@@ -5,7 +5,7 @@ use crate::lib::api::{Leds, Memory, Printer, SDCard, u8_slice_bits_to_u32, u8_sl
 use crate::lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use crate::lib::global_allocator::GlobalAllocator;
 use crate::model::{
-    Entity, EntityId, EntityMessage, Link, LinkId, Location, LocationId, LocationLink, Name, Note,
+    Entity, EntityId, Link, LinkName, LinkNameId, Location, LocationId, Message, Name, Note,
     Object, ObjectId, World,
 };
 use alloc::vec;
@@ -96,7 +96,7 @@ pub fn look(ctx: &mut ActionContext) -> Result<()> {
             ctx.printer.p(b", ");
         }
         count += 1;
-        ctx.printer.p(&ctx.world.links[lid.link].name);
+        ctx.printer.p(&ctx.world.link_names[lid.link_name].name);
     }
     if count == 0 {
         ctx.printer.p(b"none");
@@ -129,7 +129,12 @@ pub fn go(ctx: &mut ActionContext) -> Result<()> {
 
 pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     // find link id
-    let Some(link_id) = ctx.world.links.iter().position(|x| x.name == link_name) else {
+    let Some(link_name_id) = ctx
+        .world
+        .link_names
+        .iter()
+        .position(|x| x.name == link_name)
+    else {
         ctx.printer.p(b"cannot go there");
         ctx.printer.nlc(2);
         return Err(Error::NoSuchExit);
@@ -142,14 +147,17 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
         let from_location = &mut ctx.world.locations[from_location_id];
 
         // find "to" location id
-        let to_location_id =
-            if let Some(lnk) = from_location.links.iter().find(|x| x.link == link_id) {
-                lnk.location
-            } else {
-                ctx.printer.p(b"cannot go there");
-                ctx.printer.nlc(2);
-                return Err(Error::CannotGoThere);
-            };
+        let to_location_id = if let Some(lnk) = from_location
+            .links
+            .iter()
+            .find(|x| x.link_name == link_name_id)
+        {
+            lnk.location
+        } else {
+            ctx.printer.p(b"cannot go there");
+            ctx.printer.nlc(2);
+            return Err(Error::CannotGoThere);
+        };
 
         // remove entity from old location
         let pos = from_location
@@ -176,7 +184,7 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
         ctx.world,
         from_location_id,
         &[ctx.entity],
-        EntityMessage::from_parts(&[
+        Message::from_parts(&[
             &ctx.world.entities[ctx.entity].name,
             b" left to ",
             link_name,
@@ -188,7 +196,7 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
     let back_link_id = ctx.world.locations[to_location_id]
         .links
         .iter()
-        .find_map(|x| (x.location == from_location_id).then_some(x.link))
+        .find_map(|x| (x.location == from_location_id).then_some(x.link_name))
         .expect("link back to location should exist in target location");
 
     // send message to entities in 'to_location' that entity has arrived
@@ -196,10 +204,10 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
         ctx.world,
         to_location_id,
         &[ctx.entity],
-        EntityMessage::from_parts(&[
+        Message::from_parts(&[
             &ctx.world.entities[ctx.entity].name,
             b" arrived from ",
-            &ctx.world.links[back_link_id].name,
+            &ctx.world.link_names[back_link_id].name,
         ]),
     );
 
@@ -267,7 +275,7 @@ pub fn take(ctx: &mut ActionContext) -> Result<()> {
             ctx.world,
             entity.location,
             &[ctx.entity],
-            EntityMessage::from_parts(&[&entity.name, b" took ", object_name]),
+            Message::from_parts(&[&entity.name, b" took ", object_name]),
         );
     }
 
@@ -307,7 +315,7 @@ pub fn drop(ctx: &mut ActionContext) -> Result<()> {
             ctx.world,
             entity.location,
             &[ctx.entity],
-            EntityMessage::from_parts(&[&entity.name, b" dropped ", object_name]),
+            Message::from_parts(&[&entity.name, b" dropped ", object_name]),
         );
     }
 
@@ -361,7 +369,7 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
         ctx.world,
         ctx.world.entities[ctx.entity].location,
         &[to_entity_id],
-        EntityMessage::from_parts(&[
+        Message::from_parts(&[
             &ctx.world.entities[ctx.entity].name,
             b" gave ",
             &ctx.world.entities[to_entity_id].name,
@@ -373,7 +381,7 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
     send_message_to_entities(
         ctx.world,
         &[to_entity_id],
-        EntityMessage::from_parts(&[
+        Message::from_parts(&[
             &ctx.world.entities[ctx.entity].name,
             b" gave u ",
             &ctx.world.objects[object_id].name,
@@ -544,7 +552,7 @@ pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
     if ctx.world.locations[from_location_id]
         .links
         .iter()
-        .any(|x| x.link == to_link_id)
+        .any(|x| x.link_name == to_link_id)
     {
         ctx.printer.p(b"link from this location already exists");
         ctx.printer.nlc(2);
@@ -558,20 +566,18 @@ pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
     ctx.world.locations.push(Location {
         name: Name::from(new_location_name),
         note: Note::default(),
-        links: vec![LocationLink {
-            link: back_link_id,
+        links: vec![Link {
+            link_name: back_link_id,
             location: from_location_id,
         }],
         objects: vec![],
         entities: vec![],
     });
 
-    ctx.world.locations[from_location_id]
-        .links
-        .push(LocationLink {
-            link: to_link_id,
-            location: new_location_id,
-        });
+    ctx.world.locations[from_location_id].links.push(Link {
+        link_name: to_link_id,
+        location: new_location_id,
+    });
 
     Ok(())
 }
@@ -627,7 +633,7 @@ pub fn say(ctx: &mut ActionContext) -> Result<()> {
         ctx.world,
         entity.location,
         &[ctx.entity],
-        EntityMessage::from_parts(&[&entity.name, b" says ", say]),
+        Message::from_parts(&[&entity.name, b" says ", say]),
     );
 
     Ok(())
@@ -660,7 +666,7 @@ pub fn tell(ctx: &mut ActionContext) -> Result<()> {
         return Err(Error::EntityNotHere);
     };
 
-    let message = EntityMessage::from_parts(&[&entity.name, b" tells u ", tell]);
+    let message = Message::from_parts(&[&entity.name, b" tells u ", tell]);
     ctx.world.entities[to_entity_id].messages.push(message);
 
     Ok(())
@@ -690,13 +696,13 @@ fn find_object_in_entity_inventory(
         .find_map(|(index, &oid)| (world.objects[oid].name == object_name).then_some((index, oid)))
 }
 
-fn find_or_add_link(world: &mut World, link_name: &[u8]) -> LinkId {
-    if let Some(id) = world.links.iter().position(|x| x.name == link_name) {
+fn find_or_add_link(world: &mut World, link_name: &[u8]) -> LinkNameId {
+    if let Some(id) = world.link_names.iter().position(|x| x.name == link_name) {
         return id;
     }
 
-    let id = world.links.len();
-    world.links.push(Link {
+    let id = world.link_names.len();
+    world.link_names.push(LinkName {
         name: Name::from(link_name),
     });
 
@@ -707,7 +713,7 @@ fn send_message_to_entities_in_location(
     world: &mut World,
     location: LocationId,
     exclude_entities: &[EntityId],
-    message: EntityMessage,
+    message: Message,
 ) {
     for &eid in &world.locations[location].entities {
         if !exclude_entities.contains(&eid) {
@@ -716,7 +722,7 @@ fn send_message_to_entities_in_location(
     }
 }
 
-fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: EntityMessage) {
+fn send_message_to_entities(world: &mut World, entities: &[EntityId], message: Message) {
     for &eid in entities {
         world.entities[eid].messages.push(message);
     }

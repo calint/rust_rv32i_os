@@ -318,7 +318,7 @@ fn create_world() -> World {
             entities: vec![0],
         }],
         objects: vec![],
-        links: vec![],
+        link_names: vec![],
     };
 
     for line in CREATION.split(|&x| x == b'\n') {

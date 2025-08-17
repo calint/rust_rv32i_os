@@ -139,7 +139,7 @@ where
 
     /// Iterates over the buffer, returning a slice for each chunk delimited by the provided closure.
     /// Note: Leading, adjacent and trailing delimiters are consumed.
-    pub fn iter_tokens<F>(&self, delimiter: F) -> CursorBufferIterator<SIZE, T, F>
+    pub fn iter_tokens<F>(&self, delimiter: F) -> CursorBufferIterator<'_, SIZE, T, F>
     where
         F: Fn(&T) -> bool,
     {

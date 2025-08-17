@@ -437,7 +437,9 @@ pub fn sdcard_read(ctx: &mut ActionContext) -> Result<()> {
 
     let mut buf = [0_u8; SDCard::sector_size_bytes()];
     SDCard::read_blocking(sector, &mut buf);
-    buf.iter().for_each(|&x| ctx.printer.pb(x));
+    for &x in &buf {
+        ctx.printer.pb(x);
+    }
     ctx.printer.nl();
 
     Ok(())

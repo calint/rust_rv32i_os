@@ -24,3 +24,7 @@ then run
 * see https://github.com/calint/tang-nano-20k--riscv--cache-sdram for Tang Nano 20K version
 * committed code has been tested in emulator
 * tagged versions have been tested in emulator and on hardware
+
+## tools
+* cargo 1.89.0 (c24e10642 2025-06-23)
+* rustc 1.89.0 (29483883e 2025-08-04)

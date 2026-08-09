@@ -15,7 +15,7 @@ card = sys.argv[1]
 print(f"configure for Tang Nano {card}")
 print("* `src/startup.s`")
 with open("src/startup.s", "w") as file:
-    file.write("# generated - do not edit (see `configuration.py`)\n")
+    file.write("# generated - do not edit (see `configure.py`)\n")
     file.write(".global _start\n")
     file.write("_start:\n")
     file.write("    # initialize BSS section to zeros\n")
@@ -34,7 +34,7 @@ with open("src/startup.s", "w") as file:
 
 print("* `src/lib/constants.rs`")
 with open("src/lib/constants.rs", "w") as file:
-    file.write("// generated - do not edit (see `configuration.py`)\n")
+    file.write("// generated - do not edit (see `configure.py`)\n")
     file.write("pub const LED: u32 = 0xffff_fffc;\n")
     file.write("pub const UART_OUT_ADDR: u32 = 0xffff_fff8;\n")
     file.write("pub const UART_IN_ADDR: u32 = 0xffff_fff4;\n")
@@ -47,7 +47,7 @@ with open("src/lib/constants.rs", "w") as file:
 
 print("* `emulator/src/main_config.hpp`")
 with open("emulator/src/main_config.hpp", "w") as file:
-    file.write("// generated - do not edit (see `configuration.py`)\n")
+    file.write("// generated - do not edit (see `configure.py`)\n")
     file.write("#pragma once\n")
     file.write("#include <cstdint>\n")
     file.write("\n")

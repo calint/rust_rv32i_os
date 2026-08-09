@@ -1,4 +1,4 @@
-# generated - do not edit (see `configuration.py`)
+# generated - do not edit (see `configure.py`)
 .global _start
 _start:
     # initialize BSS section to zeros

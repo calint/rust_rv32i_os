@@ -1,4 +1,4 @@
-// generated - do not edit (see `configuration.py`)
+// generated - do not edit (see `configure.py`)
 pub const LED: u32 = 0xffff_fffc;
 pub const UART_OUT_ADDR: u32 = 0xffff_fff8;
 pub const UART_IN_ADDR: u32 = 0xffff_fff4;

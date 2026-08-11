@@ -11,7 +11,7 @@ use crate::model::{
 use alloc::vec;
 
 const COMMAND_BUFFER_SIZE: usize = 526;
-// note: enough to support write to SD card sector of 512 byte in 4 GB address space
+// note: enough to support write to SD card sector of 512 byte
 
 pub type CommandBuffer = CursorBuffer<COMMAND_BUFFER_SIZE, u8>;
 pub type CommandBufferIterator<'a> =

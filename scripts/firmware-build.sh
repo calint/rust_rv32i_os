@@ -26,7 +26,7 @@ else
     touch "$FIRMWARE_IMG"
     touch "$FIRMWARE_TMP"
 fi
-old_file_size=$(stat -c "%s" "$FIRMWARE_IMG")
+old_file_size=$(stat --format="%s" "$FIRMWARE_IMG")
 
 $OBJCOPY --output-target=binary "$ELF" "$FIRMWARE_IMG"
 $OBJDUMP --source --source-comment --demangle --reloc "$ELF" >"$FIRMWARE_LIST"
@@ -38,7 +38,7 @@ $OBJDUMP --full-contents \
 
 ls -l --color "$FIRMWARE_IMG"
 
-file_size=$(stat -c "%s" "$FIRMWARE_IMG")
+file_size=$(stat --format="%s" "$FIRMWARE_IMG")
 timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Compare the old and new firmware.img files.

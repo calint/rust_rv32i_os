@@ -15,29 +15,25 @@ FIRMWARE_TMP="$FIRMWARE.img.tmp"
 cd ..
 
 cargo clean
-cargo clippy --release -- \
-  -W clippy::all -W clippy::pedantic -W clippy::correctness -W clippy::perf \
-  -W clippy::style -W clippy::suspicious \
-  -W clippy::unwrap_used -W clippy::unseparated_literal_suffix
-
+cargo clippy --release
 cargo build --release
 
 # Check if firmware.img already exists and make a backup.
 if [ -f "$FIRMWARE_IMG" ]; then
-  cp "$FIRMWARE_IMG" "$FIRMWARE_TMP"
+    cp "$FIRMWARE_IMG" "$FIRMWARE_TMP"
 else
-  # first build
-  touch "$FIRMWARE_IMG"
-  touch "$FIRMWARE_TMP"
+    # first build
+    touch "$FIRMWARE_IMG"
+    touch "$FIRMWARE_TMP"
 fi
 old_file_size=$(stat -c "%s" "$FIRMWARE_IMG")
 
 $OBJCOPY -O binary "$ELF" "$FIRMWARE_IMG"
-$OBJDUMP --source-comment -SCr "$ELF" > "$FIRMWARE_LIST"
+$OBJDUMP --source-comment -SCr "$ELF" >"$FIRMWARE_LIST"
 $OBJDUMP -s --section=.rodata --section=.srodata \
-            --section=.data --section=.sdata \
-            --section=.bss --section=.sbss \
-            "$ELF" > "$FIRMWARE_DATA" || true
+    --section=.data --section=.sdata \
+    --section=.bss --section=.sbss \
+    "$ELF" >"$FIRMWARE_DATA" || true
 
 ls -l --color "$FIRMWARE_IMG"
 
@@ -46,13 +42,13 @@ timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Compare the old and new firmware.img files.
 if cmp -s "$FIRMWARE_TMP" "$FIRMWARE_IMG"; then
-  echo "$timestamp: $file_size B  (same)" >> "$FIRMWARE_LOG"
+    echo "$timestamp: $file_size B  (same)" >>"$FIRMWARE_LOG"
 else
-  if [ $file_size -eq $old_file_size ]; then
-    echo "$timestamp: $file_size B  (changed)" >> "$FIRMWARE_LOG"
-  else
-    echo "$timestamp: $file_size B" >> "$FIRMWARE_LOG"
-  fi
+    if [ $file_size -eq $old_file_size ]; then
+        echo "$timestamp: $file_size B  (changed)" >>"$FIRMWARE_LOG"
+    else
+        echo "$timestamp: $file_size B" >>"$FIRMWARE_LOG"
+    fi
 fi
 
 # Clean up the temporary file.

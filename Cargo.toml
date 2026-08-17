@@ -6,8 +6,8 @@ edition = "2024"
 [[bin]]
 name = "firmware"
 path = "src/main.rs"
-test = false # disable testing
-bench = false # ...
+test = false         # disable testing
+bench = false        # ...
 
 [profile.release]
 opt-level = "z"   # optimize for size
@@ -15,3 +15,9 @@ debug = true      # include debugging symbols to generate better 'firmware.lst'
 lto = true        # enable link time optimization
 codegen-units = 1 # parallel code generation units, 1 for slightly better optimizations
 panic = "abort"   # abort immediately rather than unwind
+
+[lints.clippy]
+all = "warn"
+pedantic = "warn"
+unwrap_used = "warn"
+unseparated_literal_suffix = "warn"

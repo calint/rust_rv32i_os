@@ -2,6 +2,11 @@
 name = "os"
 version = "1.0.0"
 edition = "2024"
+description = "A text adventure inspired miniature operating system for embedded RISC V RV32I."
+keywords = ["text adventure", "operating system"]
+license = "Unlicense"
+repository = "https://github.com/calint/rust_rv32i_os"
+categories = ["embedded", "no-std", "operating-systems", "text-adventures"]
 
 [[bin]]
 name = "firmware"
@@ -19,5 +24,14 @@ panic = "abort"   # abort immediately rather than unwind
 [lints.clippy]
 all = "warn"
 pedantic = "warn"
+cargo = "warn"
 unwrap_used = "warn"
 unseparated_literal_suffix = "warn"
+todo = "warn"
+unreachable = "warn"
+std_instead_of_core = "warn"
+std_instead_of_alloc = "warn"
+alloc_instead_of_core = "warn"
+dbg_macro = "warn"
+print_stdout = "warn"
+print_stderr = "warn"

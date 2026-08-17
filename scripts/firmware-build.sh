@@ -28,9 +28,10 @@ else
 fi
 old_file_size=$(stat -c "%s" "$FIRMWARE_IMG")
 
-$OBJCOPY -O binary "$ELF" "$FIRMWARE_IMG"
-$OBJDUMP --source-comment -SCr "$ELF" >"$FIRMWARE_LIST"
-$OBJDUMP -s --section=.rodata --section=.srodata \
+$OBJCOPY --output-target=binary "$ELF" "$FIRMWARE_IMG"
+$OBJDUMP --source --source-comment --demangle --reloc "$ELF" >"$FIRMWARE_LIST"
+$OBJDUMP --full-contents \
+    --section=.rodata --section=.srodata \
     --section=.data --section=.sdata \
     --section=.bss --section=.sbss \
     "$ELF" >"$FIRMWARE_DATA" || true
@@ -41,7 +42,7 @@ file_size=$(stat -c "%s" "$FIRMWARE_IMG")
 timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Compare the old and new firmware.img files.
-if cmp -s "$FIRMWARE_TMP" "$FIRMWARE_IMG"; then
+if cmp --silent "$FIRMWARE_TMP" "$FIRMWARE_IMG"; then
     echo "$timestamp: $file_size B  (same)" >>"$FIRMWARE_LOG"
 else
     if [ $file_size -eq $old_file_size ]; then

@@ -351,3 +351,17 @@ fn panic(_info: &PanicInfo) -> ! {
         spin_loop();
     }
 }
+
+// panic handler below adds 10K to the firmware image
+// #[panic_handler]
+// fn panic(info: &PanicInfo) -> ! {
+//     Leds::set(0b0000); // turn on all leds
+//     let p = PrinterUart::new();
+//     p.pl(b"PANIC!!!");
+//     if let Some(msg) = info.message().as_str() {
+//         p.pl(msg.as_bytes());
+//     }
+//     loop {
+//         spin_loop();
+//     }
+// }

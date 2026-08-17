@@ -7,8 +7,8 @@ OBJCOPY=riscv64-elf-objcopy
 OBJDUMP=riscv64-elf-objdump
 FIRMWARE=firmware
 FIRMWARE_IMG="$FIRMWARE.img"
-FIRMWARE_LIST="$FIRMWARE.lst"
-FIRMWARE_DATA="$FIRMWARE.dat"
+FIRMWARE_LST="$FIRMWARE.lst"
+FIRMWARE_DAT="$FIRMWARE.dat"
 FIRMWARE_LOG="notes/firmware-size-and-changed-log.txt"
 FIRMWARE_TMP="$FIRMWARE.img.tmp"
 
@@ -29,13 +29,14 @@ fi
 old_file_size=$(stat --format="%s" "$FIRMWARE_IMG")
 
 $OBJCOPY --output-target=binary "$ELF" "$FIRMWARE_IMG"
-$OBJDUMP --source --source-comment --demangle --reloc "$ELF" >"$FIRMWARE_LIST"
+$OBJDUMP --source --source-comment --demangle --reloc "$ELF" >"$FIRMWARE_LST"
 $OBJDUMP --full-contents \
     --section=.rodata --section=.srodata \
     --section=.data --section=.sdata \
     --section=.bss --section=.sbss \
-    "$ELF" >"$FIRMWARE_DATA" || true
+    "$ELF" >"$FIRMWARE_DAT" || true
 
+chmod -x "$FIRMWARE_IMG"
 ls -l --color "$FIRMWARE_IMG"
 
 file_size=$(stat --format="%s" "$FIRMWARE_IMG")

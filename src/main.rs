@@ -88,6 +88,7 @@ mod model;
 use actions::{ActionContext, CommandBuffer, Error, Result};
 use alloc::vec;
 use core::arch::global_asm;
+use core::hint::spin_loop;
 use core::panic::PanicInfo;
 use lib::api::{Leds, Memory, Printer, PrinterUart, PrinterVoid, Uart};
 use lib::global_allocator::GlobalAllocator;
@@ -346,5 +347,7 @@ fn create_world() -> World {
 fn panic(_info: &PanicInfo) -> ! {
     Leds::set(0b0000); // turn on all leds
     PrinterUart::new().pl(b"PANIC!!!");
-    loop {}
+    loop {
+        spin_loop();
+    }
 }

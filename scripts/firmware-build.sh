@@ -36,7 +36,7 @@ $OBJDUMP --full-contents \
     --section=.bss --section=.sbss \
     "$ELF" >"$FIRMWARE_DATA" || true
 
-ls -l --color "$FIRMWARE_IMG"
+ls --format=long --color "$FIRMWARE_IMG"
 
 file_size=$(stat -c "%s" "$FIRMWARE_IMG")
 timestamp=$(date +"%Y-%m-%d %H:%M:%S")

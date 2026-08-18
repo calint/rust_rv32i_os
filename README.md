@@ -26,7 +26,7 @@ then run in the emulator
 ./run.sh
 ```
 
-to flash the firmware to the fpga use
+to flash the firmware to the FPGA use
 
 ```sh
 scripts/firmware-build-and-flash-9k.sh

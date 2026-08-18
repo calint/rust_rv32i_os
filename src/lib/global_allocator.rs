@@ -9,11 +9,11 @@ use core::ptr;
 
 #[global_allocator]
 static HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
-    free_list: UnsafeCell::new(ptr::null_mut()),
+    block_head: UnsafeCell::new(ptr::null_mut()),
 };
 
 pub struct GlobalAllocator {
-    free_list: UnsafeCell<*mut BlockHeader>,
+    block_head: UnsafeCell<*mut BlockHeader>,
 }
 
 // SAFETY: Single-threaded embedded target without concurrent allocator calls.
@@ -39,7 +39,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
         // find first suitable free block
         unsafe {
-            let mut current = *self.free_list.get();
+            let mut current = *self.block_head.get();
 
             while !current.is_null() {
                 if (*current).is_free && (*current).size >= aligned_size {
@@ -133,23 +133,24 @@ impl GlobalAllocator {
         };
 
         Self {
-            free_list: UnsafeCell::new(first_block),
+            block_head: UnsafeCell::new(first_block),
         }
     }
 
     /// Called once at start of program.
     pub fn init(heap_size: usize) {
         unsafe {
-            *HEAP_ALLOCATOR.free_list.get() = Self::new(Memory::heap_start() as *mut u8, heap_size)
-                .free_list
-                .into_inner();
+            *HEAP_ALLOCATOR.block_head.get() =
+                Self::new(Memory::heap_start() as *mut u8, heap_size)
+                    .block_head
+                    .into_inner();
         }
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
     pub fn debug_block_list(printer: &dyn Printer) {
         unsafe {
-            let mut current = *HEAP_ALLOCATOR.free_list.get();
+            let mut current = *HEAP_ALLOCATOR.block_head.get();
             let mut total: usize = 0;
             let mut total_including_headers: usize = 0;
             while !current.is_null() {

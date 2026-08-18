@@ -20,10 +20,22 @@ or Tang Nano 20K
 ./configure.py 20k
 ```
 
-then run
+then run in the emulator
 
 ```sh
 ./run.sh
+```
+
+to flash the firmware to the fpga use
+
+```sh
+firmware-build-and-flash-9k.sh
+```
+
+or
+
+```sh
+firmware-build-and-flash-20k.sh
 ```
 
 ## note

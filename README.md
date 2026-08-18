@@ -29,13 +29,13 @@ then run in the emulator
 to flash the firmware to the fpga use
 
 ```sh
-firmware-build-and-flash-9k.sh
+scripts/firmware-build-and-flash-9k.sh
 ```
 
 or
 
 ```sh
-firmware-build-and-flash-20k.sh
+scripts/firmware-build-and-flash-20k.sh
 ```
 
 ## note

@@ -32,11 +32,11 @@ const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>() * 2;
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // Guarantee alignment satisfies both layout and BlockHeader requirements
+        // guarantee alignment satisfies both layout and BlockHeader requirements
         let align = max(layout.align(), mem::align_of::<BlockHeader>());
         let header_size = mem::size_of::<BlockHeader>();
 
-        // Round up total block size so split offsets remain aligned to BlockHeader
+        // round up total block size so split offsets remain aligned to BlockHeader
         let aligned_size = (layout.size() + header_size + align - 1) & !(align - 1);
 
         // find first suitable free block
@@ -144,7 +144,7 @@ impl GlobalAllocator {
         let raw_start = Memory::heap_start() as usize;
         let align = mem::align_of::<BlockHeader>();
 
-        // Align heap start upward to align_of::<BlockHeader>()
+        // align heap start upward to align_of::<BlockHeader>()
         let aligned_start = (raw_start + align - 1) & !(align - 1);
         let padding = aligned_start - raw_start;
         let usable_size = heap_size.saturating_sub(padding);

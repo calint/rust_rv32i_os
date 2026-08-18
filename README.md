@@ -49,5 +49,5 @@ scripts/firmware-build-and-flash-20k.sh
 
 ## tools
 
-* cargo 1.89.0 (c24e10642 2025-06-23)
-* rustc 1.89.0 (29483883e 2025-08-04)
+* cargo 1.97.1 (c980f4866 2026-06-30)
+* rustc 1.97.1 (8bab26f4f 2026-07-14)

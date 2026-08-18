@@ -6,7 +6,7 @@
 rustup target add riscv32i-unknown-none-elf
 ```
 
-## build and emulate
+## build, emulate and flash
 
 initialize for Tang Nano 9K
 

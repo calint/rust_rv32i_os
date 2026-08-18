@@ -16,7 +16,7 @@ pub struct GlobalAllocator {
     free_list: UnsafeCell<*mut BlockHeader>,
 }
 
-// SAFETY: Single-threaded embedded target without concurrent allocator calls
+// SAFETY: Single-threaded embedded target without concurrent allocator calls.
 unsafe impl Sync for GlobalAllocator {}
 
 struct BlockHeader {

@@ -3,13 +3,21 @@
 //
 use super::api::{Memory, Printer};
 use core::alloc::{GlobalAlloc, Layout};
+use core::cell::UnsafeCell;
 use core::mem;
 use core::ptr;
 
 #[global_allocator]
-static mut HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
-    free_list: ptr::null_mut(),
+static HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
+    free_list: UnsafeCell::new(ptr::null_mut()),
 };
+
+pub struct GlobalAllocator {
+    free_list: UnsafeCell<*mut BlockHeader>,
+}
+
+// SAFETY: Single-threaded embedded target without concurrent allocator calls
+unsafe impl Sync for GlobalAllocator {}
 
 struct BlockHeader {
     next: *mut BlockHeader, // Pointer to the next block in the free list.
@@ -19,10 +27,6 @@ struct BlockHeader {
 }
 
 const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>() * 2;
-
-pub struct GlobalAllocator {
-    free_list: *mut BlockHeader, // Head of the free list.
-}
 
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 unsafe impl GlobalAlloc for GlobalAllocator {
@@ -34,9 +38,9 @@ unsafe impl GlobalAlloc for GlobalAllocator {
         };
 
         // find first suitable free block
-        let mut current = self.free_list;
-
         unsafe {
+            let mut current = *self.free_list.get();
+
             while !current.is_null() {
                 if (*current).is_free && (*current).size >= aligned_size {
                     // found a suitable block
@@ -129,21 +133,23 @@ impl GlobalAllocator {
         };
 
         Self {
-            free_list: first_block,
+            free_list: UnsafeCell::new(first_block),
         }
     }
 
     /// Called once at start of program.
     pub fn init(heap_size: usize) {
         unsafe {
-            HEAP_ALLOCATOR = Self::new(Memory::heap_start() as *mut u8, heap_size);
+            *HEAP_ALLOCATOR.free_list.get() = Self::new(Memory::heap_start() as *mut u8, heap_size)
+                .free_list
+                .into_inner();
         }
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
     pub fn debug_block_list(printer: &dyn Printer) {
         unsafe {
-            let mut current = HEAP_ALLOCATOR.free_list;
+            let mut current = *HEAP_ALLOCATOR.free_list.get();
             let mut total: usize = 0;
             let mut total_including_headers: usize = 0;
             while !current.is_null() {

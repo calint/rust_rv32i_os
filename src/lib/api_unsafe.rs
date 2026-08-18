@@ -11,7 +11,7 @@ use core::hint::spin_loop;
 pub const SDCARD_SECTOR_SIZE_BYTES: usize = 512;
 
 unsafe extern "C" {
-    pub unsafe static __heap_start__: u8;
+    pub static __heap_start__: u8;
     // note: declared in `linker.ld`
 }
 

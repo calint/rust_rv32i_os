@@ -7,7 +7,6 @@ use super::constants::{
 };
 use core::arch::asm;
 use core::hint::spin_loop;
-use core::ptr::{read_volatile, write_volatile};
 
 pub const SDCARD_SECTOR_SIZE_BYTES: usize = 512;
 
@@ -18,10 +17,10 @@ unsafe extern "C" {
 
 pub fn uart_send_byte(byte: u8) {
     unsafe {
-        while read_volatile(UART_OUT_ADDR as *const i32) != -1 {
+        while (UART_OUT_ADDR as *const i32).read_volatile() != -1 {
             spin_loop();
         }
-        write_volatile(UART_OUT_ADDR as *mut u8, byte);
+        (UART_OUT_ADDR as *mut u8).write_volatile(byte);
     }
 }
 
@@ -30,7 +29,7 @@ pub fn uart_send_byte(byte: u8) {
 pub fn uart_read_byte() -> u8 {
     unsafe {
         loop {
-            let input = read_volatile(UART_IN_ADDR as *const i32);
+            let input = (UART_IN_ADDR as *const i32).read_volatile();
             if input != -1 {
                 return input as u8;
             }
@@ -40,7 +39,7 @@ pub fn uart_read_byte() -> u8 {
 }
 
 pub fn led_set(bits_low_being_on: u32) {
-    unsafe { write_volatile(LED as *mut u32, bits_low_being_on) }
+    unsafe { (LED as *mut u32).write_volatile(bits_low_being_on) }
 }
 
 pub fn memory_stack_pointer() -> u32 {
@@ -55,7 +54,7 @@ pub fn memory_stack_pointer() -> u32 {
 }
 
 pub fn sdcard_status() -> i32 {
-    unsafe { read_volatile(SDCARD_STATUS as *const i32) }
+    unsafe { (SDCARD_STATUS as *const i32).read_volatile() }
 }
 
 pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
@@ -65,15 +64,15 @@ pub fn sdcard_read_blocking(sector: u32, buffer_512_bytes: &mut [u8]) {
     );
 
     unsafe {
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {
+        while (SDCARD_BUSY as *const i32).read_volatile() != 0 {
             spin_loop();
         }
-        write_volatile(SDCARD_READ_SECTOR as *mut u32, sector);
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {
+        (SDCARD_READ_SECTOR as *mut u32).write_volatile(sector);
+        while (SDCARD_BUSY as *const i32).read_volatile() != 0 {
             spin_loop();
         }
         for byte in buffer_512_bytes.iter_mut() {
-            *byte = read_volatile(SDCARD_NEXT_BYTE as *const u8);
+            *byte = (SDCARD_NEXT_BYTE as *const u8).read_volatile();
         }
     }
 }
@@ -85,14 +84,14 @@ pub fn sdcard_write_blocking(sector: u32, buffer_512_bytes: &[u8]) {
     );
 
     unsafe {
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {
+        while (SDCARD_BUSY as *const i32).read_volatile() != 0 {
             spin_loop();
         }
         for byte in buffer_512_bytes {
-            write_volatile(SDCARD_NEXT_BYTE as *mut u8, *byte);
+            (SDCARD_NEXT_BYTE as *mut u8).write_volatile(*byte);
         }
-        write_volatile(SDCARD_WRITE_SECTOR as *mut u32, sector);
-        while read_volatile(SDCARD_BUSY as *const i32) != 0 {
+        (SDCARD_WRITE_SECTOR as *mut u32).write_volatile(sector);
+        while (SDCARD_BUSY as *const i32).read_volatile() != 0 {
             spin_loop();
         }
     }

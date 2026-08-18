@@ -4,6 +4,7 @@
 use super::api::{Memory, Printer};
 use core::alloc::{GlobalAlloc, Layout};
 use core::cell::UnsafeCell;
+use core::cmp::max;
 use core::mem;
 use core::ptr;
 
@@ -31,11 +32,12 @@ const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>() * 2;
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // adjust size to include header and ensure alignment
-        let aligned_size = {
-            let size = layout.size() + mem::size_of::<BlockHeader>();
-            (size + layout.align() - 1) & !(layout.align() - 1)
-        };
+        // Guarantee alignment satisfies both layout and BlockHeader requirements
+        let align = max(layout.align(), mem::align_of::<BlockHeader>());
+        let header_size = mem::size_of::<BlockHeader>();
+
+        // Round up total block size so split offsets remain aligned to BlockHeader
+        let aligned_size = (layout.size() + header_size + align - 1) & !(align - 1);
 
         // find first suitable free block
         unsafe {
@@ -139,11 +141,18 @@ impl GlobalAllocator {
 
     /// Called once at start of program.
     pub fn init(heap_size: usize) {
+        let raw_start = Memory::heap_start() as usize;
+        let align = mem::align_of::<BlockHeader>();
+
+        // Align heap start upward to align_of::<BlockHeader>()
+        let aligned_start = (raw_start + align - 1) & !(align - 1);
+        let padding = aligned_start - raw_start;
+        let usable_size = heap_size.saturating_sub(padding);
+
         unsafe {
-            *HEAP_ALLOCATOR.block_head.get() =
-                Self::new(Memory::heap_start() as *mut u8, heap_size)
-                    .block_head
-                    .into_inner();
+            *HEAP_ALLOCATOR.block_head.get() = Self::new(aligned_start as *mut u8, usable_size)
+                .block_head
+                .into_inner();
         }
     }
 
@@ -151,16 +160,18 @@ impl GlobalAllocator {
     pub fn debug_block_list(printer: &dyn Printer) {
         unsafe {
             let mut current = *HEAP_ALLOCATOR.block_head.get();
-            let mut total: usize = 0;
-            let mut total_including_headers: usize = 0;
+            let mut total_user_allocated: usize = 0;
+            let mut total_allocated_with_headers: usize = 0;
             while !current.is_null() {
                 printer.p(b"at: ");
                 printer.p_hex_u32(current as u32, true);
                 printer.p(b", size: ");
                 printer.p_hex_u32((*current).size as u32, true);
                 if !(*current).is_free {
-                    total += (*current).size;
-                    total_including_headers += (*current).size + mem::size_of::<BlockHeader>();
+                    total_allocated_with_headers += (*current).size;
+                    total_user_allocated += (*current)
+                        .size
+                        .saturating_sub(mem::size_of::<BlockHeader>());
                 }
                 printer.p(b", free: ");
                 printer.pb(if (*current).is_free { b'y' } else { b'n' });
@@ -169,10 +180,10 @@ impl GlobalAllocator {
                 current = (*current).next;
             }
             printer.p(b"total user allocated: ");
-            printer.p_u32(total as u32);
+            printer.p_u32(total_user_allocated as u32);
             printer.pl(b" bytes");
             printer.p(b"total allocated including headers: ");
-            printer.p_u32(total_including_headers as u32);
+            printer.p_u32(total_allocated_with_headers as u32);
             printer.pl(b" bytes");
             printer.p(b"block header size: ");
             printer.p_u32(mem::size_of::<BlockHeader>() as u32);

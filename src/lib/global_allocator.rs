@@ -160,9 +160,7 @@ impl GlobalAllocator {
                 printer.p_hex_u32((*current).size as u32, true);
                 if !(*current).is_free {
                     total_allocated_with_headers += (*current).size;
-                    total_user_allocated += (*current)
-                        .size
-                        .saturating_sub(mem::size_of::<BlockHeader>());
+                    total_user_allocated += (*current).size - mem::size_of::<BlockHeader>();
                 }
                 printer.p(b", free: ");
                 printer.pb(if (*current).is_free { b'y' } else { b'n' });

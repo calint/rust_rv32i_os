@@ -90,13 +90,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
             let current = block;
 
             // merge with next block if possible
-            if !(*current).next.is_null()
-                && (*(*current).next).is_free
-                && ptr::eq(
-                    current.cast::<u8>().add((*current).size),
-                    (*current).next.cast::<u8>(),
-                )
-            {
+            if !(*current).next.is_null() && (*(*current).next).is_free {
                 (*current).size += (*(*current).next).size;
                 (*current).next = (*(*current).next).next;
                 if !(*current).next.is_null() {
@@ -105,13 +99,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
             }
 
             // merge with previous block if possible
-            if !(*current).prev.is_null()
-                && (*(*current).prev).is_free
-                && ptr::eq(
-                    current.cast::<u8>(),
-                    (*current).prev.cast::<u8>().add((*(*current).prev).size),
-                )
-            {
+            if !(*current).prev.is_null() && (*(*current).prev).is_free {
                 (*(*current).prev).size += (*current).size;
                 (*(*current).prev).next = (*current).next;
                 if !(*current).next.is_null() {

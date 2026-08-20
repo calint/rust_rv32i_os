@@ -154,7 +154,6 @@ impl GlobalAllocator {
             let mut total_user_allocated: usize = 0;
             let mut total_allocated_with_headers: usize = 0;
             while !current.is_null() {
-                printer.p(b"at: ");
                 printer.p_hex_u32(current as u32, true);
                 printer.p(b", size: ");
                 printer.p_hex_u32((*current).size as u32, true);
@@ -168,6 +167,7 @@ impl GlobalAllocator {
 
                 current = (*current).next;
             }
+            printer.nl();
             printer.p(b"total user allocated: ");
             printer.p_u32(total_user_allocated as u32);
             printer.pl(b" bytes");

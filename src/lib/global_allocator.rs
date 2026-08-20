@@ -51,11 +51,12 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                         let remaining_size = (*current).size - aligned_size;
                         let new_block =
                             current.cast::<u8>().add(aligned_size).cast::<BlockHeader>();
-
-                        (*new_block).next = (*current).next;
-                        (*new_block).prev = current;
-                        (*new_block).size = remaining_size;
-                        (*new_block).is_free = true;
+                        *new_block = BlockHeader {
+                            next: (*current).next,
+                            prev: current,
+                            size: remaining_size,
+                            is_free: true,
+                        };
 
                         if !(*current).next.is_null() {
                             (*(*current).next).prev = new_block;
@@ -116,10 +117,12 @@ impl GlobalAllocator {
         // initialize the entire memory as one free block
         let first_block = memory.cast::<BlockHeader>();
         unsafe {
-            (*first_block).next = ptr::null_mut();
-            (*first_block).prev = ptr::null_mut();
-            (*first_block).size = total_size;
-            (*first_block).is_free = true;
+            *first_block = BlockHeader {
+                next: ptr::null_mut(),
+                prev: ptr::null_mut(),
+                size: total_size,
+                is_free: true,
+            };
         };
 
         Self {

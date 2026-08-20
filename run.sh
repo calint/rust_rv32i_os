@@ -8,7 +8,7 @@ cp -a firmware.img firmware.img.bak || true
 scripts/firmware-build.sh
 
 echo " * compare previous firmware.img with current"
-if cmp -s firmware.img firmware.img.bak; then
+if cmp --silent firmware.img firmware.img.bak; then
     echo "no change"
 else
     old_size=$(stat -c%s firmware.img.bak)

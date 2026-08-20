@@ -51,6 +51,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
                         let remaining_size = (*current).size - aligned_size;
                         let new_block =
                             current.cast::<u8>().add(aligned_size).cast::<BlockHeader>();
+
                         *new_block = BlockHeader {
                             next: (*current).next,
                             prev: current,

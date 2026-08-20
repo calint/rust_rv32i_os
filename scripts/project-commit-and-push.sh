@@ -4,5 +4,5 @@ cd $(dirname "$0")
 
 cd ..
 git add .
-git commit -m "."
+git commit --message "."
 git push

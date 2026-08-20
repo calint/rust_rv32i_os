@@ -138,7 +138,7 @@ impl GlobalAllocator {
         // align heap start upward to align_of::<BlockHeader>()
         let aligned_start = (raw_start + align - 1) & !(align - 1);
         let padding = aligned_start - raw_start;
-        let usable_size = heap_size.saturating_sub(padding);
+        let usable_size = heap_size - padding;
 
         unsafe {
             *HEAP_ALLOCATOR.block_head.get() = Self::new(aligned_start as *mut u8, usable_size)

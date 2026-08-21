@@ -1,7 +1,8 @@
 //
 // reviewed: 2025-04-21
+//           2026-08-21
 //
-use core::ops::Deref;
+use core::{cmp::min, ops::Deref};
 
 #[derive(Clone, Copy)]
 pub struct FixedSizeString<const SIZE: usize> {
@@ -40,7 +41,7 @@ impl<const SIZE: usize> FixedSizeString<SIZE> {
     /// Will not write more than the allocated length.
     /// Silently returns self.
     pub fn append(&mut self, source: &[u8]) -> &Self {
-        let cpy_len = source.len().min(SIZE - self.len);
+        let cpy_len = min(source.len(), SIZE - self.len);
         self.data[self.len..self.len + cpy_len].copy_from_slice(&source[..cpy_len]);
         self.len += cpy_len;
         self

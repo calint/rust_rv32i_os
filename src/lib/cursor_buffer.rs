@@ -1,5 +1,6 @@
 //
 // reviewed: 2025-04-21
+//           2026-08-21
 //
 pub struct CursorBuffer<const SIZE: usize, T> {
     buffer: [T; SIZE],

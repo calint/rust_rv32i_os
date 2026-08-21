@@ -1,5 +1,6 @@
 //
 // reviewed: 2025-04-21
+//           2026-08-21
 //
 use crate::lib::api::{Leds, Memory, Printer, SDCard, u8_slice_bits_to_u32, u8_slice_to_u32};
 use crate::lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
@@ -73,8 +74,8 @@ pub fn look(ctx: &mut ActionContext) -> Result<()> {
             if count != 0 {
                 ctx.printer.p(b", ");
             }
-            ctx.printer.p(&ctx.world.entities[eid].name);
             count += 1;
+            ctx.printer.p(&ctx.world.entities[eid].name);
         }
     }
     for &oid in &location.objects {
@@ -220,15 +221,15 @@ pub fn go_named_link(ctx: &mut ActionContext, link_name: &[u8]) -> Result<()> {
 )]
 pub fn inventory(ctx: &mut ActionContext) -> Result<()> {
     ctx.printer.p(b"u have: ");
-    let mut i = 0;
+    let mut count = 0;
     for &oid in &ctx.world.entities[ctx.entity].objects {
-        if i != 0 {
+        if count != 0 {
             ctx.printer.p(b", ");
         }
-        i += 1;
+        count += 1;
         ctx.printer.p(&ctx.world.objects[oid].name);
     }
-    if i == 0 {
+    if count == 0 {
         ctx.printer.p(b"nothing");
     }
     ctx.printer.nl();
@@ -437,9 +438,7 @@ pub fn sdcard_read(ctx: &mut ActionContext) -> Result<()> {
 
     let mut buf = [0_u8; SDCard::sector_size_bytes()];
     SDCard::read_blocking(sector, &mut buf);
-    for &x in &buf {
-        ctx.printer.pb(x);
-    }
+    ctx.printer.p(&buf);
     ctx.printer.nl();
 
     Ok(())
@@ -458,7 +457,7 @@ pub fn sdcard_write(ctx: &mut ActionContext) -> Result<()> {
     let len = data.len().min(SDCard::sector_size_bytes());
     let mut buf = [0_u8; SDCard::sector_size_bytes()];
     buf[..len].copy_from_slice(&data[..len]);
-    // todo: allow slice to be less than sector size on pad rest with zeros
+    // todo: allow slice to be less than sector size and pad rest with zeros
     SDCard::write_blocking(sector, &buf);
 
     Ok(())

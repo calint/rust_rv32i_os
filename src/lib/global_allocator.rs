@@ -1,5 +1,6 @@
 //
 // reviewed: 2025-04-21
+//           2026-08-21
 //
 use super::api::{Memory, Printer};
 use core::alloc::{GlobalAlloc, Layout};
@@ -21,8 +22,8 @@ pub struct GlobalAllocator {
 unsafe impl Sync for GlobalAllocator {}
 
 struct BlockHeader {
-    next: *mut BlockHeader, // Pointer to the next block in the free list.
-    prev: *mut BlockHeader, // Pointer to the previous block in the free list.
+    next: *mut BlockHeader, // Pointer to the next block in the list.
+    prev: *mut BlockHeader, // Pointer to the previous block in the list.
     size: usize,            // Total size of the block, including the header.
     is_free: bool,          // Indicates whether the block is available for allocation.
 }
@@ -35,8 +36,6 @@ unsafe impl GlobalAlloc for GlobalAllocator {
         // guarantee alignment satisfies both layout and BlockHeader requirements
         let align = max(layout.align(), mem::align_of::<BlockHeader>());
         let header_size = mem::size_of::<BlockHeader>();
-
-        // round up total block size so split offsets remain aligned to BlockHeader
         let aligned_size = (layout.size() + header_size + align - 1) & !(align - 1);
 
         // find first suitable free block

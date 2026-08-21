@@ -58,7 +58,8 @@ static HELP: &[u8] = b"command:\r
 \x20 ne <name>: create new entity\r
 \x20 mi: memory allocation info\r
 \x20 wait: do nothing\r
-\x20 help: this message\r\n";
+\x20 help: this message\r
+";
 
 static CREATION: &[u8] = b"sln todo: find an exit
 nl none back office

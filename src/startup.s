@@ -7,7 +7,7 @@ _start:
     li a2, 0
 .bss_clear_loop:
     bge a0, a1, .bss_clear_done
-    sb a2, (a0)
+    sb a2, 0(a0)
     addi a0, a0, 1
     j .bss_clear_loop
 .bss_clear_done:

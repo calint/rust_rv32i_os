@@ -24,7 +24,7 @@ with open("src/startup.s", "w") as file:
     file.write("    li a2, 0\n")
     file.write(".bss_clear_loop:\n")
     file.write("    bge a0, a1, .bss_clear_done\n")
-    file.write("    sb a2, (a0)\n")
+    file.write("    sb a2, 0(a0)\n")
     file.write("    addi a0, a0, 1\n")
     file.write("    j .bss_clear_loop\n")
     file.write(".bss_clear_done:\n")

@@ -1,3 +1,5 @@
+use core::cmp::min;
+
 //
 // reviewed: 2025-04-21
 //           2026-08-21
@@ -454,10 +456,9 @@ pub fn sdcard_write(ctx: &mut ActionContext) -> Result<()> {
     };
 
     let data = ctx.tokens.rest();
-    let len = data.len().min(SDCard::sector_size_bytes());
+    let len = min(data.len(), SDCard::sector_size_bytes());
     let mut buf = [0_u8; SDCard::sector_size_bytes()];
     buf[..len].copy_from_slice(&data[..len]);
-    // todo: allow slice to be less than sector size and pad rest with zeros
     SDCard::write_blocking(sector, &buf);
 
     Ok(())
@@ -584,7 +585,7 @@ pub fn new_location(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn new_entity(ctx: &mut ActionContext) -> Result<()> {
-    // get object name
+    // get entity name
     let Some(entity_name) = ctx.tokens.next() else {
         ctx.printer.p(b"what entity name");
         ctx.printer.nlc(2);

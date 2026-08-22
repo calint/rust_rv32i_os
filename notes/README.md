@@ -1,7 +1,11 @@
+# Notes
+
 ## how to record input given to emulator
+
 `script -I log -c scripts/emulator-run.sh`
 
 ## full clippy
+
 ```
 cargo clippy --fix --release -- -W clippy::all -W clippy::pedantic -W clippy::correctness -W clippy::perf -W clippy::style -W clippy::suspicious -W clippy::unwrap_used -W clippy::unseparated_literal_suffix
 
@@ -14,7 +18,6 @@ cargo clippy --fix --release -- -W clippy::all -W clippy::pedantic -W clippy::co
 #    -A clippy::undocumented_unsafe_blocks -A clippy::arbitrary_source_item_ordering \
 ```
 
-
-
 ## escaped characters and \0
+
 Use `cutecom` and send files to validate FPGA function.

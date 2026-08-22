@@ -10,10 +10,10 @@ use core::mem;
 use core::ptr;
 
 struct BlockHeader {
-    next: *mut BlockHeader, // Pointer to the next block in the list.
-    prev: *mut BlockHeader, // Pointer to the previous block in the list.
-    size: usize,            // Total size of the block, including the header.
-    is_free: bool,          // Indicates whether the block is available for allocation.
+    next: *mut Self, // Pointer to the next block in the list.
+    prev: *mut Self, // Pointer to the previous block in the list.
+    size: usize,     // Total size of the block, including the header.
+    is_free: bool,   // Indicates whether the block is available for allocation.
 }
 
 const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>() * 2;

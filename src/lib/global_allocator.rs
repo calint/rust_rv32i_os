@@ -9,18 +9,6 @@ use core::cmp::max;
 use core::mem;
 use core::ptr;
 
-#[global_allocator]
-static HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
-    block_head: UnsafeCell::new(ptr::null_mut()),
-};
-
-pub struct GlobalAllocator {
-    block_head: UnsafeCell<*mut BlockHeader>,
-}
-
-// SAFETY: Single-threaded embedded target without concurrent allocator calls.
-unsafe impl Sync for GlobalAllocator {}
-
 struct BlockHeader {
     next: *mut BlockHeader, // Pointer to the next block in the list.
     prev: *mut BlockHeader, // Pointer to the previous block in the list.
@@ -29,6 +17,20 @@ struct BlockHeader {
 }
 
 const MIN_BLOCK_SIZE: usize = mem::size_of::<BlockHeader>() * 2;
+
+pub struct GlobalAllocator {
+    block_head: UnsafeCell<*mut BlockHeader>,
+    ram_size_bytes: UnsafeCell<usize>,
+}
+
+// SAFETY: Single-threaded embedded target without concurrent allocator calls.
+unsafe impl Sync for GlobalAllocator {}
+
+#[global_allocator]
+static HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
+    block_head: UnsafeCell::new(ptr::null_mut()),
+    ram_size_bytes: UnsafeCell::new(0),
+};
 
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 unsafe impl GlobalAlloc for GlobalAllocator {
@@ -113,33 +115,27 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 impl GlobalAllocator {
-    fn init_first_block(memory: *mut u8, total_size: usize) -> *mut BlockHeader {
-        // initialize the entire memory as one free block
-        let first_block = memory.cast::<BlockHeader>();
+    /// Called once at start of program.
+    pub fn init() {
+        // align heap start upward to align_of::<BlockHeader>()
+        let raw_start = Memory::heap_start() as usize;
+        let raw_end = Memory::end() as usize;
+        let align = mem::align_of::<BlockHeader>();
+        let aligned_start = raw_start.next_multiple_of(align);
+        let usable_size = raw_end - aligned_start;
+
+        let first_block = (aligned_start as *mut u8).cast::<BlockHeader>();
         unsafe {
             *first_block = BlockHeader {
                 next: ptr::null_mut(),
                 prev: ptr::null_mut(),
-                size: total_size,
+                size: usable_size,
                 is_free: true,
             };
         };
-        first_block
-    }
-
-    /// Called once at start of program.
-    pub fn init(heap_size: usize) {
-        let raw_start = Memory::heap_start() as usize;
-        let align = mem::align_of::<BlockHeader>();
-
-        // align heap start upward to align_of::<BlockHeader>()
-        let aligned_start = raw_start.next_multiple_of(align);
-        let padding = aligned_start - raw_start;
-        let usable_size = heap_size - padding;
-
-        let first_block = Self::init_first_block(aligned_start as *mut u8, usable_size);
         unsafe {
             *HEAP_ALLOCATOR.block_head.get() = first_block;
+            *HEAP_ALLOCATOR.ram_size_bytes.get() = usable_size;
         }
     }
 
@@ -164,6 +160,9 @@ impl GlobalAllocator {
                 current = (*current).next;
             }
             printer.nl();
+            printer.p(b"ram size: ");
+            printer.p_u32(*HEAP_ALLOCATOR.ram_size_bytes.get() as u32);
+            printer.pl(b" bytes");
             printer.p(b"total user allocated: ");
             printer.p_u32(total_user_allocated as u32);
             printer.pl(b" bytes");

@@ -92,7 +92,7 @@ use alloc::vec;
 use core::arch::global_asm;
 use core::hint::spin_loop;
 use core::panic::PanicInfo;
-use lib::api::{Leds, Memory, Printer, PrinterUart, PrinterVoid, Uart};
+use lib::api::{Leds, Printer, PrinterUart, PrinterVoid, Uart};
 use lib::global_allocator::GlobalAllocator;
 use model::{Entity, Location, Name, Note, World};
 
@@ -114,7 +114,7 @@ global_asm!(include_str!("startup.s"));
 pub extern "C" fn run() -> ! {
     Leds::set(0b0000); // turn all leds on
 
-    GlobalAllocator::init(Memory::end() as usize);
+    GlobalAllocator::init();
 
     let mut world = create_world();
 

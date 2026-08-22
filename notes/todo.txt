@@ -1,0 +1,2 @@
+[ ] specify stack size and don't allow heap to allocate memory in stack
+[ ] figure out how to measure maximum stack usage

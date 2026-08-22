@@ -430,9 +430,7 @@ pub fn sdcard_status(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn sdcard_read(ctx: &mut ActionContext) -> Result<()> {
-    let sector = if let Some(sector) = ctx.tokens.next() {
-        u8_slice_to_u32(sector)
-    } else {
+    let Some(sector) = ctx.tokens.next().map(u8_slice_to_u32) else {
         ctx.printer.p(b"what sector");
         ctx.printer.nlc(2);
         return Err(Error::WhatSector);
@@ -447,9 +445,7 @@ pub fn sdcard_read(ctx: &mut ActionContext) -> Result<()> {
 }
 
 pub fn sdcard_write(ctx: &mut ActionContext) -> Result<()> {
-    let sector = if let Some(sector) = ctx.tokens.next() {
-        u8_slice_to_u32(sector)
-    } else {
+    let Some(sector) = ctx.tokens.next().map(u8_slice_to_u32) else {
         ctx.printer.p(b"what sector");
         ctx.printer.nlc(2);
         return Err(Error::WhatSector);

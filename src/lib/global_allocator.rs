@@ -36,7 +36,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
         // guarantee alignment satisfies both layout and BlockHeader requirements
         let align = max(layout.align(), mem::align_of::<BlockHeader>());
         let header_size = mem::size_of::<BlockHeader>();
-        let aligned_size = (layout.size() + header_size + align - 1) & !(align - 1);
+        let aligned_size = (layout.size() + header_size).next_multiple_of(align);
 
         // find first suitable free block
         unsafe {
@@ -113,7 +113,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
 
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 impl GlobalAllocator {
-    fn new(memory: *mut u8, total_size: usize) -> Self {
+    fn init_first_block(memory: *mut u8, total_size: usize) -> *mut BlockHeader {
         // initialize the entire memory as one free block
         let first_block = memory.cast::<BlockHeader>();
         unsafe {
@@ -124,10 +124,7 @@ impl GlobalAllocator {
                 is_free: true,
             };
         };
-
-        Self {
-            block_head: UnsafeCell::new(first_block),
-        }
+        first_block
     }
 
     /// Called once at start of program.
@@ -136,14 +133,13 @@ impl GlobalAllocator {
         let align = mem::align_of::<BlockHeader>();
 
         // align heap start upward to align_of::<BlockHeader>()
-        let aligned_start = (raw_start + align - 1) & !(align - 1);
+        let aligned_start = raw_start.next_multiple_of(align);
         let padding = aligned_start - raw_start;
         let usable_size = heap_size - padding;
 
+        let first_block = Self::init_first_block(aligned_start as *mut u8, usable_size);
         unsafe {
-            *HEAP_ALLOCATOR.block_head.get() = Self::new(aligned_start as *mut u8, usable_size)
-                .block_head
-                .into_inner();
+            *HEAP_ALLOCATOR.block_head.get() = first_block;
         }
     }
 

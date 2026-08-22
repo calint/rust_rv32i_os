@@ -132,8 +132,6 @@ impl GlobalAllocator {
                 size: usable_size,
                 is_free: true,
             };
-        };
-        unsafe {
             *HEAP_ALLOCATOR.block_head.get() = first_block;
             *HEAP_ALLOCATOR.ram_size_bytes.get() = usable_size;
         }

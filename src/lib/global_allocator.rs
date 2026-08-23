@@ -8,9 +8,9 @@ use core::cell::UnsafeCell;
 use core::mem;
 use core::ptr;
 
-// note: align to ensure u64 is aligned on 8 bytes
-//       minimum allocation uses 16 + 8 bytes
-#[repr(C, align(8))]
+// note: align to ensure u64 and u128 are aligned correctly (8 or 16 bytes)
+//       minimum allocation uses 16 + 16 bytes
+#[repr(C, align(16))]
 struct BlockHeader {
     next: *mut Self, // Pointer to the next block in the list.
     prev: *mut Self, // Pointer to the previous block in the list.

@@ -139,25 +139,37 @@ impl GlobalAllocator {
     }
 
     #[expect(clippy::cast_possible_truncation, reason = "intended behavior")]
-    pub fn debug_block_list(printer: &dyn Printer) {
+    pub fn debug_info(printer: &dyn Printer) {
+        printer.pl(b"heap blocks:");
+        printer.pl(b"address   size      free");
         unsafe {
             let mut current = *HEAP_ALLOCATOR.block_head.get();
             let mut total_user_allocated: usize = 0;
             let mut total_allocated_with_headers: usize = 0;
             while !current.is_null() {
                 printer.p_hex_u32(current as u32, true);
-                printer.p(b", size: ");
+                printer.p(b" ");
                 printer.p_hex_u32((*current).size as u32, true);
                 if !(*current).is_free {
                     total_allocated_with_headers += (*current).size;
                     total_user_allocated += (*current).size - mem::size_of::<BlockHeader>();
                 }
-                printer.p(b", free: ");
-                printer.pb(if (*current).is_free { b'y' } else { b'n' });
+                printer.p(b" ");
+                printer.p(if (*current).is_free { b"yes" } else { b"no" });
                 printer.nl();
 
                 current = (*current).next;
             }
+            printer.nl();
+
+            printer.p(b"heap start: ");
+            printer.p_hex_u32(Memory::heap_start(), true);
+            printer.nl();
+            printer.p(b"stack pointer: ");
+            printer.p_hex_u32(Memory::stack_pointer(), true);
+            printer.nl();
+            printer.p(b"memory end: ");
+            printer.p_hex_u32(Memory::end(), true);
             printer.nl();
             printer.p(b"ram size: ");
             printer.p_u32(*HEAP_ALLOCATOR.ram_size_bytes.get() as u32);

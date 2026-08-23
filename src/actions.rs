@@ -4,7 +4,7 @@ use core::cmp::min;
 // reviewed: 2025-04-21
 //           2026-08-21
 //
-use crate::lib::api::{Leds, Memory, Printer, SDCard, u8_slice_bits_to_u32, u8_slice_to_u32};
+use crate::lib::api::{Leds, Printer, SDCard, u8_slice_bits_to_u32, u8_slice_to_u32};
 use crate::lib::cursor_buffer::{CursorBuffer, CursorBufferIterator};
 use crate::lib::global_allocator::GlobalAllocator;
 use crate::model::{
@@ -399,19 +399,7 @@ pub fn give(ctx: &mut ActionContext) -> Result<()> {
     reason = "actions return Result for consistency"
 )]
 pub fn memory_info(ctx: &mut ActionContext) -> Result<()> {
-    ctx.printer.p(b"   heap start: ");
-    ctx.printer.p_hex_u32(Memory::heap_start(), true);
-    ctx.printer.nl();
-    ctx.printer.p(b"stack pointer: ");
-    ctx.printer.p_hex_u32(Memory::stack_pointer(), true);
-    ctx.printer.nl();
-    ctx.printer.p(b"   memory end: ");
-    ctx.printer.p_hex_u32(Memory::end(), true);
-    ctx.printer.nl();
-    ctx.printer.nl();
-    ctx.printer.p(b"heap blocks:");
-    ctx.printer.nl();
-    GlobalAllocator::debug_block_list(ctx.printer);
+    GlobalAllocator::debug_info(ctx.printer);
 
     Ok(())
 }

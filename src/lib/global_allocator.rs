@@ -5,10 +5,12 @@
 use super::api::{Memory, Printer};
 use core::alloc::{GlobalAlloc, Layout};
 use core::cell::UnsafeCell;
-use core::cmp::max;
 use core::mem;
 use core::ptr;
 
+// note: align to ensure u64 is aligned on 8 bytes
+//       minimum allocation uses 16 + 8 bytes
+#[repr(C, align(8))]
 struct BlockHeader {
     next: *mut Self, // Pointer to the next block in the list.
     prev: *mut Self, // Pointer to the previous block in the list.
@@ -35,8 +37,7 @@ static HEAP_ALLOCATOR: GlobalAllocator = GlobalAllocator {
 #[expect(clippy::cast_ptr_alignment, reason = "intended behavior")]
 unsafe impl GlobalAlloc for GlobalAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        // guarantee alignment satisfies both layout and BlockHeader requirements
-        let align = max(layout.align(), mem::align_of::<BlockHeader>());
+        let align = mem::align_of::<BlockHeader>();
         let header_size = mem::size_of::<BlockHeader>();
         let aligned_size = (layout.size() + header_size).next_multiple_of(align);
 

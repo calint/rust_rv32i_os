@@ -241,6 +241,9 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUa
                         printer.p(b"\x1B[C");
                     }
                 }
+                b'H' => input_move_to_start_of_line(command_buffer, printer),
+                b'F' => input_move_to_end_of_line(command_buffer, printer),
+                b'~' if parameter == 1 => input_move_to_start_of_line(command_buffer, printer),
                 b'~' if parameter == 3 && command_buffer.delete().is_ok() => {
                     command_buffer.for_each_from_cursor(|&x| printer.pb(x));
                     printer.pb(b' ');
@@ -250,6 +253,7 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUa
                         printer.pb(CHAR_MOVE_CURSOR_BACK);
                     }
                 }
+                b'~' if parameter == 4 => input_move_to_end_of_line(command_buffer, printer),
                 _ => {}
             }
             return;

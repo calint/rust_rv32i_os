@@ -241,7 +241,7 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUa
                         printer.p(b"\x1B[C");
                     }
                 }
-                b'~' if command_buffer.delete().is_ok() => {
+                b'~' if parameter == 3 && command_buffer.delete().is_ok() => {
                     command_buffer.for_each_from_cursor(|&x| printer.pb(x));
                     printer.pb(b' ');
                     let count = command_buffer.elements_after_cursor_count() + 1;
@@ -250,7 +250,6 @@ fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUa
                         printer.pb(CHAR_MOVE_CURSOR_BACK);
                     }
                 }
-
                 _ => {}
             }
             return;

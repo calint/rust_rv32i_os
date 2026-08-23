@@ -217,6 +217,13 @@ fn input(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     }
 }
 
+// Handles CSI escape sequences (ESC [ ...). Home/End are terminal-dependent:
+// xterm/GNOME Terminal/iTerm2 send `ESC[H` / `ESC[F` (no parameter),
+// while VT220-style terminals (classic xterm in VT220 mode, some SSH/serial
+// clients) send `ESC[1~` / `ESC[4~` instead — both are handled here.
+// Not handled: SS3 sequences (`ESC O H` / `ESC O F`), sent by some terminals
+// in "application cursor keys" mode (DECCKM) — these fall through to `_` and
+// are ignored (safe no-op) rather than being consumed and misread as input.
 fn input_escape_sequence(command_buffer: &mut CommandBuffer, printer: &PrinterUart) {
     if Uart::read_blocking() != b'[' {
         return;

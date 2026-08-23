@@ -48,7 +48,7 @@ unsafe impl GlobalAlloc for GlobalAllocator {
             while !current.is_null() {
                 if (*current).is_free && (*current).size >= aligned_size {
                     // found a suitable block
-                    if (*current).size > aligned_size + MIN_BLOCK_SIZE {
+                    if (*current).size >= aligned_size + MIN_BLOCK_SIZE {
                         // split the block if it's significantly larger
                         let remaining_size = (*current).size - aligned_size;
                         let new_block =

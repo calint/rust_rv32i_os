@@ -1,7 +1,6 @@
 # Quality Assurance
 
-Contains scripts to test the FPGA and emulator with input defined in `test.in`
-compared to `test.diff`.
-
-`/emulator/` contains script to test using emulator
-`/fpga/` contains script to test the FPGA
+* `test.in` input to emulator or FPGA
+* `test.diff` expected output from emulator or FPGA
+* `/emulator/test.sh` script to run test using emulator
+* `/fpga/test.sh` script to run test on the FPGA

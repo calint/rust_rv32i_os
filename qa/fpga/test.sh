@@ -42,6 +42,6 @@ if cmp --silent ../test.diff test.out; then
 else
     echo
     echo
-    echo "test: FAILED, check 'diff -a qa/test.diff qa/fpga/test.out'"
+    echo "test: FAILED, check 'diff --text qa/test.diff qa/fpga/test.out'"
     exit 1
 fi

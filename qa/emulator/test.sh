@@ -13,6 +13,6 @@ if cmp --silent ../test.diff test.out; then
     echo "test: PASSED"
     rm test.out
 else
-    echo "test: FAILED, check 'diff -a qa/test.diff qa/emulator/test.out'"
+    echo "test: FAILED, check 'diff --text qa/test.diff qa/emulator/test.out'"
     exit 1
 fi

@@ -19,7 +19,8 @@ LOG_PID=$!
 # ensure background logger is killed on ANY exit (normal, error, or Ctrl+C)
 trap 'kill $LOG_PID 2>/dev/null || true' EXIT
 
-read -rsp $'program or reset FPGA then press "enter" to continue\n\n'
+echo "Assuming the FPGA opens $TTY at $BAUD baud, 8 data bits, 1 stop bit, no parity"
+read -rsp $'Program or reset FPGA then press "Enter" to continue\n\n'
 
 # read commands from test.in and send them to TTY
 while IFS= read -r line; do

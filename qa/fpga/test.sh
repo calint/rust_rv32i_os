@@ -27,8 +27,7 @@ while IFS= read -r line; do
     sleep $SLP
 done <../test.in
 
-# wait briefly for final response, then stop logger
-sleep $SLP
+# stop logger
 kill $LOG_PID 2>/dev/null || true
 wait $LOG_PID 2>/dev/null || true
 

@@ -7,12 +7,12 @@ FIRMWARE=../../firmware.img
 SDCARD=../../sdcard.img
 
 echo " * running test for 2 seconds"
-echo -e "$(<../test.in)" | timeout 2 $EMULATOR $FIRMWARE $SDCARD > test.out || true
+timeout 2 $EMULATOR $FIRMWARE $SDCARD <../test.in >test.out || true
 
-if cmp -s ../test.diff test.out; then
+if cmp --silent ../test.diff test.out; then
     echo "test: PASSED"
     rm test.out
 else
-    echo "test: FAILED, check 'diff ../test.diff test.out'"
+    echo "test: FAILED, check 'diff -a qa/test.diff qa/emulator/test.out'"
     exit 1
 fi

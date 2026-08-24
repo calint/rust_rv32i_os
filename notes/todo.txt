@@ -1,2 +1,4 @@
 [ ] specify stack size and don't allow heap to allocate memory in stack
 [ ] figure out how to measure maximum stack usage
+    => fill top of memory with example 0xAA run the tests then find where
+       stack has written

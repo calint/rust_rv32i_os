@@ -31,9 +31,6 @@ done <../test.in
 # stop logger
 kill $LOG_PID
 
-# disable EXIT trap now that logger has stopped
-trap - EXIT
-
 if cmp --silent ../test.diff test.out; then
     echo
     echo

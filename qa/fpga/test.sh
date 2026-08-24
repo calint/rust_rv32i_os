@@ -28,8 +28,7 @@ while IFS= read -r line; do
 done <../test.in
 
 # stop logger
-kill $LOG_PID 2>/dev/null || true
-wait $LOG_PID 2>/dev/null || true
+kill $LOG_PID
 
 # disable EXIT trap now that logger has stopped
 trap - EXIT

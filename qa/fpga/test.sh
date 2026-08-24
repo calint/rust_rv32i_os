@@ -1,8 +1,4 @@
 #!/bin/bash
-#
-# note: when script fails `cat` process might be active reading from TTY
-#  do `ps aux | grep cat` and terminate the process
-#
 set -e
 cd $(dirname "$0")
 
@@ -10,16 +6,18 @@ TTY=/dev/ttyUSB1
 BAUD=115200
 SLP=0.1
 
-# capture ctrl+c and kill cat
-trap 'kill $(jobs -p); exit 130' INT
-
 stty --file $TTY $BAUD cs8 -cstopb -parenb -crtscts raw -echo
 #   cs8: 8 data bits per character
 #   -cstopb: 1 stop bit (the - disables 2 stop bits)
 #   -parenb: no parity bit
 #   -echo: disables echoing of received input characters back to the sender
 
-cat $TTY | tee test.out &
+# stream serial port to terminal and log file
+tee test.out <$TTY &
+LOG_PID=$!
+
+# ensure background logger is killed on ANY exit (normal, error, or Ctrl+C)
+trap 'kill $LOG_PID 2>/dev/null || true' EXIT
 
 read -rsp $'program or reset FPGA then press "enter" to continue\n\n'
 
@@ -29,11 +27,13 @@ while IFS= read -r line; do
     sleep $SLP
 done <../test.in
 
-# send SIGTERM (termination signal) to 'cat'
-kill -SIGTERM %1
+# wait briefly for final response, then stop logger
+sleep $SLP
+kill $LOG_PID 2>/dev/null || true
+wait $LOG_PID 2>/dev/null || true
 
-# wait for 'cat' to exit
-wait %1 || true
+# disable EXIT trap now that logger has stopped
+trap - EXIT
 
 if cmp --silent ../test.diff test.out; then
     echo

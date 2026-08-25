@@ -2,7 +2,7 @@
 set -e
 cd $(dirname "$0")
 
-TTY=/dev/ttyUSB1
+TTY=${1-/dev/ttyUSB1}
 BAUD=115200
 SLP=0.1
 

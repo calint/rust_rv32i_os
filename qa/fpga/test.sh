@@ -10,6 +10,7 @@ stty --file $TTY $BAUD cs8 -cstopb -parenb -crtscts raw -echo
 #   cs8: 8 data bits per character
 #   -cstopb: 1 stop bit (the - disables 2 stop bits)
 #   -parenb: no parity bit
+#   -crtscts: disables RTS/CTS hardware handshaking
 #   -echo: disables echoing of received input characters back to the sender
 
 # stream serial port to terminal and log file

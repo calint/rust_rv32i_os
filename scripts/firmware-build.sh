@@ -43,9 +43,7 @@ file_size=$(stat --format="%s" "$FIRMWARE_IMG")
 timestamp=$(date +"%Y-%m-%d %H:%M:%S")
 
 # Compare the old and new firmware.img files.
-if cmp --silent "$FIRMWARE_TMP" "$FIRMWARE_IMG"; then
-    echo "$timestamp: $file_size B  (same)" >>"$FIRMWARE_LOG"
-else
+if ! cmp --silent "$FIRMWARE_TMP" "$FIRMWARE_IMG"; then
     if [ $file_size -eq $old_file_size ]; then
         echo "$timestamp: $file_size B  (changed)" >>"$FIRMWARE_LOG"
     else
